@@ -1,0 +1,29 @@
+name: Kiểm tra bản dựng
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  kiem-tra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Cài thư viện
+        run: |
+          npm ci --no-audit --no-fund
+          pip install playwright==1.49.1
+          python -m playwright install --with-deps chromium
+      - name: Dựng lại từ mã nguồn
+        run: python build.py
+      - name: Bản dựng trong kho phải khớp mã nguồn
+        run: git diff --exit-code -- docs dist || (echo "::error::docs/ hoặc dist/ chưa được dựng lại sau khi sửa src/ — chạy python build.py rồi commit" && exit 1)
+      - name: Tự kiểm tra tool (web app + bản file)
+        run: python tests/kiemtra.py
