@@ -669,6 +669,8 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.5','16/10/2026',['Dữ liệu & bảo mật: khu “Thư mục sao lưu” — xem danh sách file trong thư mục sao lưu (bản mới nhất, bản theo ngày, thủ công, trước nâng cấp, hồ sơ từng khóa), xem & khôi phục, tải, xóa bản cũ; ghi và sao chép đường dẫn thư mục để mở bằng File Explorer',
+                       'Nút “Lưu bản thủ công vào thư mục”; Nhật ký sao lưu: lúc nào, cách nào, lưu ở đâu, ai làm']],
   ['4.4','16/10/2026',['Có bản web app (GitHub Pages): cài như ứng dụng trên máy (biểu tượng riêng, cửa sổ riêng), mở được cả khi mất mạng, tự cập nhật khi có bản mới; bản file .html vẫn dùng như cũ',
                        'Thẻ nhắc lịch Windows: nút “Mở tool” mở web app nếu bộ cài được tải từ web app']],
   ['4.3','13/10/2026',['Mục Báo cáo 2: nút “Xuất BC đề nghị tổ chức SH (Word)” theo mẫu 001_BC_ĐN_TC_SH — chỉ thay ngày ký, số khóa, tên khóa, mã khóa trong ngoặc (lấy từ file XML đã gán thi mới / thi lại), số học viên, ngày sát hạch, tổng số, giám đốc; tự đọc lại đối chiếu từng đoạn chữ',
@@ -733,7 +735,7 @@ function snapshot(label){
 function undoTo(idx){
   const h=HIST[idx]; if(!h) return;
   const keepLog=DB.xlog, keepBk=DB.lastBackup;   // nhật ký xuất & lần sao lưu không bị hoàn tác
-  const K={sec:DB.sec,drive:DB.drive,users:DB.users,arc:DB.arc,errLog:DB.errLog,selftest:DB.selftest,_appVer:DB._appVer}, KA={};
+  const K={sec:DB.sec,drive:DB.drive,users:DB.users,arc:DB.arc,errLog:DB.errLog,selftest:DB.selftest,_appVer:DB._appVer,bkLog:DB.bkLog}, KA={};
   Object.values(DB.courses).forEach(c=>KA[c.id]=c.audit);   // nhật ký thay đổi cũng không bị hoàn tác
   DB=JSON.parse(h.data); DB.xlog=keepLog; DB.lastBackup=keepBk; Object.assign(DB,K);
   Object.values(DB.courses).forEach(c=>{ if(KA[c.id]) c.audit=KA[c.id]; });
@@ -3555,6 +3557,7 @@ async function drvBackup(why,manual){
     for(const a of (DB.arc||[]).filter(a=>!a.drv)){ let b=null; try{ b=await idbGet('arc:'+a.id); }catch(e){} if(b){ await drvWrite(arcPath(a),u8(b)); a.drv=1; } }
     if(!await drvRead('DOC_TOI.txt')) await drvWrite('DOC_TOI.txt',DRV_README);
     DB.drive=DB.drive||{}; DB.drive.last=nowIso(); DB.drive.err=''; DB.drive.n=(DB.drive.n||0)+1; DB.lastBackup=DB.drive.last; DRV.remoteT=DB._t;
+    bkLog(manual?'drive-tay':'drive-auto',`${DRV_MAIN} + saoluu/SAOLUU_${dstamp()}.json`,txt.length);
     ok=true;
   }catch(e){ DB.drive=DB.drive||{}; DB.drive.err=(e&&e.message)||String(e); DB.drive.errT=nowIso(); logErr('Sao lưu Drive: '+DB.drive.err,'drvBackup'); if(manual) toast('Lỗi ghi Google Drive: '+DB.drive.err,6000); }
   finally{ DRV.busy=false; writeQuiet(); renderSide(); if(DRV.again){ DRV.again=false; drvSchedule(3000); } }
@@ -3635,10 +3638,79 @@ async function makeBackupText(plain){
   return s;
 }
 async function manualBackup(){
-  try{ const txt=await makeBackupText(); DB.lastBackup=nowIso(); save(); renderSide();
-    dlBlob(txt,'SAOLUU_'+dstamp()+(DB.sec&&DB.sec.enc?'_mahoa':'')+'.json','application/json');
+  try{ const txt=await makeBackupText(), fn='SAOLUU_'+dstamp()+(DB.sec&&DB.sec.enc?'_mahoa':'')+'.json'; DB.lastBackup=nowIso(); bkLog('tai',fn,txt.length); save(); renderSide();
+    dlBlob(txt,fn,'application/json');
     if(DRV.state==='ok') drvBackup('thủ công'); }
   catch(e){ alert('Không tạo được bản sao lưu: '+e.message); }
+}
+/* ===== NHẬT KÝ SAO LƯU + DUYỆT THƯ MỤC SAO LƯU ===== */
+const BK_KIND={'tai':'Tải về máy','drive-auto':'Tự động vào thư mục Drive','drive-tay':'Bấm “Sao lưu ngay”','thucong':'Lưu bản thủ công vào thư mục','khoiphuc':'Khôi phục','xoa':'Xóa bản sao lưu cũ'};
+function bkLog(kind,file,size,extra){
+  DB.bkLog=DB.bkLog||[]; const t=nowIso(), day=new Date().toDateString();
+  if(kind==='drive-auto'){ const L=DB.bkLog.slice().reverse().find(x=>x.kind==='drive-auto'&&new Date(x.t).toDateString()===day&&x.folder===(DRV.h&&DRV.h.name));
+    if(L){ L.n=(L.n||1)+1; L.t2=t; L.size=size; return; } }   // tự động: mỗi ngày 1 dòng
+  DB.bkLog.push({t,kind,file,size,folder:kind==='tai'?'':(DRV.h&&DRV.h.name)||'',u:userName(),...(extra||{})}); if(DB.bkLog.length>300) DB.bkLog=DB.bkLog.slice(-300);
+}
+const drvPathOf=()=>(DB.drive&&DB.drive.path)||'';
+const winJoin=(base,rel)=>base?base.replace(/[\\\/]+$/,'')+'\\'+rel.replace(/\//g,'\\'):rel;
+async function drvLs(dir){ const out=[]; try{ const d=await drvDir(dir,false); for await (const [n,h] of d.entries()){ if(h.kind==='file'){ const f=await h.getFile(); out.push({n,k:'f',size:f.size,t:f.lastModified}); } else out.push({n,k:'d'}); } }catch(e){} return out.sort((a,b)=>a.n.localeCompare(b.n)); }
+async function saveToFolder(){
+  if(!(await drvPerm(true))){ toast('Chưa liên kết / chưa được phép ghi vào thư mục sao lưu.',5000); return; }
+  try{ const txt=await makeBackupText(), path=`saoluu/THUCONG_${tstamp()}.json`; await drvWrite(path,txt); bkLog('thucong',path,txt.length); DB.lastBackup=nowIso(); writeQuiet(); renderSide();
+    toast('Đã lưu '+winJoin(drvPathOf()||DRV.h.name,path),5000); if(TAB==='dl') render(); }
+  catch(e){ alert('Không lưu được: '+e.message); }
+}
+const bkType=n=>/^SAOLUU_/.test(n)?'Theo ngày (tự động)':/^THUCONG_/.test(n)?'Thủ công':/^TRUOC_NANG_CAP/.test(n)?'Trước khi nâng cấp tool':'Khác';
+function bkFolderCard(){
+  if(!DRV.h) return `<div class="card"><h2>Thư mục sao lưu</h2><div class="muted">Chưa liên kết thư mục. File bấm <b>Tải file sao lưu</b> nằm trong thư mục <b>Tải xuống (Downloads)</b> của Chrome — xem nhanh bằng phím <b>Ctrl + J</b>.</div></div>`;
+  const nm=DRV.h.name, path=drvPathOf();
+  return `<div class="card" id="bkFolder"><div class="row"><h2 style="margin:0">Thư mục sao lưu</h2><span style="flex:1"></span>
+      ${DRV.state==='ok'?`<button class="btn sm" id="bfSave">${ic('upload')}Lưu bản thủ công vào thư mục</button><button class="btn sm" id="bfReload">Làm mới</button>`:`<button class="btn sm pri" id="bfAllow">Cho phép đọc thư mục</button>`}</div>
+    <div class="grid" style="margin-top:10px;grid-template-columns:1fr"><label>Đường dẫn thư mục trên máy <span class="muted" style="font-weight:400">(ghi 1 lần để nhớ — trình duyệt không cho trang web tự biết đường dẫn đầy đủ)</span>
+      <div class="row" style="gap:6px;margin-top:4px"><input type="text" id="bfPath" value="${esc(path)}" placeholder="Ví dụ: G:\\My Drive\\${esc(nm)}" style="flex:1;min-width:240px;font-family:monospace">
+      <button class="btn sm" id="bfPathSave">Lưu</button><button class="btn sm" id="bfCopy" title="Sao chép rồi dán vào thanh địa chỉ File Explorer (Windows + E) để mở thư mục">${ic('paste')}Sao chép</button></div></label></div>
+    <div class="muted" style="font-size:12.5px;margin-top:4px">Thư mục đã liên kết: <b>${esc(nm)}</b>. Mở trên máy: bấm <b>Sao chép</b> → <b>Windows + E</b> → dán vào thanh địa chỉ → Enter. Trên web: drive.google.com → My Drive → ${esc(nm)}.</div>
+    <div id="bfTree" style="margin-top:10px">${DRV.state==='ok'?'<div class="muted">Đang đọc thư mục…</div>':'<div class="muted">Bấm “Cho phép đọc thư mục” để xem danh sách file.</div>'}</div></div>`;
+}
+async function bkFolderFill(){
+  const el=$('#bfTree'); if(!el||DRV.state!=='ok') return;
+  const base=drvPathOf()||DRV.h.name, root=await drvLs(''), sl=(await drvLs('saoluu')).filter(x=>x.k==='f'&&/\.json$/i.test(x.n)).sort((a,b)=>b.n.localeCompare(a.n));
+  const hs=(await drvLs('hoso')).filter(x=>x.k==='d'), H=[];
+  for(const k of hs){ const r={k:k.n,sub:{},n:0,size:0}; for(const sub of ['xuat_ra','nap_vao','goi_zip']){ const L=(await drvLs(`hoso/${k.n}/${sub}`)).filter(x=>x.k==='f'); r.sub[sub]=L; r.n+=L.length; r.size+=L.reduce((t,x)=>t+x.size,0); } H.push(r); }
+  const main=root.find(x=>x.n===DRV_MAIN), slSize=sl.reduce((t,x)=>t+x.size,0);
+  const p=rel=>`<code style="font-size:11.5px" title="${esc(winJoin(base,rel))}">${esc(winJoin(base,rel))}</code>`;
+  const dt=ms=>ms?fmtDT(new Date(ms).toISOString()):'';
+  el.innerHTML=`<div class="imp" style="margin-top:0"><table><thead><tr><th>File / thư mục</th><th>Loại</th><th>Cập nhật</th><th class="c">Cỡ</th><th></th></tr></thead><tbody>
+    ${main?`<tr><td>${p(DRV_MAIN)}</td><td><b>Bản mới nhất</b> <span class="muted">(ghi lại sau mỗi thay đổi)</span></td><td>${dt(main.t)}</td><td class="c">${fmtSize(main.size)}</td>
+      <td style="white-space:nowrap"><button class="btn sm" data-bfv="${DRV_MAIN}">Xem &amp; khôi phục</button> <button class="btn sm" data-bfd="${DRV_MAIN}">${ic('download')}Tải</button></td></tr>`:''}
+    <tr><td colspan="5" style="background:var(--sunken)"><b>${p('saoluu')}</b> — ${sl.length} bản, ${fmtSize(slSize)} <span class="muted">· giữ 30 ngày gần nhất + bản cuối mỗi tháng; bản thủ công và bản trước nâng cấp giữ nguyên</span></td></tr>
+    ${sl.slice(0,60).map(x=>`<tr><td style="padding-left:22px">${esc(x.n)}</td><td>${bkType(x.n)}</td><td>${dt(x.t)}</td><td class="c">${fmtSize(x.size)}</td>
+      <td style="white-space:nowrap"><button class="btn sm" data-bfv="saoluu/${esc(x.n)}">Xem &amp; khôi phục</button> <button class="btn sm" data-bfd="saoluu/${esc(x.n)}">${ic('download')}Tải</button> <button class="btn sm" data-bfx="${esc(x.n)}" title="Xóa bản này" style="color:var(--seal)">✕</button></td></tr>`).join('')}
+    ${sl.length>60?`<tr><td colspan="5" class="muted" style="padding-left:22px">… và ${sl.length-60} bản cũ hơn</td></tr>`:''}
+    <tr><td colspan="5" style="background:var(--sunken)"><b>${p('hoso')}</b> — nguyên bản file xuất / nạp từng khóa (${H.reduce((t,x)=>t+x.n,0)} file, ${fmtSize(H.reduce((t,x)=>t+x.size,0))})</td></tr>
+    ${H.map((r,i)=>`<tr><td style="padding-left:22px">${p('hoso/'+r.k)}</td><td>Xuất ra ${r.sub.xuat_ra.length} · Nạp vào ${r.sub.nap_vao.length}${r.sub.goi_zip.length?` · ZIP ${r.sub.goi_zip.length}`:''}</td><td></td><td class="c">${fmtSize(r.size)}</td><td><button class="btn sm" data-bfh="${i}">Xem file</button></td></tr>
+      <tr class="hide" data-bfhr="${i}"><td colspan="5" style="padding-left:34px;font-size:12.5px">${['xuat_ra','nap_vao','goi_zip'].filter(s=>r.sub[s].length).map(s=>`<div style="margin:4px 0 2px"><b>${s}</b></div>`+r.sub[s].slice().reverse().map(x=>`<div class="row" style="gap:6px;justify-content:space-between;border-bottom:1px solid var(--line2);padding:2px 0"><span>${esc(x.n)}</span><span class="muted">${fmtSize(x.size)} <a href="#" data-bff="hoso/${esc(r.k)}/${s}/${esc(x.n)}">Tải</a></span></div>`).join('')).join('')}</td></tr>`).join('')}
+    ${root.filter(x=>x.k==='f'&&x.n!==DRV_MAIN&&!/^\./.test(x.n)).map(x=>`<tr><td>${p(x.n)}</td><td>${x.n==='DOC_TOI.txt'?'Giải thích các thư mục':''}</td><td>${dt(x.t)}</td><td class="c">${fmtSize(x.size)}</td><td><button class="btn sm" data-bfd="${esc(x.n)}">${ic('download')}Tải</button></td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="muted" style="font-size:12.5px;margin-top:6px">Tổng: ${fmtSize((main?main.size:0)+slSize+H.reduce((t,x)=>t+x.size,0))} trong thư mục ${esc(base)}.</div>`;
+  el.querySelectorAll('[data-bfv]').forEach(b=>b.onclick=async()=>{ const t=await drvRead(b.dataset.bfv); if(t) restoreFlow(t,winJoin(base,b.dataset.bfv)); else toast('Không đọc được file.',4000); });
+  const dl=async rel=>{ const d=await drvReadBin(rel); if(d) dlBlob(d,rel.split('/').pop()); else toast('Không đọc được file.',4000); };
+  el.querySelectorAll('[data-bfd]').forEach(b=>b.onclick=()=>dl(b.dataset.bfd));
+  el.querySelectorAll('[data-bff]').forEach(a=>a.onclick=e=>{ e.preventDefault(); dl(a.dataset.bff); });
+  el.querySelectorAll('[data-bfh]').forEach(b=>b.onclick=()=>{ const r=el.querySelector(`[data-bfhr="${b.dataset.bfh}"]`); r.classList.toggle('hide'); b.textContent=r.classList.contains('hide')?'Xem file':'Ẩn'; });
+  el.querySelectorAll('[data-bfx]').forEach(b=>b.onclick=async()=>{ const n=b.dataset.bfx;
+    if(sl.length<=1){ alert('Đây là bản sao lưu duy nhất trong thư mục — không xóa.'); return; }
+    if(!confirm(`Xóa bản sao lưu “${n}” khỏi thư mục?\n(Bản mới nhất ${DRV_MAIN} và các bản khác vẫn còn.)`)) return;
+    await drvRemove('saoluu',n); bkLog('xoa','saoluu/'+n,0); writeQuiet(); toast('Đã xóa '+n); bkFolderFill(); });
+}
+function bkLogCard(){
+  const L=(DB.bkLog||[]).slice().reverse().slice(0,60);
+  return `<div class="card"><div class="row"><h2 style="margin:0">Nhật ký sao lưu</h2><span class="muted">Mỗi lần sao lưu / khôi phục: lúc nào, cách nào, lưu ở đâu, ai làm.</span></div>
+    ${L.length?`<div class="imp" style="max-height:320px;overflow:auto"><table><thead><tr><th>Thời điểm</th><th>Cách</th><th>Lưu ở đâu</th><th class="c">Cỡ</th><th>Người</th></tr></thead><tbody>
+    ${L.map(x=>`<tr><td style="white-space:nowrap">${fmtDT(x.t)}${x.n>1?`<div class="muted" style="font-size:11.5px">→ ${new Date(x.t2).toLocaleTimeString('vi-VN')} · ${x.n} lần</div>`:''}</td><td>${esc(BK_KIND[x.kind]||x.kind)}${x.kind==='khoiphuc'?` <span class="muted">(${x.mode==='all'?'thay toàn bộ':'chọn từng khóa'})</span>`:''}</td>
+      <td style="white-space:normal;font-size:12.5px">${x.kind==='tai'?`Thư mục <b>Tải xuống (Downloads)</b> của Chrome — <code>${esc(x.file)}</code>`:x.kind==='khoiphuc'?'Từ '+esc(x.file):`<code>${esc(winJoin(drvPathOf()&&x.folder===(DRV.h&&DRV.h.name)?drvPathOf():x.folder,x.file))}</code>`}</td>
+      <td class="c">${x.size?fmtSize(x.size):''}</td><td>${esc(x.u||'—')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted" style="margin-top:8px">Chưa có lần sao lưu nào được ghi (nhật ký bắt đầu từ bản 4.5).</div>'}
+    <div class="muted" style="font-size:12.5px;margin-top:6px">File <b>Tải về máy</b> nằm trong thư mục Tải xuống của Chrome — bấm <b>Ctrl + J</b> trong Chrome để xem và mở thư mục chứa file.</div></div>`;
 }
 /* đọc nhanh thông tin bản sao lưu (không giải mã nếu chưa có khóa) */
 async function peekBackup(text){
@@ -3697,6 +3769,7 @@ function applyRestore(o,mode,pick,src){
   for(const id in _mau) idbSet('mau:'+id,b64d(_mau[id]).buffer).catch(()=>{});
   for(const fid in _form) idbSet('form:'+fid,b64d(_form[fid]).buffer).catch(()=>{});
   const stamp={t:nowIso(),files:['Khôi phục từ '+src],u:userName()};
+  const bkKeep=DB.bkLog;
   if(mode==='all'){
     const arc=DB.arc||[];
     DB=o; Object.assign(DB,{sec:keep.sec,drive:keep.drive,_appVer:keep._appVer,users:[...new Set([...(o.users||[]),...(keep.users||[])])],
@@ -3712,6 +3785,8 @@ function applyRestore(o,mode,pick,src){
     if(!Object.keys(DB.mau||{}).length&&o.mau) DB.mau=o.mau;
     if(!DB.courses[DB.cur]) DB.cur=pick[0].k.id;
   }
+  DB.bkLog=[...(bkKeep||[]),...((DB.bkLog||[]).filter(x=>!(bkKeep||[]).some(y=>y.t===x.t&&y.kind===x.kind)))].sort((a,b)=>a.t.localeCompare(b.t)).slice(-300);
+  bkLog('khoiphuc',src,0,{mode});
   normalizeDB(); KEYCACHE.clear(); audReset(); pending=[]; SEL.clear(); writeNow(); render();
   toast(mode==='all'?'Đã khôi phục toàn bộ dữ liệu.':`Đã khôi phục ${pick.length} khóa.`,5000);
 }
@@ -3935,9 +4010,11 @@ async function vDL(v){
     <li>Xong. Tool tự ghi sau mỗi thay đổi (khoảng 15 giây sau), Google Drive tự đưa lên mạng. Trên máy khác: cài Drive, đăng nhập cùng tài khoản, mở tool, liên kết đúng thư mục đó → tool hỏi khôi phục.</li>
     <li>Nếu Chrome không nhớ quyền: mỗi lần mở tool, bấm dòng <b>“Drive tạm dừng — bấm để bật”</b> ở góc trái dưới.</li></ol>
     <div class="muted" style="font-size:12.5px;margin-top:6px">Vì sao không đăng nhập Google ngay trong tool? Tool là một file chạy trên máy (không có địa chỉ web), Google không cho đăng nhập trực tiếp từ file như vậy. Dùng Google Drive cho máy tính là cách chính thức, ổn định — máy mất mạng vẫn ghi, có mạng lại tự đẩy lên.</div></details></div>
+  ${bkFolderCard()}
   <div class="card"><h2>Sao lưu thủ công & khôi phục</h2>
    <div class="row" style="margin-top:6px"><button class="btn" id="dlBk">${ic('download')}Tải file sao lưu</button><button class="btn" id="dlRs">${ic('upload')}Khôi phục từ file…</button><button class="btn" id="dlUndo">${ic('undo')}Hoàn tác…</button></div>
    <div class="muted" style="font-size:13px;margin-top:8px">File sao lưu có mã kiểm tra SHA-256${sec&&sec.enc?' và được mã hóa bằng mã PIN':''}. Khôi phục luôn cho xem trước khác biệt và chọn khôi phục riêng từng khóa. Sao lưu gần nhất: <b>${DB.lastBackup?fmtDT(DB.lastBackup):'chưa có'}</b>.</div></div>
+  ${bkLogCard()}
   <div class="card"><h2>Dung lượng</h2><div id="dlSpace" class="muted">Đang đo…</div></div>
   <div class="card"><h2>Bảo mật</h2>
    <div style="line-height:1.8">${sec?`Mã PIN: <b style="color:var(--ok)">đã đặt</b> (${fmtDay(sec.t)})`:'Mã PIN: <b>chưa đặt</b> — ai mở máy cũng xem được danh sách học viên (họ tên, CCCD, địa chỉ).'}</div>
@@ -3956,6 +4033,10 @@ async function vDL(v){
   on('dvGet',drvPickRestore); on('dvOff',drvUnlink);
   if($('#dvAuto')) $('#dvAuto').onchange=e=>{ DB.drive.auto=e.target.checked; save(); if(e.target.checked) drvSchedule(1000); };
   on('dlBk',manualBackup); on('dlRs',()=>$('#restoreFile').click()); on('dlUndo',()=>askUndo());
+  on('bfSave',saveToFolder); on('bfReload',()=>bkFolderFill()); on('bfAllow',async()=>{ if(await drvPerm(true)){ renderSide(); render(); } });
+  on('bfPathSave',()=>{ DB.drive=DB.drive||{}; DB.drive.path=$('#bfPath').value.trim(); save(); render(); toast('Đã lưu đường dẫn thư mục.'); });
+  on('bfCopy',async()=>{ const t=$('#bfPath').value.trim()||$('#bfPath').placeholder.replace(/^Ví dụ: /,''); try{ await navigator.clipboard.writeText(t); toast('Đã sao chép: '+t+' — mở File Explorer (Windows + E), dán vào thanh địa chỉ, Enter.',6000); }catch(e){ prompt('Sao chép đường dẫn này:',t); } });
+  bkFolderFill();
   on('scSet',pinSetup); on('scOff',pinRemove);
   if($('#scLock')) $('#scLock').onchange=e=>{ DB.sec.lock=+e.target.value; save(); };
   if($('#scEnc')) $('#scEnc').onchange=e=>{ DB.sec.enc=e.target.checked; save(); drvSchedule(1000); };
@@ -3996,13 +4077,13 @@ function renderSide(){
   const d=$('#drvInfo'); if(d){
     const dr=DB.drive||{};
     d.innerHTML=DRV.busy?'<span>⟳ Đang ghi Google Drive…</span>'
-      :DRV.state==='ok'?`<span style="color:#9be3b5">● Drive: ${dr.err?'<span style="color:#ffb4a8">lỗi — xem mục Dữ liệu</span>':'đã sao lưu '+(dr.last?new Date(dr.last).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'')}</span>`
+      :DRV.state==='ok'?`<a href="#" id="drvGo" title="Xem thư mục sao lưu" style="color:#9be3b5">● Drive: ${dr.err?'<span style="color:#ffb4a8">lỗi — xem mục Dữ liệu</span>':'đã sao lưu '+(dr.last?new Date(dr.last).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'')}</a>`
       :DRV.state==='need'?'<a href="#" id="drvAsk" style="color:#ffd27a;font-weight:600">⚠ Drive tạm dừng — bấm để bật</a>'
       :'<a href="#" id="drvGo" style="color:#ffb4a8">⚠ Chưa sao lưu Google Drive</a>';
   }
   const ul=$('#userLink'); if(ul) ul.onclick=e=>{ e.preventDefault(); askUser(); };
   const da=$('#drvAsk'); if(da) da.onclick=async e=>{ e.preventDefault(); if(await drvPerm(true)){ renderSide(); drvCompare(); } };
-  const dg=$('#drvGo'); if(dg) dg.onclick=e=>{ e.preventDefault(); TAB='dl'; render(); };
+  const dg=$('#drvGo'); if(dg) dg.onclick=e=>{ e.preventDefault(); TAB='dl'; render(); setTimeout(()=>{ const c=$('#bkFolder'); if(c) c.scrollIntoView({behavior:'smooth',block:'start'}); },80); };
 }
 
 /* ================== NÂNG CẤP, KHỞI ĐỘNG ================== */
