@@ -1,0 +1,15 @@
+{
+  "name": "bc1-bc2-sbd-moto",
+  "version": "4.4.0",
+  "private": true,
+  "description": "TOOLS BC1+BC2+SBD — báo cáo đào tạo & danh sách sát hạch mô tô hạng A1",
+  "scripts": {
+    "build": "python3 build.py",
+    "test": "python3 tests/kiemtra.py"
+  },
+  "dependencies": {
+    "@fontsource/be-vietnam-pro": "5.3.0",
+    "exceljs": "4.4.0",
+    "xlsx": "0.18.5"
+  }
+}

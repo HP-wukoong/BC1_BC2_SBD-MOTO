@@ -1,0 +1,7 @@
+node_modules/
+__pycache__/
+*.pyc
+# KHÔNG đưa dữ liệu thật của học viên lên kho
+du_lieu/
+*.json.bak
+SAOLUU_*.json
