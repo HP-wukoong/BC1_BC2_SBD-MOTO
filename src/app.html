@@ -274,6 +274,7 @@ details summary{cursor:pointer}
     <button data-t="bc1"><span class="num">2</span><span class="lbl">Báo cáo 1</span><span class="badge" id="bdBC1">0</span></button>
     <button data-t="bc2"><span class="num">3</span><span class="lbl">Báo cáo 2</span><span class="badge" id="bdBC2">0</span></button>
     <button data-t="sbd"><span class="num">4</span><span class="lbl">Số báo danh</span></button>
+    <button data-t="tt"><svg class="ico" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 18.5A1.6 1.6 0 0 0 5.9 21h12.2a1.6 1.6 0 0 0 1.4-2.5L14 9V3"/><path d="M7 15h10"/></svg><span class="lbl">Thi thử</span></button>
     <div class="ngrp">Theo dõi</div>
     <button data-t="tq"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span class="lbl">Tổng quan các khóa</span></button>
     <button data-t="moc"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg><span class="lbl">Lịch nộp</span><span class="badge" id="bdMOC">0</span></button>
@@ -308,6 +309,7 @@ details summary{cursor:pointer}
 
 <script type="text/plain" id="tbTpl">/*TB_TEMPLATE*/</script>
 <script type="text/plain" id="bcdnTpl">/*BCDN_TEMPLATE*/</script>
+<script type="text/plain" id="bcdtTpl">/*BCDT_TEMPLATE*/</script>
 <script type="text/plain" id="psInstaller">/*PS_INSTALLER*/</script>
 <script>/*XLSX_LIB*/</script>
 <script>/*EXCELJS_LIB*/</script>
@@ -398,6 +400,8 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.6','20/10/2026',['Báo cáo 1: nút “BC đăng ký khóa (Word)” — điền theo khóa: ngày theo khai giảng, mã khóa, số học viên BC1, khai giảng/bế giảng; ngày Phương án đào tạo mặc định 16/07/2026, sửa được khi có công văn mới',
+                       'Mục mới “Thi thử” (độc lập): nạp file tên đuôi _Thithu, xuất danh sách SBD thi thử cùng mẫu Số báo danh, đọc lại đối chiếu từng ô — không ảnh hưởng BC1, BC2, SBD']],
   ['4.5','16/10/2026',['Dữ liệu & bảo mật: khu “Thư mục sao lưu” — xem danh sách file trong thư mục sao lưu (bản mới nhất, bản theo ngày, thủ công, trước nâng cấp, hồ sơ từng khóa), xem & khôi phục, tải, xóa bản cũ; ghi và sao chép đường dẫn thư mục để mở bằng File Explorer',
                        'Nút “Lưu bản thủ công vào thư mục”; Nhật ký sao lưu: lúc nào, cách nào, lưu ở đâu, ai làm']],
   ['4.4','16/10/2026',['Có bản web app (GitHub Pages): cài như ứng dụng trên máy (biểu tượng riêng, cửa sổ riêng), mở được cả khi mất mạng, tự cập nhật khi có bản mới; bản file .html vẫn dùng như cũ',
@@ -677,6 +681,7 @@ async function analyzeFile(file){
   const buf=await file.arrayBuffer();
   const wb=XLSX.read(buf,{type:'array',cellStyles:true});
   const pnL=parseName(file.name); if(pnL&&pnL.rule&&pnL.rule.id==='tlr') return analyzeLoc(wb,file);
+  if(pnL&&pnL.rule&&pnL.rule.id==='thithu') return analyzeThiThu(wb,file,pnL);
   const isGLD=!!(pnL&&pnL.rule&&pnL.rule.id==='sbd');   // Số báo danh: CHỈ nạp từ file tên GLĐ…
   const fnorm=norm(file.name).replace(/_/g,' ');
   const out=[], sbdIgnored=[];
@@ -868,6 +873,7 @@ function locDiff(p){
 }
 function preImport(){
   if(pending.some(p=>p.kind==='xml'&&p.target!=='skip'&&!p.part)) return askXmlQueue(preImport);
+  if(ttPre(preImport)) return;      // thi thử: nạp riêng trước, quy trình chung không đụng tới
   const news=pending.filter(p=>p.kind==='sbd'&&p.target==='sbd');
   const dup=news.map(p=>({p, old:(DB.exams||[]).filter(e=>norm(asciiName(e.khoaThi))===norm(asciiName(p.khoaThi)))})).filter(x=>x.old.length);
   if(!dup.length) return preImportLoc();
@@ -1148,6 +1154,71 @@ async function exportBCDN(ngay){
   if(+D.DU_SH_MOI!==bc2MoiList().length||+D.DU_SH_TL!==tlList(false).length||+D.TONG!==bc2MoiList().length+tlList(false).length) P.push('Số học viên không khớp danh sách BC2');
   if(P.length){ dialog('Dừng xuất file — phát hiện sai lệch',`<div class="note warn">${ic('alert')}<span>Tool đọc lại file Word vừa tạo và thấy <b>${P.length}</b> chỗ không khớp. File chưa được tải về.</span></div><div style="max-height:300px;overflow:auto;margin-top:10px;font-size:13px">${P.slice(0,40).map(x=>'• '+esc(x)).join('<br>')}</div>`,[['Đóng','pri']]); return false; }
   saveVerified(buf,`001_BC_ĐN_TC_SH_${c.ten}.docx`,'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  return true;
+}
+/* ===== BC đăng ký khóa đào tạo (Word, xuất cùng Báo cáo 1) — độc lập, không đụng các file BC1/BC2 ===== */
+const PA_NGAY_MD='16/07/2026';
+function wordBuildT(tplId,D){
+  const z=zOpen(tplBytes(tplId).buffer); const x=zGet(z,'word/document.xml'); if(!x) throw new Error('mẫu Word hỏng (thiếu word/document.xml)');
+  const miss=[]; const y=x.replace(/\{\{(\w+)\}\}/g,(m,k)=>{ if(!(k in D)){ miss.push(k); return m; } return xmlEsc(D[k]); });
+  if(miss.length) throw new Error('mẫu có mã lạ: '+miss.join(', '));
+  zPut(z,'word/document.xml',y);
+  const now=new Date(); z.FileIndex.forEach(e=>{ e.mt=now; e.ct=now; });
+  const o=XLSX.CFB.write(z,{fileType:'zip',type:'array',compression:true}); return o instanceof Uint8Array?o:new Uint8Array(o);
+}
+function wordVerifyT(tplId,buf,D){
+  const P=[]; let x; try{ x=zGet(zOpen(buf),'word/document.xml'); }catch(e){ return ['Không đọc lại được file Word vừa tạo: '+e.message]; }
+  if(!x) return ['File Word vừa tạo thiếu nội dung'];
+  const want=wTexts(zGet(zOpen(tplBytes(tplId).buffer),'word/document.xml')).map(t=>t.replace(/\{\{(\w+)\}\}/g,(m,k)=>xmlEsc(D[k])));
+  const got=wTexts(x);
+  if(got.length!==want.length) P.push(`Số đoạn chữ khác mẫu (${got.length}/${want.length})`);
+  want.forEach((t,i)=>{ if(got[i]!==t) P.push(`Đoạn ${i+1}: file ghi “${got[i]}”, đúng phải là “${t}”`); });
+  if(/\{\{\w+\}\}/.test(x)) P.push('Còn sót mã chưa thay trong file');
+  return P;
+}
+function paNgayOk(t){ const m=String(t||'').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if(!m) return false; const d=new Date(+m[3],+m[2]-1,+m[1]); return d.getDate()===+m[1]&&d.getMonth()===+m[2]-1; }
+function bcdtData(c,pa){
+  const d=c.khaiGiang?c.khaiGiang.split('-'):null;
+  return {NGAY:d?d[2]:'', THANG:d?d[1]:'', NAM:d?d[0]:'', NGAY_PA:String(pa||'').trim(), MA:`${c.maKhoa||''}`.trim(), SOHV:String(bc1List().length), KG:isoToVN(c.khaiGiang), BG:isoToVN(c.beGiang)};
+}
+function bcdtProblems(c,pa){
+  const E=[], W=[], L=bc1List();
+  if(!L.length) E.push('Chưa có học viên trong Báo cáo 1.');
+  if(!String(c.maKhoa||'').trim()) E.push('Chưa nhập Mã khóa BC1 (mục Thông tin khóa).');
+  if(!c.khaiGiang) E.push('Chưa nhập Ngày khai giảng (mục Thông tin khóa).');
+  if(!c.beGiang) E.push('Chưa nhập Ngày bế giảng (mục Thông tin khóa).');
+  if(c.khaiGiang&&c.beGiang&&c.beGiang<c.khaiGiang) E.push('Ngày bế giảng trước ngày khai giảng — kiểm tra lại Thông tin khóa.');
+  if(!paNgayOk(pa)) E.push('Ngày Phương án đào tạo phải đúng dạng dd/mm/yyyy (vd 16/07/2026).');
+  const nl=L.filter(s=>s.biLoai).length; if(nl) W.push(`Số học viên ghi ${L.length} = toàn bộ danh sách BC1 (trong đó ${nl} người bị loại bôi vàng vẫn được tính, giống file BC1).`);
+  return {E,W};
+}
+function askBCDT(){
+  const c=C(); let pa=DB.phuongAnNgay||PA_NGAY_MD;
+  const draw=()=>{
+    const D=bcdtData(c,pa), Pr=bcdtProblems(c,pa);
+    $('#dlgB').innerHTML=`<div class="muted">Theo mẫu <b>BC_Dao_Tao_Khoa_Hoc</b> (2 trang) — giữ nguyên định dạng, chỉ thay các thông tin dưới đây.</div>
+      <div class="grid" style="margin-top:10px"><label>Ngày Phương án đào tạo (theo công văn)<input type="text" id="bdtPA" value="${esc(pa)}" placeholder="dd/mm/yyyy"></label>
+        <label>&nbsp;<button class="btn sm" id="bdtPAmd" type="button">Về mặc định ${PA_NGAY_MD}</button></label></div>
+      <div class="imp" style="margin-top:10px"><table><thead><tr><th>Mã khóa học</th><th class="c">Hạng</th><th class="c">Số học viên</th><th class="c">Khai giảng</th><th class="c">Bế giảng</th></tr></thead><tbody>
+        <tr><td><b>${esc(D.MA)||'<b style="color:var(--seal)">(chưa có)</b>'}</b></td><td class="c">A1</td><td class="c"><b>${D.SOHV}</b></td><td class="c">${esc(D.KG)||'…'}</td><td class="c">${esc(D.BG)||'…'}</td></tr></tbody></table></div>
+      <div class="muted" style="font-size:12.5px;margin-top:6px">“Gia Lai, ngày ${esc(D.NGAY)||'…'} tháng ${esc(D.THANG)||'…'} năm ${esc(D.NAM)||'…'}” (theo ngày khai giảng) · “Thực hiện Phương án … ngày <b>${esc(D.NGAY_PA)}</b> …” · Ngày phương án được nhớ cho các khóa sau, đổi khi có công văn mới.</div>
+      ${Pr.E.length?`<div class="note warn" style="margin-top:10px">${ic('alert')}<span><b>Chưa xuất được:</b><br>${Pr.E.map(esc).join('<br>')}</span></div>`:''}
+      ${Pr.W.length?`<div class="note" style="margin-top:8px">${ic('info')}<span>${Pr.W.map(esc).join('<br>')}</span></div>`:''}`;
+    $('#bdtPA').onchange=e=>{ pa=e.target.value.trim(); draw(); };
+    $('#bdtPAmd').onclick=()=>{ pa=PA_NGAY_MD; draw(); };
+    const b=[...$('#dlgF').querySelectorAll('button')].find(x=>x.textContent==='Xuất file Word'); if(b) b.disabled=!!Pr.E.length;
+  };
+  dialog('BC đăng ký khóa đào tạo (Word)','',[['Hủy',''],['Xuất file Word','pri',()=>{ const v=$('#bdtPA'); if(v) pa=v.value.trim(); if(bcdtProblems(c,pa).E.length){ draw(); return false; } if(DB.phuongAnNgay!==pa){ DB.phuongAnNgay=pa; save(); } setTimeout(()=>exportBCDT(pa),0); }]]);
+  $('#dlg').classList.add('wide'); draw();
+}
+async function exportBCDT(pa){
+  const c=C(), Pr=bcdtProblems(c,pa); if(Pr.E.length){ dialog('Chưa xuất được',`<div class="note warn">${ic('alert')}<span>${Pr.E.map(esc).join('<br>')}</span></div>`,[['Đóng','pri']]); return false; }
+  const D=bcdtData(c,pa); let buf;
+  try{ buf=wordBuildT('bcdtTpl',D); }catch(e){ dialog('Dừng xuất file',`<div class="note warn">${ic('alert')}<span>${esc(e.message)}</span></div>`,[['Đóng','pri']]); return false; }
+  const P=wordVerifyT('bcdtTpl',buf,D);
+  if(+D.SOHV!==c.students.filter(s=>s.loai==='moi').length) P.push('Số học viên không khớp danh sách BC1');
+  if(P.length){ dialog('Dừng xuất file — phát hiện sai lệch',`<div class="note warn">${ic('alert')}<span>Tool đọc lại file Word vừa tạo và thấy <b>${P.length}</b> chỗ không khớp. File chưa được tải về.</span></div><div style="max-height:300px;overflow:auto;margin-top:10px;font-size:13px">${P.slice(0,40).map(x=>'• '+esc(x)).join('<br>')}</div>`,[['Đóng','pri']]); return false; }
+  saveVerified(buf,`BC_Dao_Tao_Khoa_Hoc_${c.ten}.docx`,'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
   return true;
 }
 async function exportTCVP(){
@@ -1614,6 +1685,7 @@ const PAGES={
  bc1:['Báo cáo 1','Danh sách học viên học mới, sắp theo bảng chữ cái tiếng Việt. Người bị loại vẫn in nhưng bôi vàng.'],
  bc2:['Báo cáo 2','Sheet lần đầu chuyển nguyên thứ tự từ Báo cáo 1, bỏ người bị loại. Sheet thi lại sắp riêng.'],
  sbd:['Số báo danh','Danh sách thí sinh theo khóa thi, lấy từ file máy chủ phòng thi lý thuyết. Xuất đúng mẫu của Hội đồng sát hạch.'],
+ tt:['Thi thử','Mục riêng, độc lập: nạp file tên đuôi _Thithu, xuất danh sách SBD thi thử cùng mẫu với mục Số báo danh. Không ảnh hưởng BC1, BC2, SBD.'],
  moc:['Lịch nộp','Các mốc tính từ ngày khai giảng, bế giảng, ngày ký BC2 và ngày sát hạch. Tích từng việc khi xong.'],
  kt:['Kiểm tra dữ liệu','Những chỗ cần xem lại trước khi nộp. Phần này không in vào báo cáo.'],
  cfg:['Thông tin khóa','Các thông tin in trên tiêu đề báo cáo và dùng để tính mốc nhắc việc.'],
@@ -1651,7 +1723,7 @@ function render(){
   renderAlerts();
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===TAB));
   const v=$('#view');
-  ({nap:vNap,bc1:vBC1,bc2:vBC2,sbd:vSBD,kt:vKT,moc:vMOC,cfg:vCfg,tq:vTQ,hs:vHS,dl:vDL,hd:vHD})[TAB](v,c,ck);
+  ({nap:vNap,bc1:vBC1,bc2:vBC2,sbd:vSBD,tt:vTT,kt:vKT,moc:vMOC,cfg:vCfg,tq:vTQ,hs:vHS,dl:vDL,hd:vHD})[TAB](v,c,ck);
   bindEmpty(); renderSide();
 }
 function statBox(n,l,cls=''){ return `<div class="stat ${cls}"><b>${n}</b><span>${l}</span></div>`; }
@@ -1706,17 +1778,17 @@ function vNap(v,c){
 function renderPending(){
   const el=$('#pend'); if(!el) return;
   if(!pending.length){ el.innerHTML=''; return; }
-  const lab={xml:'File XML Báo cáo 2 (mã + danh sách)',loctl:'Thi lại đã lọc (Nội dung SH lại)',hoso:'File hồ sơ',bc1:'BC1 đã làm',bc2:'BC2 đã làm',gplx:'File GPLX',sbd:'Danh sách phòng thi (SBD)'};
+  const lab={xml:'File XML Báo cáo 2 (mã + danh sách)',loctl:'Thi lại đã lọc (Nội dung SH lại)',hoso:'File hồ sơ',bc1:'BC1 đã làm',bc2:'BC2 đã làm',gplx:'File GPLX',sbd:'Danh sách phòng thi (SBD)',thithu:'Danh sách THI THỬ (mục riêng)'};
   el.innerHTML=`<div class="imp"><table><thead><tr><th>File</th><th>Tên file</th><th>Nhận dạng</th><th class="c">Số dòng</th><th>Nạp vào</th></tr></thead><tbody>
   ${pending.map((p,i)=>`<tr><td><b>${esc(p.file)}</b><div class="muted" style="font-size:12px">sheet ${esc(p.sheet)}</div>${p.note?`<div style="font-size:12px;max-width:340px;white-space:normal;color:${p.target==='skip'?'var(--amber)':'var(--muted)'}">${esc(p.note)}</div>`:''}</td><td style="white-space:normal;max-width:300px">${p.nameOk?`<span class="tag gplx">${ic('check')} ${esc(p.nameMsg)}</span>`:`<span style="color:${p.wrongKhoa?'var(--seal)':'var(--amber)'};font-size:12.5px;${p.wrongKhoa?'font-weight:600':''}">${esc(p.nameMsg||'')}</span>`}${p.goCourse?`<div><button class="btn sm" data-goc2="${esc(p.goCourse)}" style="margin-top:6px">Chuyển sang khóa ${esc(p.wrongKhoa)}</button></div>`:''}</td><td>${lab[p.kind]}</td><td class="c">${p.recs.length}${p.skipped&&p.skipped.length?`<div style="color:var(--seal);font-size:12px;font-weight:600;white-space:nowrap" title="${esc(p.skipped.map(x=>'Dòng '+x.row+': '+(x.ten||'')+' '+(x.id||'')+' — '+x.reason).join('\n'))}">+${p.skipped.length} dòng lỗi</div>`:''}</td><td>
-   <select data-pi="${i}" ${p.userLock?'disabled':''}>${p.kind==='xml'?`${!p.part&&p.target!=='skip'?'<option value="" selected>— Chọn: thi mới hay thi lại? —</option>':''}<option value="xml_moi" ${p.target!=='skip'&&p.part==='moi'?'selected':''}>Mã cho THI MỚI (lần đầu)</option><option value="xml_tl" ${p.target!=='skip'&&p.part==='tl'?'selected':''}>Mã cho THI LẠI</option>`:p.kind==='gplx'?`<option value="gplx">GPLX tra cứu</option>`:p.kind==='sbd'?`<option value="sbd">Khóa thi ${esc(p.khoaThi||'')} — ${esc(p.ngayThi||'')}</option>`:p.kind==='loctl'?`<option value="gcfill" ${p.target!=='skip'?'selected':''}>Điền Nội dung SH lại theo số CCCD</option>`:`<option value="moi" ${p.target==='moi'?'selected':''}>Học mới (BC1)</option><option value="tl" ${p.target==='tl'?'selected':''}>Thi lại — gộp thêm</option>${p.kind==='hoso'&&C().students.some(x=>x.loai==='tl')?`<option value="tlr" ${p.target==='tlr'?'selected':''}>Thi lại — THAY DS cũ (file đã lọc)</option>`:''}`}<option value="skip" ${p.target==='skip'?'selected':''}>Bỏ qua</option></select></td></tr>`).join('')}
+   <select data-pi="${i}" ${p.userLock?'disabled':''}>${p.kind==='xml'?`${!p.part&&p.target!=='skip'?'<option value="" selected>— Chọn: thi mới hay thi lại? —</option>':''}<option value="xml_moi" ${p.target!=='skip'&&p.part==='moi'?'selected':''}>Mã cho THI MỚI (lần đầu)</option><option value="xml_tl" ${p.target!=='skip'&&p.part==='tl'?'selected':''}>Mã cho THI LẠI</option>`:p.kind==='gplx'?`<option value="gplx">GPLX tra cứu</option>`:p.kind==='sbd'?`<option value="sbd">Khóa thi ${esc(p.khoaThi||'')} — ${esc(p.ngayThi||'')}</option>`:p.kind==='thithu'?`<option value="thithu">Mục Thi thử — ${esc(p.label||'')}</option>`:p.kind==='loctl'?`<option value="gcfill" ${p.target!=='skip'?'selected':''}>Điền Nội dung SH lại theo số CCCD</option>`:`<option value="moi" ${p.target==='moi'?'selected':''}>Học mới (BC1)</option><option value="tl" ${p.target==='tl'?'selected':''}>Thi lại — gộp thêm</option>${p.kind==='hoso'&&C().students.some(x=>x.loai==='tl')?`<option value="tlr" ${p.target==='tlr'?'selected':''}>Thi lại — THAY DS cũ (file đã lọc)</option>`:''}`}<option value="skip" ${p.target==='skip'?'selected':''}>Bỏ qua</option></select></td></tr>`).join('')}
   </tbody></table></div><div class="row" style="margin-top:10px"><button class="btn pri" id="btnDoImp">${ic('check')}Nạp ${pending.filter(p=>p.target!=='skip').length} danh sách</button><button class="btn" id="btnCancelImp">Hủy</button></div>`;
   el.querySelectorAll('[data-goc2]').forEach(b=>b.onclick=()=>{ DB.cur=b.dataset.goc2; save(); pending.forEach(applyNameRule); render(); toast('Đã chuyển sang khóa '+C().ten+' — kiểm tra lại cột “Nạp vào” rồi bấm Nạp'); });
   el.querySelectorAll('select[data-pi]').forEach(s=>s.onchange=()=>{ const p=pending[+s.dataset.pi];
     if(p.kind==='xml'&&/^xml_/.test(s.value)){ const part=s.value.slice(4); renderPending(); xmlPick(p,part,()=>renderPending()); return; }
     if(p.kind==='xml'&&!s.value){ renderPending(); return; }
     p.target=s.value; p.userSet=true; renderPending();});
-  pending.forEach(p=>{ if(p.target==='skip') return; if(p.kind==='gplx') p.target='gplx'; if(p.kind==='sbd') p.target='sbd'; });
+  pending.forEach(p=>{ if(p.target==='skip') return; if(p.kind==='gplx') p.target='gplx'; if(p.kind==='sbd') p.target='sbd'; if(p.kind==='thithu') p.target='thithu'; });
   $('#btnDoImp').onclick=preImport; $('#btnCancelImp').onclick=()=>{pending=[];renderPending();};
 }
 /* ===== QUY ƯỚC TÊN FILE: LOẠI_KHÓA[_ghi-chú].đuôi — không dấu, không khoảng trắng ===== */
@@ -1733,12 +1805,13 @@ const NAMES=[
  {id:'gplx', kind:'gplx', target:'gplx',show:'GPLX_<khóa>',       what:'Danh sách GPLX đã có (số GPLX, hạng, ngày cấp, ngày hết hạn)', ex:'GPLX_A1m-42.xlsx'},
  {id:'bc1',  kind:'bc1',  target:'moi', show:'BC1_<khóa>',        what:'Báo cáo 1 đã làm (người bị loại bôi vàng)', ex:'BC1_A1m-42.xlsx'},
  {id:'bc2',  kind:'bc2',  target:null,  show:'BC2_<khóa>',        what:'Báo cáo 2 đã làm (2 sheet: lần đầu và -TL)', ex:'BC2_A1m-42.xlsx'},
+ {id:'thithu', kind:'thithu', target:'thithu', show:'<khóa>_Thithu', what:'Danh sách THI THỬ — vào mục riêng “Thi thử”, độc lập, không ảnh hưởng BC1, BC2, Số báo danh. Phải đúng đuôi _Thithu', ex:'GLĐ-2026-K240_Thithu.xls'},
  {id:'sbd',  kind:'sbd',  target:'sbd', show:'GLĐ_<khóa thi>',    what:'File máy chủ phòng thi lý thuyết — CHỈ file tên bắt đầu bằng GLĐ mới được nạp làm danh sách SBD; mỗi khóa thi chỉ 1 file', ex:'GLĐ-2026-K150.xls'}
 ];
 const OUTNAMES=[['o_bc1','Báo cáo 1 (nộp Sở)','BC1_A1m-42.xlsx'],['o_bc2','Báo cáo 2 (2 sheet: lần đầu và -TL)','BC2_A1m-42.xlsx'],
   ['o_pc08','Báo cáo 2 tách cho PC-08 — phần lần đầu','Danh sách Báo cáo 2 A1m-42_K26A1115_.xlsx'],['o_pc08tl','Báo cáo 2 tách cho PC-08 — phần thi lại','Danh sách Báo cáo 2 A1m-42-TL_K26A1116_.xlsx'],
-  ['o_dssh','DS thí sinh dự sát hạch','DSSATHACH_A1m-42.xlsx'],['o_sbd','Danh sách SBD (mẫu Hội đồng sát hạch)','SBD_GLD-2026-K232.xlsx'],['o_gplx','DS thí sinh có GPLX (số GPLX, ngày cấp, ngày hết hạn)','DSGPLX_GLD-2026-K232.xlsx'],
-  ['o_bcdn','Báo cáo đề nghị tổ chức sát hạch (Word, mục Báo cáo 2)','001_BC_ĐN_TC_SH_A1m-44.docx'],['o_tcvp','DS tra cứu vi phạm (thi mới + thi lại)','TRA_CUU_VI_PHAM_A1m-44_SH_26-10-2026.xlsx'],['o_tb','Thông báo kỳ sát hạch (gửi nhóm Zalo)','THONGBAO_GLD-2026-K232.xlsx'],['o_kt','Danh sách kiểm tra','KIEMTRA_A1m-42.xlsx'],['o_bk','Sao lưu dữ liệu tool','SAOLUU_2026-10-09.json']];
+  ['o_dssh','DS thí sinh dự sát hạch','DSSATHACH_A1m-42.xlsx'],['o_sbd','Danh sách SBD (mẫu Hội đồng sát hạch)','SBD_GLD-2026-K232.xlsx'],['o_tt','Danh sách SBD THI THỬ (mục Thi thử, cùng mẫu SBD)','SBD_THITHU_GLD-2026-K240.xlsx'],['o_gplx','DS thí sinh có GPLX (số GPLX, ngày cấp, ngày hết hạn)','DSGPLX_GLD-2026-K232.xlsx'],
+  ['o_bcdt','BC đăng ký khóa đào tạo (Word, mục Báo cáo 1)','BC_Dao_Tao_Khoa_Hoc_A1m-44.docx'],['o_bcdn','Báo cáo đề nghị tổ chức sát hạch (Word, mục Báo cáo 2)','001_BC_ĐN_TC_SH_A1m-44.docx'],['o_tcvp','DS tra cứu vi phạm (thi mới + thi lại)','TRA_CUU_VI_PHAM_A1m-44_SH_26-10-2026.xlsx'],['o_tb','Thông báo kỳ sát hạch (gửi nhóm Zalo)','THONGBAO_GLD-2026-K232.xlsx'],['o_kt','Danh sách kiểm tra','KIEMTRA_A1m-42.xlsx'],['o_bk','Sao lưu dữ liệu tool','SAOLUU_2026-10-09.json']];
 const asciiName=t=>strip(String(t||'')).replace(/[^A-Za-z0-9\-]+/g,'-').replace(/^-+|-+$/g,'');
 function parseName(fname){
   // bỏ đuôi file và “ (1)”, “ (2)” do trình duyệt thêm khi tải trùng tên
@@ -1746,6 +1819,7 @@ function parseName(fname){
   const a=strip(base);
   const by=id=>NAMES.find(n=>n.id===id);
   let m;
+  if((m=a.match(/^(.+?)_THITHU$/i))) return {rule:by('thithu'), khoa:base.replace(/_[^_]*$/,'').trim()};   // thi thử — mục riêng
   if(/^GLD[-_ ]/i.test(a)) return {rule:by('sbd'), khoa:a.replace(/^GLD[_ ]+/i,'')};   // GLĐ-2026-K232 (tên gốc máy chủ) hoặc GLĐ_…
   if((m=a.match(/^GPLX[_ ]+(.+)$/i))) return {rule:by('gplx'), khoa:m[1]};
   if((m=a.match(/^BC1[_ ]+(.+)$/i)))  return {rule:by('bc1'), khoa:m[1]};
@@ -1770,6 +1844,7 @@ function applyNameRule(item){
   if(!item.userSet) item.target=item.target0;
   if(!pn){ item.nameMsg='Chưa theo quy ước — nên đặt: '+stdName(item); return; }
   if(![].concat(pn.rule.kinds||pn.rule.kind).includes(item.kind)){ item.nameMsg=`Tên file kiểu “${pn.rule.what.split(' —')[0].split(' (')[0]}”, nhưng nội dung lại là loại khác — kiểm tra lại file`; return; }
+  if(item.kind==='thithu'){ if(item.userLock) return; item.nameOk=true; item.nameMsg='Đúng quy ước (đuôi _Thithu) — nạp vào mục Thi thử riêng'; return; }
   if(item.kind==='hoso'){ item.target = pn.rule.target==='tlr' && !C().students.some(x=>x.loai==='tl') ? 'tl' : pn.rule.target; }
   if(item.kind==='sbd'){
     if(item.userLock) return;
@@ -1914,7 +1989,7 @@ async function handleFiles(fl){
   res.forEach(applyNameRule);
   { const seen={}; [...pending,...res].forEach(p=>{ if(p.kind!=='sbd'||p.target==='skip') return; const k=norm(asciiName(p.khoaThi));
       if(seen[k]){ p.target='skip'; p.userLock=true; p.nameOk=false; p.nameMsg=`Trùng khóa thi ${p.khoaThi} với file “${seen[k]}” trong lần nạp này — mỗi khóa thi chỉ 1 file, file này không nạp.`; } else seen[k]=p.file; }); }
-  const pr={hoso:0,bc1:1,bc2:2,gplx:3,sbd:4,loctl:5,xml:6}; res.sort((a,b)=>pr[a.kind]-pr[b.kind]);
+  const pr={hoso:0,bc1:1,bc2:2,gplx:3,sbd:4,loctl:5,xml:6,thithu:7}; res.sort((a,b)=>pr[a.kind]-pr[b.kind]);
   pending=pending.concat(res); TAB='nap'; render();
   if(res.some(p=>p.kind==='xml'&&p.target!=='skip')) setTimeout(()=>askXmlQueue(()=>renderPending()),50);
 }
@@ -1998,7 +2073,7 @@ function vBC1(v,c,ck){
     <span class="search">${ic('search')}<input type="text" id="q1" placeholder="Tìm theo tên, số định danh, địa chỉ" value="${esc(Q.bc1)}"></span>
     <select id="f1"><option value="all">Tất cả</option><option value="loai">Chỉ người bị loại</option><option value="giu">Chỉ người giữ lại</option><option value="gplx">Đã có GPLX</option></select>
     <span class="muted">Hiển thị ${L.length}/${all.length}</span><span style="flex:1"></span>
-    <button class="btn acc" id="xBC1">${ic('download')}Xuất Báo cáo 1</button><button class="btn" id="pBC1" title="In hoặc lưu PDF (chọn “Lưu dưới dạng PDF” trong hộp in)">${ic('print')}In / PDF</button></div>
+    <button class="btn acc" id="xBC1">${ic('download')}Xuất Báo cáo 1</button><button class="btn" id="pBC1" title="In hoặc lưu PDF (chọn “Lưu dưới dạng PDF” trong hộp in)">${ic('print')}In / PDF</button><button class="btn" id="xBCDT" title="Báo cáo đăng ký khóa đào tạo lái xe — file Word, điền theo khóa">${ic('download')}BC đăng ký khóa (Word)</button></div>
     <div class="note" style="margin-top:12px">${ic('info')}<span>Bấm <b>Loại</b> ở mỗi dòng: người đó vẫn có trong BC1 nhưng <b>bôi vàng</b>, lý do lưu trong tool (không in ra file), và <b>tự bỏ khỏi BC2</b>.</span></div>
   </div>
   <div class="selbar ${SEL.size?'':'hide'}" id="selbar"><b id="selN">${SEL.size}</b>&nbsp;người đã chọn <span id="selHid" style="opacity:.75;margin-left:6px"></span><span style="flex:1"></span><button class="btn sm" id="selClear">Bỏ chọn</button><button class="btn sm danger" id="selDel">${ic('trash')}Xóa các dòng đã chọn</button></div>
@@ -2011,7 +2086,7 @@ function vBC1(v,c,ck){
     <td class="c"><button class="btn sm ico-only" data-ed="${s.cccd}" title="Sửa thông tin">${ic('edit')}</button></td></tr>`;}).join('')}</tbody></table></div>`;
   $('#f1').value=Q.f1;
   bindList('q1','f1','bc1','f1');
-  $('#xBC1').onclick=exportBC1; $('#pBC1').onclick=printBC1;
+  $('#xBC1').onclick=exportBC1; $('#pBC1').onclick=printBC1; $('#xBCDT').onclick=askBCDT;
 }
 function vBC2(v,c){
   const moi=bc2MoiList();
@@ -2854,6 +2929,8 @@ const OUT_FORM={o_bc1:'bc1',o_bc2:'bc2',o_dssh:'dssh',o_sbd:'sbd'};
 function formCells(oid){
   if(oid==='o_pc08'||oid==='o_pc08tl') return `<td colspan="2" class="muted" style="white-space:normal;font-size:12.5px">Dùng chung form Báo cáo 2 — ${oid==='o_pc08'?'sheet 1 (Lần đầu)':'sheet 2 (Thi lại)'}</td>`;
   if(oid==='o_bcdn') return `<td><button class="btn sm" data-fbcdn="1">${ic('download')}Tải mẫu</button></td><td class="muted" style="white-space:normal;font-size:12.5px">Mẫu Word cài sẵn (từ file 001_BC_ĐN_TC_SH gốc, có mã {{…}} ở các chỗ thay)</td>`;
+  if(oid==='o_bcdt') return `<td><button class="btn sm" data-fbcdt="1">${ic('download')}Tải mẫu</button></td><td class="muted" style="white-space:normal;font-size:12.5px">Mẫu Word cài sẵn (từ file BC_Dao_Tao_Khoa_Hoc gốc, có mã {{…}} ở các chỗ thay)</td>`;
+  if(oid==='o_tt') return `<td colspan="2" class="muted" style="white-space:normal;font-size:12.5px">Dùng chung form Danh sách SBD</td>`;
   if(oid==='o_tb') return `<td><button class="btn sm" data-ftb="1">${ic('download')}Tải mẫu</button></td><td class="muted" style="white-space:normal;font-size:12.5px">Mẫu thông báo cài sẵn trong tool (điền các ô C5–C9)</td>`;
   const id=OUT_FORM[oid]; if(!id) return `<td class="muted">—</td><td class="muted">—</td>`;
   const f=(DB.forms||{})[id]||{}, list=f.list||[], cur=list.find(x=>x.fid===f.cur);
@@ -2881,6 +2958,7 @@ async function formUpload(file){
 function bindForms(root){
   root.querySelectorAll('[data-fdef]').forEach(b=>b.onclick=async e=>{ e.preventDefault(); const id=b.dataset.fdef; try{ dlBuf(await formDefaultBuf(id),FORM_DEF[id].file); }catch(err){ toast('Lỗi tạo form: '+err.message,5000); } });
   root.querySelectorAll('[data-fbcdn]').forEach(b=>b.onclick=e=>{ e.preventDefault(); dlBlob(tplBytes('bcdnTpl'),'FORM_BC_DN_TC_SH.docx','application/vnd.openxmlformats-officedocument.wordprocessingml.document'); });
+  root.querySelectorAll('[data-fbcdt]').forEach(b=>b.onclick=e=>{ e.preventDefault(); dlBlob(tplBytes('bcdtTpl'),'FORM_BC_DAO_TAO_KHOA_HOC.docx','application/vnd.openxmlformats-officedocument.wordprocessingml.document'); });
   root.querySelectorAll('[data-ftb]').forEach(b=>b.onclick=e=>{ e.preventDefault(); const bin=atob(document.getElementById('tbTpl').textContent.trim()), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); dlBuf(u,'FORM_THONGBAO.xlsx'); });
   root.querySelectorAll('[data-fup]').forEach(b=>b.onclick=e=>{ e.preventDefault(); FORM_ID=b.dataset.fup; $('#formIn').value=''; $('#formIn').click(); });
   root.querySelectorAll('[data-fcur]').forEach(b=>b.onclick=async e=>{ e.preventDefault(); const id=b.dataset.fcur, f=DB.forms[id], m=f.list.find(x=>x.fid===f.cur); const buf=await formLoad(id); if(buf) dlBuf(buf,m.name); });
@@ -3073,6 +3151,155 @@ async function exportSBD(ex){
     <ul style="margin:10px 0 0;padding-left:20px;line-height:1.8"><li><b>${ex.rows.length}/${ex.rows.length}</b> dòng khớp SBD, họ tên, số CMT, ngày sinh, hạng, nội dung</li>
     <li>Thứ tự giữ nguyên như file phòng thi</li><li>Bảng tổng hợp: Thi mới ${st.moiLT} LT / ${st.moiH} Hình · Thi lại ${st.L} LT / ${st.H} Hình / ${st.LH} LT+Hình</li>
     ${chk.W.length?`<li style="color:var(--amber)">Còn ${chk.W.length} cảnh báo ở phần kiểm tra toàn vẹn — nên xem lại</li>`:''}</ul>`,[['Đóng',''],['Làm thông báo Zalo','pri',()=>{ setTimeout(()=>askTB(ex),50); }]]);
+}
+/* ===== THI THỬ — mục riêng, ĐỘC LẬP: file tên <khóa>_Thithu; lưu ở DB.thithu, KHÔNG đụng khóa thi (DB.exams), BC1, BC2, SBD của học viên ===== */
+let QTT='';
+function analyzeThiThu(wb,file,pn){
+  const out=[];
+  for(const sn of wb.SheetNames){
+    const ws=wb.Sheets[sn]; if(!ws||!ws['!ref']) continue;
+    const rg=XLSX.utils.decode_range(ws['!ref']);
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:'',blankrows:true});
+    const h=mapHeader(rows); if(!h) continue;
+    const {r:hr,map}=h; if(map.id==null||map.ten==null) continue;
+    const hasSbd=map.sbd!=null, recs=[], skipped=[];
+    const cellAt=(r,c)=>c==null?null:ws[XLSX.utils.encode_cell({r:rg.s.r+r,c:rg.s.c+c})];
+    const txtAt=(r,c)=>{ const x=cellAt(r,c); if(!x||x.v==null) return ''; if(typeof x.v==='number') return String(x.v); return String(x.v).replace(/^\s+|\s+$/g,''); };
+    for(let r=hr+1;r<rows.length;r++){
+      // Giữ NGUYÊN thứ tự và giá trị gốc của file; chỉ chuyển kiểu khi ô là số và ghi lại cảnh báo (giống mục Số báo danh)
+      const flags=[];
+      let sb='';
+      if(hasSbd){ const sbX=cellAt(r,map.sbd); sb=txtAt(r,map.sbd); if(sbX&&typeof sbX.v==='number'&&Number.isInteger(sbX.v)) sb=String(sbX.v); }
+      const tenR=txtAt(r,map.ten);
+      const cX=cellAt(r,map.id); let cmt=txtAt(r,map.id);
+      if(cX&&typeof cX.v==='number'){ cmt=String(Math.round(cX.v)); if(cmt.length===11||cmt.length===8){ cmt='0'+cmt; flags.push('Số CMT lưu dạng số trong file gốc — đã bổ sung số 0 ở đầu'); } }
+      const nX=cellAt(r,map.ns); let ns=txtAt(r,map.ns);
+      if(nX&&typeof nX.v==='number'){ ns=fmtDate(nX.v); flags.push('Ngày sinh lưu dạng số trong file gốc — đã chuyển sang dd/mm/yyyy'); }
+      const hang=txtAt(r,map.hangG!=null?map.hangG:map.hang), nd=txtAt(r,map.nd!=null?map.nd:map.gc);
+      if(!tenR&&!cmt) continue;
+      if(/^\(\d+\)$/.test(tenR)) continue;
+      const miss=[hasSbd&&!sb&&'SBD',!tenR&&'họ tên',!cmt&&'số CMT'].filter(Boolean);
+      if(miss.length){ skipped.push({row:rg.s.r+r+1, ten:tenR, id:cmt, reason:'Thiếu '+miss.join(', ')}); continue; }
+      recs.push({sbd:sb, ten:tenR, cmt, id:normId(cmt), ns, hang, nd, flags, row:rg.s.r+r+1});
+    }
+    if(!hasSbd) recs.forEach((x,i)=>x.sbd=String(i+1));     // file không có cột SBD: đánh số theo đúng thứ tự dòng trong file
+    const cells=rows.slice(0,hr).flat().map(v=>String(v??'').trim()).filter(Boolean);
+    const kt=cells.map(v=>v.match(/[A-ZĐ]{2,5}-\d{4}-K\d+/)).find(Boolean);
+    const nt=cells.map(v=>v.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)).find(Boolean);
+    const item={file:file.name, sheet:sn, kind:'thithu', target:'thithu', recs, skipped, hasSbd, label:pn.khoa,
+      khoaThi:kt?kt[0]:pn.khoa, ngayThi:nt?pad(nt[1],2)+'/'+pad(nt[2],2)+'/'+nt[3]:''};
+    for(const row of rows.slice(0,hr)){ const i=row.findIndex(v=>/^tong so/.test(norm(v))); if(i<0) continue;
+      const v=row.slice(i+1).find(x=>String(x).trim()!==''); if(v!=null&&/^\d+$/.test(String(v).trim())){ item.tongSo=+String(v).trim(); break; } }
+    if(!hasSbd) item.note='File không có cột SBD — SBD đánh 1, 2, 3… theo đúng thứ tự dòng trong file (không sắp lại).';
+    if(recs.length||skipped.length) out.push(item);
+  }
+  let L=out.some(x=>x.hasSbd)? out.filter(x=>x.hasSbd) : out;
+  if(L.length>1) L.forEach(x=>{ x.target='skip'; x.userLock=true; x.nameMsg=`File có ${L.length} sheet danh sách — mỗi file thi thử chỉ được 1 danh sách. Không nạp, kiểm tra lại file.`; });
+  if(!L.length) toast(`“${file.name}” tên _Thithu nhưng không tìm thấy danh sách (cột họ tên + số CMT/CCCD) — không nạp.`,6000);
+  return L;
+}
+function ttSame(a,b){ return norm(asciiName(a))===norm(asciiName(b)); }
+function curTT(){ return (DB.thithu||[]).find(e=>e.id===DB.curTT) || (DB.thithu||[])[0] || null; }
+/* chạy trước quy trình nạp chung: hỏi khi trùng tên, nạp phần thi thử riêng rồi đánh dấu “bỏ qua” để quy trình chung không đụng tới */
+function ttPre(next){
+  const T=pending.filter(p=>p.kind==='thithu'&&p.target!=='skip');
+  if(!T.length) return false;
+  const ask=T.filter(p=>!p.ttOk&&(DB.thithu||[]).some(e=>ttSame(e.label,p.label)));
+  if(ask.length){
+    dialog('Danh sách thi thử này đã có',`<div class="note warn">${ic('alert')}<span>Mỗi tên thi thử chỉ giữ <b>1 danh sách</b>. Tool không trộn 2 file.</span></div>
+      <ul style="margin:10px 0 0;padding-left:20px;line-height:1.8">${ask.map(p=>{ const o=DB.thithu.find(e=>ttSame(e.label,p.label)); return `<li><b>${esc(p.label)}</b> đã nạp từ <b>${esc(o.file)}</b> lúc ${new Date(o.t).toLocaleString('vi-VN')} (${o.rows.length} thí sinh) — file mới có ${p.recs.length} thí sinh</li>`; }).join('')}</ul>`,
+      [['Giữ danh sách cũ','',()=>{ ask.forEach(p=>{ p.target='skip'; p.ttOk=true; }); setTimeout(next,0); }],
+       ['Thay bằng file mới','pri',()=>{ ask.forEach(p=>{ p.replace=true; p.ttOk=true; }); setTimeout(next,0); }]]);
+    return true;
+  }
+  const names=T.map(p=>p.file).join(', ');
+  snapshot('Nạp thi thử '+names); audCtx('Nạp file thi thử: '+names,'Nạp file');
+  const msg=[]; let last=null;
+  DB.thithu=DB.thithu||[];
+  for(const p of T){
+    const t={id:'t'+Date.now()+Math.random().toString(36).slice(2,6), label:p.label, khoaThi:p.khoaThi, ngayThi:p.ngayThi, file:p.file, t:new Date().toISOString(),
+      tongSo:p.tongSo, sbdAuto:!p.hasSbd, skipped:p.skipped||[], u:userName(),
+      rows:p.recs.map(r=>({sbd:r.sbd, ten:r.ten, cmt:r.cmt, id:r.id, ns:r.ns, hang:r.hang, nd:r.nd, flags:r.flags||[], row:r.row}))};
+    if(DB.thithu.some(e=>ttSame(e.label,t.label))){ if(!p.replace){ p.target='skip'; continue; } DB.thithu=DB.thithu.filter(e=>!ttSame(e.label,t.label)); msg.push(`Đã THAY danh sách thi thử ${t.label}`); }
+    DB.thithu.unshift(t); last=t; msg.push(`Thi thử ${t.label}: ${t.rows.length} thí sinh${t.skipped.length?`, ${t.skipped.length} dòng thiếu thông tin không nạp`:''}`);
+    p.target='skip'; p.ttDone=true;
+  }
+  if(last) DB.curTT=last.id;
+  save();
+  if(msg.length) toast(msg.join(' · '),5000);
+  if(pending.some(p=>p.target!=='skip')) return false;      // còn file khác → quy trình nạp chung chạy tiếp như cũ
+  pending=[]; if(last){ TAB='tt'; QTT=''; } render(); return true;
+}
+function ttStats(t){ return examStats(t); }
+async function exportTT(t){
+  t=t||curTT(); if(!t){ toast('Chưa có danh sách thi thử.'); return; }
+  const cfg=sbdCfgGet(), st=examStats(t), S=sbdScal(cfg,t,st), R=t.rows.map(sbdRow);
+  const F=await formLoad('sbd'); if(F===false) return;
+  let wb, FR=null;
+  if(F){ FR=await formRun(F,'sbd',[{src:0,name:t.khoaThi,S,rows:R}]); if(!FR) return; wb=FR.wb; }
+  else{ wb=new ExcelJS.Workbook(); wb.creator='So Sat Hach A1'; sbdSheet(wb,t.khoaThi,S,R); }
+  const chk=examCheck(t);
+  if(chk.E.length && !confirm(`Danh sách thi thử còn ${chk.E.length} LỖI ở phần “Kiểm tra toàn vẹn dữ liệu”.\nNên xử lý xong rồi mới xuất. Vẫn xuất?`)) return;
+  const exp=t.rows.map(r=>[String(r.sbd),r.ten,r.cmt,r.ns,r.hang,r.nd,gplxHang(r)]);
+  const name=`SBD_THITHU_${asciiName(t.label)}.xlsx`;
+  const ok=await download(wb,name, back=>{
+    let P;
+    if(FR) P=verifyForm(back,FR);
+    else{ const w=back.worksheets[0]; P=verifyRows(w,19,exp,['A','B','C','D','E','F','G'],'DS SBD thi thử');
+    const want={E6:st.a1,H6:st.tong,C12:st.moiLT,D12:st.moiH,C13:st.L,D13:st.H,G13:st.LH,C14:st.cLT,D14:st.cH,G14:st.cLH,B6:'Khóa thi: '+t.khoaThi,B7:'Ngày thi: '+(t.ngayThi||'')};
+    for(const a in want) if(cellStr(w,a)!==String(want[a])) P.push(`Ô ${a}: file ghi “${cellStr(w,a)}”, đúng phải là “${want[a]}”`); }
+    if(st.moiLT+st.moiH!==st.moi) P.push('Thi mới: Lý thuyết + Hình không bằng số SH lần đầu');
+    if(st.moi+st.L+st.H+st.LH+st.unk!==st.tong) P.push('Tổng các loại nội dung không bằng tổng số thí sinh');
+    return P; });
+  if(ok){ t.lastExport=new Date().toISOString(); save(); render();
+    dialog('Đã xuất danh sách SBD thi thử',`<div class="note ok">${ic('check')}<span>Tool đã đọc lại file <b>${esc(name)}</b> và so từng ô với file thi thử:</span></div>
+    <ul style="margin:10px 0 0;padding-left:20px;line-height:1.8"><li><b>${t.rows.length}/${t.rows.length}</b> dòng khớp SBD, họ tên, số CMT, ngày sinh, hạng, nội dung</li>
+    <li>Thứ tự giữ nguyên như file ${esc(t.file)}</li><li>Bảng tổng hợp: Thi mới ${st.moiLT} LT / ${st.moiH} Hình · Thi lại ${st.L} LT / ${st.H} Hình / ${st.LH} LT+Hình</li>
+    ${chk.W.length?`<li style="color:var(--amber)">Còn ${chk.W.length} cảnh báo ở phần kiểm tra toàn vẹn — nên xem lại</li>`:''}</ul>`,[['Đóng','pri']]); }
+}
+function vTT(v){
+  sbdCfgGet();
+  const T=DB.thithu||[], t=curTT();
+  const pick=`<button class="btn pri" id="ttPick">${ic('upload')}Nạp file _Thithu</button>`;
+  if(!t){ v.innerHTML=`<div class="card"><div class="note">${ic('info')}<span>Mục <b>Thi thử</b> chạy riêng, <b>không ảnh hưởng</b> Báo cáo 1, Báo cáo 2, Số báo danh. Nạp file có tên đuôi <b>_Thithu</b> (vd <b>GLĐ-2026-K240_Thithu.xls</b>, <b>A1m-44_Thithu.xlsx</b>) — có thể nạp chung ở mục Nạp dữ liệu, tool tự tách riêng. File không có đuôi _Thithu sẽ <b>không</b> được nhận vào đây.</span></div>
+    <div class="row" style="margin-top:12px">${pick}</div></div>`;
+    $('#ttPick').onclick=()=>$('#fileIn').click(); return; }
+  const st=examStats(t), chk=examCheck(t);
+  const L=t.rows.filter(r=>!QTT||norm(r.ten).includes(norm(QTT))||String(r.cmt).includes(QTT)||String(r.sbd)===QTT.trim());
+  v.innerHTML=`
+  <div class="card"><div class="row" style="flex-wrap:wrap;gap:6px"><b style="margin-right:6px">Danh sách thi thử:</b>${T.map(e=>`<button class="btn sm ${e===t?'pri':''}" data-tt="${e.id}">${esc(e.label)} <span style="opacity:.7">(${e.rows.length})</span></button>`).join('')}<span style="flex:1"></span>${pick}</div>
+    <div class="muted" style="font-size:12.5px;margin-top:8px">Mục riêng, độc lập — không gán SBD cho học viên, không đổi Báo cáo 1, Báo cáo 2 hay danh sách Số báo danh. Chỉ nhận file tên đuôi <b>_Thithu</b>.</div></div>
+  <div class="card"><div class="row">
+    <h2 style="margin:0">Thi thử ${esc(t.label)}</h2><span class="muted">${t.khoaThi!==t.label?'Khóa thi '+esc(t.khoaThi)+' · ':''}Ngày thi ${esc(t.ngayThi||'?')} · nạp từ ${esc(t.file)}</span>
+    <span style="flex:1"></span>
+    <button class="btn loai sm" id="ttDel">${ic('trash')}Xóa danh sách</button>
+    <button class="btn acc" id="xTT">${ic('download')}Xuất danh sách SBD thi thử</button></div>
+    ${t.sbdAuto?`<div class="note warn" style="margin-top:12px">${ic('alert')}<span>File không có cột SBD — SBD được đánh <b>1, 2, 3…</b> theo đúng thứ tự dòng trong file (không sắp lại).</span></div>`:''}
+    ${st.unk?`<div class="note warn" style="margin-top:8px">${ic('alert')}<span>${st.unk} dòng có nội dung sát hạch trống hoặc lạ, không đưa vào bảng tổng hợp.</span></div>`:''}
+  </div>
+  <div class="card"><div class="row"><h2 style="margin:0">Kiểm tra toàn vẹn dữ liệu</h2>
+    ${chk.E.length?`<span class="tag" style="background:var(--seal-tint);color:var(--seal)">${chk.E.length} lỗi</span>`:`<span class="tag gplx">${ic('check')} Không có lỗi</span>`}
+    ${chk.W.length?`<span class="tag tl">${chk.W.length} cảnh báo</span>`:''}</div>
+    <div class="muted" style="margin:6px 0 4px">Số dòng đọc được: <b>${t.rows.length}</b>${t.tongSo!=null?` · file ghi Tổng số: <b>${t.tongSo}</b>`:''}${t.skipped&&t.skipped.length?` · <b style="color:var(--seal)">${t.skipped.length} dòng thiếu thông tin không nạp</b>`:''}</div>
+    ${[...chk.E.map(x=>['err',x]),...chk.W.map(x=>['warn',x]),...chk.I.map(x=>['info',x])].slice(0,40).map(([l,x])=>`<div class="lv-${l}" style="font-weight:500;font-size:13px;margin-top:4px">• ${esc(x)}</div>`).join('')}
+    ${(t.skipped||[]).slice(0,20).map(x=>`<div class="lv-err" style="font-size:13px;margin-top:4px">• Dòng ${x.row}: ${esc(x.ten||'(không tên)')} ${esc(x.id||'')} — ${esc(x.reason)}</div>`).join('')}</div>
+  <div class="card" style="padding:0;overflow:auto"><table class="sum">
+    <thead><tr><th>Lần thi</th><th class="c">Hạng</th><th class="c">Lý thuyết</th><th class="c">Hình</th><th class="c">Đường</th><th class="c">LT + Đường</th><th class="c">LT + Hình</th><th class="c">Hình + Đường</th></tr></thead>
+    <tbody>
+     <tr><td><b>Thi mới</b> <span class="muted">(${st.moi})</span></td><td class="c">A1</td><td class="c">${st.moiLT}</td><td class="c">${st.moiH}</td><td></td><td></td><td></td><td></td></tr>
+     <tr><td><b>Thi lại</b> <span class="muted">(${st.L+st.H+st.LH})</span></td><td class="c">A1</td><td class="c">${st.L}</td><td class="c">${st.H}</td><td></td><td></td><td class="c">${st.LH}</td><td></td></tr>
+     <tr class="tot"><td><b>Tổng</b></td><td></td><td class="c"><b>${st.cLT}</b></td><td class="c"><b>${st.cH}</b></td><td></td><td></td><td class="c"><b>${st.cLH}</b></td><td></td></tr>
+    </tbody></table></div>
+  <div class="card"><div class="row"><span class="search">${ic('search')}<input type="text" id="qtt" placeholder="Tìm theo tên, số CMT hoặc SBD" value="${esc(QTT)}"></span><span class="muted">Hiển thị ${L.length}/${t.rows.length} · tiêu đề in dùng chung với mục Số báo danh</span></div></div>
+  <div class="card tblwrap"><table><thead><tr><th class="c">SBD</th><th>Họ và tên</th><th class="c">Số CMT</th><th class="c">Ngày sinh</th><th class="c">Hạng</th><th>Nội dung sát hạch</th><th class="c">Hạng GPLX đã có</th></tr></thead>
+  <tbody>${L.map(r=>{ const g=gplxHang(r);
+    return `<tr><td class="c sbdv">${esc(r.sbd)}</td><td class="nm">${esc(r.ten)}</td><td class="c">${esc(r.cmt)}</td><td class="c">${esc(r.ns)}</td><td class="c">${esc(r.hang)}</td>
+      <td>${r.nd?`<span class="tag ${/^moi/.test(ndClass(r.nd))?'moi':'tl'}">${esc(r.nd)}</span>`:''}</td><td class="c">${g?`<b>${esc(g)}</b>`:''}</td></tr>`;}).join('')}</tbody></table></div>`;
+  v.querySelectorAll('[data-tt]').forEach(b=>b.onclick=()=>{ DB.curTT=b.dataset.tt; QTT=''; save(); render(); });
+  $('#ttPick').onclick=()=>$('#fileIn').click();
+  $('#ttDel').onclick=()=>{ if(confirm('Xóa danh sách thi thử '+t.label+' khỏi tool? (không ảnh hưởng dữ liệu khác)')){ snapshot('Xóa thi thử '+t.label); DB.thithu=DB.thithu.filter(e=>e!==t); DB.curTT=(DB.thithu[0]||{}).id; save(); render(); } };
+  $('#xTT').onclick=()=>exportTT(t);
+  const q=$('#qtt'); q.oninput=()=>{ QTT=q.value; clearTimeout(q._t); q._t=setTimeout(()=>{ render(); const n=$('#qtt'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); },250); };
 }
 async function exportKT(ck){
   const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('KIỂM TRA');
@@ -3510,6 +3737,7 @@ function applyRestore(o,mode,pick,src){
     DB.exams=DB.exams||[];
     for(const e of (o.exams||[])){ const i=DB.exams.findIndex(x=>norm(asciiName(x.khoaThi))===norm(asciiName(e.khoaThi))); if(i>=0) DB.exams[i]=e; else DB.exams.push(e); }
     DB.arc=[...(DB.arc||[]),...(o.arc||[]).filter(a=>!(DB.arc||[]).some(b=>b.id===a.id))];
+    if((o.thithu||[]).length){ DB.thithu=DB.thithu||[]; for(const e of o.thithu){ const i=DB.thithu.findIndex(x=>ttSame(x.label,e.label)); if(i>=0) DB.thithu[i]=e; else DB.thithu.push(e); } }
     if(!Object.keys(DB.forms||{}).length&&o.forms) DB.forms=o.forms;
     if(!Object.keys(DB.mau||{}).length&&o.mau) DB.mau=o.mau;
     if(!DB.courses[DB.cur]) DB.cur=pick[0].k.id;

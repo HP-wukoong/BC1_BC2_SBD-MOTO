@@ -21,7 +21,7 @@ for sub in ('vietnamese', 'latin'):
     for w in (400, 500, 600, 700):
         css += f"@font-face{{font-family:'Be Vietnam Pro';font-style:normal;font-weight:{w};font-display:swap;src:url(data:font/woff2;base64,{b64(F % (sub, w))}) format('woff2');unicode-range:{UR[sub]}}}\n"
 ps = rd('src/installer.ps1'); assert '</script' not in ps.lower()
-html = (src.replace('/*TB_TEMPLATE*/', b64('src/thongbao_mau.xlsx'), 1).replace('/*BCDN_TEMPLATE*/', b64('src/bcdn_mau.docx'), 1)
+html = (src.replace('/*TB_TEMPLATE*/', b64('src/thongbao_mau.xlsx'), 1).replace('/*BCDN_TEMPLATE*/', b64('src/bcdn_mau.docx'), 1).replace('/*BCDT_TEMPLATE*/', b64('src/bcdt_mau.docx'), 1)
         .replace('/*PS_INSTALLER*/', ps, 1).replace('/*FONTS*/', css, 1).replace('/*XLSX_LIB*/', x, 1).replace('/*EXCELJS_LIB*/', e, 1))
 ver = re.search(r"const VERSIONS=\[\s*\['([^']+)'", src).group(1)
 assert '/*PWA_HEAD*/' in html
