@@ -18,13 +18,16 @@ UR = {'vietnamese': 'U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1
       'latin': 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD'}
 css = ''
 for sub in ('vietnamese', 'latin'):
-    for w in (400, 500, 600, 700):
-        css += f"@font-face{{font-family:'Be Vietnam Pro';font-style:normal;font-weight:{w};font-display:swap;src:url(data:font/woff2;base64,{b64(F % (sub, w))}) format('woff2');unicode-range:{UR[sub]}}}\n"
+    for w, st in ((400, 'normal'), (500, 'normal'), (600, 'normal'), (700, 'normal'), (800, 'normal'), (900, 'normal'), (600, 'italic'), (800, 'italic')):
+        css += f"@font-face{{font-family:'Be Vietnam Pro';font-style:{st};font-weight:{w};font-display:swap;src:url(data:font/woff2;base64,{b64((F % (sub, w)).replace('-normal.', '-' + st + '.'))}) format('woff2');unicode-range:{UR[sub]}}}\n"
 ps = rd('src/installer.ps1'); assert '</script' not in ps.lower()
 html = (src.replace('/*TB_TEMPLATE*/', b64('src/thongbao_mau.xlsx'), 1).replace('/*BCDN_TEMPLATE*/', b64('src/bcdn_mau.docx'), 1).replace('/*BCDT_TEMPLATE*/', b64('src/bcdt_mau.docx'), 1)
+        .replace('/*PDF_FONT_R*/', b64('src/fonts/LS-Regular.ttf'), 1).replace('/*PDF_FONT_B*/', b64('src/fonts/LS-Bold.ttf'), 1)
+        .replace('/*TBP_LOGO*/', b64('src/poster/logo.png'), 1).replace('/*TBP_HDR*/', b64('src/poster/hdr.jpg'), 1).replace('/*TBP_RIDER*/', b64('src/poster/rider.png'), 1)
         .replace('/*PS_INSTALLER*/', ps, 1).replace('/*FONTS*/', css, 1).replace('/*XLSX_LIB*/', x, 1).replace('/*EXCELJS_LIB*/', e, 1))
 ver = re.search(r"const VERSIONS=\[\s*\['([^']+)'", src).group(1)
 assert '/*PWA_HEAD*/' in html
+for k in ('PDF_FONT_R', 'PDF_FONT_B', 'TBP_LOGO', 'TBP_HDR', 'TBP_RIDER', 'BCDT_TEMPLATE'): assert '/*' + k + '*/' not in html, k
 
 # 1) bản file
 os.makedirs(P('dist'), exist_ok=True)

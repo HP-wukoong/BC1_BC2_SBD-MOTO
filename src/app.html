@@ -207,6 +207,12 @@ textarea{width:100%;min-height:130px;font-family:Consolas,"Cascadia Mono",monosp
 dialog{border:0;border-radius:14px;padding:0;max-width:580px;width:calc(100% - 32px);box-shadow:0 24px 64px rgba(20,33,61,.3);color:var(--ink)}
 dialog::backdrop{background:rgba(17,42,74,.45)}
 dialog.wide{max-width:1180px}
+dialog.xl{max-width:1360px;width:96vw}
+.tbp{display:grid;grid-template-columns:minmax(300px,430px) 1fr;gap:18px;align-items:start}
+.tbpL{max-height:calc(100vh - 210px);overflow:auto;padding-right:8px}
+.tbpR{position:sticky;top:0;text-align:center}
+.tbpR canvas{width:auto;max-width:100%;max-height:calc(100vh - 250px);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.12);background:#fff}
+@media (max-width:900px){.tbp{grid-template-columns:1fr}.tbpL{max-height:none}}
 #lock{position:fixed;inset:0;z-index:2000;background:#14213d;display:flex;align-items:center;justify-content:center}
 #lock.hide{display:none}
 .lockbox{background:#fff;border-radius:18px;padding:30px 28px;width:330px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.35)}
@@ -310,6 +316,11 @@ details summary{cursor:pointer}
 <script type="text/plain" id="tbTpl">/*TB_TEMPLATE*/</script>
 <script type="text/plain" id="bcdnTpl">/*BCDN_TEMPLATE*/</script>
 <script type="text/plain" id="bcdtTpl">/*BCDT_TEMPLATE*/</script>
+<script type="text/plain" id="pdfFontR">/*PDF_FONT_R*/</script>
+<script type="text/plain" id="pdfFontB">/*PDF_FONT_B*/</script>
+<script type="text/plain" id="tbpLogo">/*TBP_LOGO*/</script>
+<script type="text/plain" id="tbpHdr">/*TBP_HDR*/</script>
+<script type="text/plain" id="tbpRider">/*TBP_RIDER*/</script>
 <script type="text/plain" id="psInstaller">/*PS_INSTALLER*/</script>
 <script>/*XLSX_LIB*/</script>
 <script>/*EXCELJS_LIB*/</script>
@@ -400,6 +411,8 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.7','21/10/2026',['Số báo danh: nút “PDF dán bảng tin” — file PDF A4 đúng bố cục mẫu (SBD, họ tên, số CMT, ngày sinh, hạng, nội dung; trang 1: 39 người, trang sau: 46), tool đọc lại từng dòng trước khi tải về',
+                       'Thông báo kỳ sát hạch làm lại theo mẫu poster: xem trước trực tiếp, sửa được mọi chữ và ảnh, xuất ảnh PNG gửi Zalo và PDF in A4']],
   ['4.6','20/10/2026',['Báo cáo 1: nút “BC đăng ký khóa (Word)” — điền theo khóa: ngày theo khai giảng, mã khóa, số học viên BC1, khai giảng/bế giảng; ngày Phương án đào tạo mặc định 16/07/2026, sửa được khi có công văn mới',
                        'Mục mới “Thi thử” (độc lập): nạp file tên đuôi _Thithu, xuất danh sách SBD thi thử cùng mẫu Số báo danh, đọc lại đối chiếu từng ô — không ảnh hưởng BC1, BC2, SBD']],
   ['4.5','16/10/2026',['Dữ liệu & bảo mật: khu “Thư mục sao lưu” — xem danh sách file trong thư mục sao lưu (bản mới nhất, bản theo ngày, thủ công, trước nâng cấp, hồ sơ từng khóa), xem & khôi phục, tải, xóa bản cũ; ghi và sao chép đường dẫn thư mục để mở bằng File Explorer',
@@ -1811,7 +1824,7 @@ const NAMES=[
 const OUTNAMES=[['o_bc1','Báo cáo 1 (nộp Sở)','BC1_A1m-42.xlsx'],['o_bc2','Báo cáo 2 (2 sheet: lần đầu và -TL)','BC2_A1m-42.xlsx'],
   ['o_pc08','Báo cáo 2 tách cho PC-08 — phần lần đầu','Danh sách Báo cáo 2 A1m-42_K26A1115_.xlsx'],['o_pc08tl','Báo cáo 2 tách cho PC-08 — phần thi lại','Danh sách Báo cáo 2 A1m-42-TL_K26A1116_.xlsx'],
   ['o_dssh','DS thí sinh dự sát hạch','DSSATHACH_A1m-42.xlsx'],['o_sbd','Danh sách SBD (mẫu Hội đồng sát hạch)','SBD_GLD-2026-K232.xlsx'],['o_tt','Danh sách SBD THI THỬ (mục Thi thử, cùng mẫu SBD)','SBD_THITHU_GLD-2026-K240.xlsx'],['o_gplx','DS thí sinh có GPLX (số GPLX, ngày cấp, ngày hết hạn)','DSGPLX_GLD-2026-K232.xlsx'],
-  ['o_bcdt','BC đăng ký khóa đào tạo (Word, mục Báo cáo 1)','BC_Dao_Tao_Khoa_Hoc_A1m-44.docx'],['o_bcdn','Báo cáo đề nghị tổ chức sát hạch (Word, mục Báo cáo 2)','001_BC_ĐN_TC_SH_A1m-44.docx'],['o_tcvp','DS tra cứu vi phạm (thi mới + thi lại)','TRA_CUU_VI_PHAM_A1m-44_SH_26-10-2026.xlsx'],['o_tb','Thông báo kỳ sát hạch (gửi nhóm Zalo)','THONGBAO_GLD-2026-K232.xlsx'],['o_kt','Danh sách kiểm tra','KIEMTRA_A1m-42.xlsx'],['o_bk','Sao lưu dữ liệu tool','SAOLUU_2026-10-09.json']];
+  ['o_bcdt','BC đăng ký khóa đào tạo (Word, mục Báo cáo 1)','BC_Dao_Tao_Khoa_Hoc_A1m-44.docx'],['o_bcdn','Báo cáo đề nghị tổ chức sát hạch (Word, mục Báo cáo 2)','001_BC_ĐN_TC_SH_A1m-44.docx'],['o_tcvp','DS tra cứu vi phạm (thi mới + thi lại)','TRA_CUU_VI_PHAM_A1m-44_SH_26-10-2026.xlsx'],['o_sbdpdf','DS SBD dạng PDF để in dán bảng tin (mục Số báo danh)','SBD_GLD-2026-K242.pdf'],['o_tbpng','Thông báo kỳ sát hạch dạng ảnh (Zalo) / PDF in A4','THONGBAO_GLD-2026-K232.png / .pdf'],['o_tb','Thông báo kỳ sát hạch — Excel mẫu cũ','THONGBAO_GLD-2026-K232.xlsx'],['o_kt','Danh sách kiểm tra','KIEMTRA_A1m-42.xlsx'],['o_bk','Sao lưu dữ liệu tool','SAOLUU_2026-10-09.json']];
 const asciiName=t=>strip(String(t||'')).replace(/[^A-Za-z0-9\-]+/g,'-').replace(/^-+|-+$/g,'');
 function parseName(fname){
   // bỏ đuôi file và “ (1)”, “ (2)” do trình duyệt thêm khi tải trùng tên
@@ -2167,7 +2180,7 @@ function deleteSelected(){
 
 /* ---- hộp thoại ---- */
 function dialog(title, body, buttons){
-  const d=$('#dlg'); d.classList.remove('wide'); $('#dlgT').textContent=title; $('#dlgB').innerHTML=body; const f=$('#dlgF'); f.innerHTML='';
+  const d=$('#dlg'); d.classList.remove('wide','xl'); $('#dlgT').textContent=title; $('#dlgB').innerHTML=body; const f=$('#dlgF'); f.innerHTML='';
   for(const [lab,cls,fn] of buttons){ const b=document.createElement('button'); b.className='btn '+(cls||''); b.textContent=lab; b.onclick=()=>{ if(fn&&fn()===false) return; d.close(); }; f.appendChild(b); }
   d.showModal(); return d;
 }
@@ -2224,7 +2237,7 @@ function vSBD(v){
     <h2 style="margin:0">Khóa thi ${esc(ex.khoaThi)}</h2><span class="muted">Ngày thi ${esc(ex.ngayThi||'?')} · nạp từ ${esc(ex.file)}</span>
     <span style="flex:1"></span>
     <button class="btn loai sm" id="exDel">${ic('trash')}Xóa khóa thi</button>
-    <button class="btn acc" id="xSBD" ${examBad(ex)?'disabled':''}>${ic('download')}Xuất danh sách SBD</button><button class="btn" id="xGPLX" ${examBad(ex)?'disabled':''} title="Thí sinh có GPLX: số GPLX, ngày cấp, ngày hết hạn (theo file GPLX_<khóa>)">${ic('download')}Xuất DS có GPLX (${ex.rows.filter(r=>gplxHang(r)).length})</button><button class="btn" id="pSBD" ${examBad(ex)?'disabled':''}>${ic('print')}In / PDF</button><button class="btn" id="tbSBD" ${examBad(ex)?'disabled':''} title="Thông báo kỳ sát hạch gửi nhóm Zalo (theo mẫu)">${ic('bell')}Thông báo Zalo</button></div>
+    <button class="btn acc" id="xSBD" ${examBad(ex)?'disabled':''}>${ic('download')}Xuất danh sách SBD</button><button class="btn" id="xGPLX" ${examBad(ex)?'disabled':''} title="Thí sinh có GPLX: số GPLX, ngày cấp, ngày hết hạn (theo file GPLX_<khóa>)">${ic('download')}Xuất DS có GPLX (${ex.rows.filter(r=>gplxHang(r)).length})</button><button class="btn" id="pSBD" ${examBad(ex)?'disabled':''}>${ic('print')}In / PDF</button><button class="btn" id="pdfSBD" ${examBad(ex)?'disabled':''} title="File PDF A4 danh sách SBD để in dán bảng tin (SBD, họ tên, số CMT, ngày sinh, hạng, nội dung)">${ic('download')}PDF dán bảng tin</button><button class="btn" id="tbSBD" ${examBad(ex)?'disabled':''} title="Thông báo kỳ sát hạch — ảnh gửi Zalo / PDF in A4, sửa được mọi nội dung">${ic('bell')}Thông báo (ảnh / PDF)</button></div>
     ${examBad(ex)?`<div class="note warn" style="margin-top:12px;border-color:var(--seal)">${ic('alert')}<span><b>Danh sách này không hợp lệ</b>: nạp từ “${esc(ex.file)}” — không phải file máy chủ phòng thi (tên bắt đầu bằng GLĐ). Không dùng để xuất SBD. Bấm <b>Xóa khóa thi</b> để bỏ.</span></div>`:''}
     ${st.noTool?`<div class="note warn" style="margin-top:12px">${ic('alert')}<span><b>${st.noTool}</b> thí sinh không có trong dữ liệu tool nên chưa biết hạng GPLX đã có — bảng tổng hợp coi như <b>chưa có GPLX</b>. Nạp hồ sơ của các khóa đó (hoặc file GPLX) nếu cần chính xác.</span></div>`:''}
     ${st.unk?`<div class="note warn" style="margin-top:8px">${ic('alert')}<span>${st.unk} dòng có nội dung sát hạch lạ, không đưa vào bảng tổng hợp.</span></div>`:''}
@@ -2254,7 +2267,7 @@ function vSBD(v){
   if($('#qey')) $('#qey').onchange=e=>{ QEY=e.target.value; render(); };
   const qe=$('#qe'); qe.oninput=()=>{ QE=qe.value; clearTimeout(qe._t); qe._t=setTimeout(()=>{ render(); const n=$('#qe'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); },250); };
   $('#exDel').onclick=()=>{ if(confirm('Xóa khóa thi '+ex.khoaThi+' khỏi tool? (SBD đã gán cho học viên vẫn giữ)')){ snapshot('Xóa khóa thi '+ex.khoaThi); DB.exams=DB.exams.filter(e=>e!==ex); DB.curExam=(DB.exams[0]||{}).id; save(); render(); } };
-  $('#xSBD').onclick=()=>exportSBD(ex); $('#xGPLX').onclick=()=>askGPLX(ex); $('#pSBD').onclick=()=>printSBD(ex); $('#tbSBD').onclick=()=>askTB(ex);
+  $('#xSBD').onclick=()=>exportSBD(ex); $('#xGPLX').onclick=()=>askGPLX(ex); $('#pSBD').onclick=()=>printSBD(ex); $('#pdfSBD').onclick=()=>exportSBDPdf(ex); $('#tbSBD').onclick=()=>askTB(ex);
   v.querySelectorAll('[data-cf]').forEach(i=>i.onchange=()=>{ cfg[i.dataset.cf]=i.value.trim(); save(); });
   const q=$('#qs'); q.oninput=()=>{ QS=q.value; clearTimeout(q._t); q._t=setTimeout(()=>{ render(); const n=$('#qs'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); },250); };
 }
@@ -2410,17 +2423,476 @@ function copyText(t){
   if(navigator.clipboard&&navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(()=>true,()=>fb());
   return Promise.resolve(fb());
 }
-function askTB(ex){
-  ex=ex||curExam(); const V=tbValues(ex);
-  const F=[['ngay','Ngày sát hạch (dd/mm/yyyy)'],['tapTrung','Thời gian tập trung'],['khaiMac','Giờ khai mạc'],['diemDanh','Giờ điểm danh sát hạch lại'],['diaDiem','Địa điểm']];
-  dialog('Thông báo kỳ sát hạch'+(ex?' — '+ex.khoaThi:''),`<div class="muted" style="margin-bottom:8px">Theo mẫu “MẪU THÔNG BÁO SHLX A1”. Ngày sát hạch lấy từ file GLĐ; các mục khác tool nhớ cho lần sau.</div>
-    <div class="grid">${F.map(([k,l])=>`<label>${l}<input type="text" id="tb_${k}" value="${esc(V[k]||'')}"></label>`).join('')}</div>
-    <div class="muted" style="margin:10px 0 4px">Nội dung gửi nhóm Zalo (xem trước):</div><textarea id="tbPrev" readonly style="width:100%;height:190px;font-size:12.5px"></textarea>`,
-    [['Đóng',''],['Sao chép nội dung Zalo','',()=>{ const W=read(); copyText(tbText(ex,W)).then(ok=>toast(ok?'Đã sao chép — mở Zalo và dán (Ctrl+V) vào nhóm.':'Không sao chép được — bôi đen khung xem trước rồi Ctrl+C.',5000)); return false; }],
-     ['Xuất file thông báo (Excel)','pri',()=>{ const W=read(); exportTB(ex,W); }]]);
-  const read=()=>{ const W={}; F.forEach(([k])=>W[k]=$('#tb_'+k).value.trim()); const T=tbCfgGet(); ['tapTrung','khaiMac','diemDanh','diaDiem'].forEach(k=>T[k]=W[k]); if(ex){ ex.tb={ngay:W.ngay}; } save(); $('#tbPrev').value=tbText(ex,W); return W; };
-  $('#dlgB').querySelectorAll('input').forEach(i=>i.oninput=read); read();
+/* ===== THÔNG BÁO KỲ SÁT HẠCH dạng ẢNH / PDF (theo mẫu poster) — mọi chữ, ảnh đều sửa được; vẽ bằng canvas, xuất PNG gửi Zalo và PDF in A4 ===== */
+const TBP_DEF={
+  cty1:'CÔNG TY CỔ PHẦN ĐÀO TẠO VÀ DỊCH VỤ GTVT', cty2:'BÌNH ĐỊNH', ctySlogan:'An toàn hôm nay – Vững chắc ngày mai',
+  tb:'THÔNG BÁO', tieuDe:'KỲ SÁT HẠCH CẤP GIẤY PHÉP LÁI XE', hang:'HẠNG A1', pill:'LÁI XE AN TOÀN',
+  tuTin:'Tự tin\nVượt qua\nKỳ thi!', badge1:'HẠNG A1', badge2:'(Xe mô tô đến 125cm³)',
+  i1l:'NGÀY SÁT HẠCH', i1v:'{NGAY}', i1s:'({THU})',
+  i2l:'THỜI GIAN TẬP TRUNG', i2v:'{TAP_TRUNG}', i2s:'(Có mặt đúng giờ tập trung)',
+  i3l:'GIỜ KHAI MẠC', i3v:'{KHAI_MAC}', i3s:'(Tại Hội trường)',
+  i4l:'ĐIỂM DANH SÁT HẠCH LẠI', i4v:'{DIEM_DANH}', i4s:'(Học viên thi lại)',
+  wT:'LƯU Ý QUAN TRỌNG CHO HỌC VIÊN SÁT HẠCH LẠI',
+  wB:'Học viên **SÁT HẠCH LẠI** (thi lại 1 hay nhiều nội dung) **PHẢI CÓ MẶT ĐÚNG {DIEM_DANH}** ngày sát hạch.\nHội đồng sát hạch **điểm danh đầu buổi thi** – chỉ áp dụng cho học viên sát hạch lại.\nHọc viên sát hạch lại không có mặt khi điểm danh sẽ **KHÔNG ĐƯỢC** thực hiện phần thi của mình.',
+  sH:'CÁC BƯỚC THỰC HIỆN',
+  s1t:'TẬP TRUNG – HỘI TRƯỜNG', s1g:'{TAP_TRUNG}', s1b:'Có mặt tại **Hội trường – {DIA_DIEM}**.\nKiểm tra danh sách, thực hiện thủ tục.\nNghe phổ biến quy trình sát hạch.',
+  s2t:'KHAI MẠC – ĐIỂM DANH', s2g:'{KHAI_MAC}', s2m:'KHAI MẠC', s2b:'Khai mạc kỳ sát hạch tại Hội trường.\n**Điểm danh** đối với học viên **sát hạch lại** ({DIEM_DANH}).\nMỗi phần thi xong, ký đầy đủ biên bản bài thi.',
+  s3t:'SÁT HẠCH LÝ THUYẾT', s3g:'', s3b:'Khi được gọi tên (**theo SBD từ nhỏ đến lớn**), di chuyển từ Hội trường đến khu vực chờ/phòng thi.\nThi xong chờ tại khu vực cán bộ hướng dẫn.\nKhông đạt Lý thuyết: **dừng sát hạch** theo quy định.',
+  s4t:'SÁT HẠCH HÌNH', s4g:'', s4b:'Đạt Lý thuyết → di chuyển đến khu vực Hình, **đợi gọi tên**, lên xe theo hướng dẫn.\nThi lại Hình / miễn Lý thuyết: tập trung tại khu vực Hình.\n**ĐẠT Hình** → nhận phiếu hẹn GPLX tại Phòng tổng hợp.',
+  vang:'**Cần chuyển phát GPLX về nhà?** Đăng ký tại Phòng tổng hợp khi nhận phiếu hẹn.',
+  lT:'NHỮNG LƯU Ý BẮT BUỘC',
+  lB:'Học viên **mang theo Thẻ căn cước**. Học viên đã có **GPLX ô tô** phải mang theo GPLX ô tô.\n**TUYỆT ĐỐI KHÔNG MANG ĐIỆN THOẠI DI ĐỘNG** và các thiết bị thu, phát sóng vào phòng sát hạch Lý thuyết cũng như khi lên xe sát hạch.\nDi chuyển theo **hướng dẫn của cán bộ phụ trách**.\n**Không tự ý rời khu vực chờ**, không chen lấn, gây mất trật tự trong quá trình sát hạch.\nThực hiện đúng trình tự **Lý thuyết → Hình**. Không đạt nội dung nào thì dừng sát hạch nội dung tiếp theo.',
+  mT:'TRƯỚC KHI LÊN XE SÁT HẠCH\nĐỘI MŨ BẢO HIỂM', mB:'Đội mũ bảo hiểm **đúng tiêu chuẩn** và **cài quai mũ đúng quy cách** trước khi lên xe sát hạch.', mS:'An toàn\nlà trên hết!',
+  note:'★ ĐỀ NGHỊ TOÀN THỂ HỌC VIÊN NGHIÊM TÚC THỰC HIỆN, ĐỂ KỲ SÁT HẠCH DIỄN RA AN TOÀN, THUẬN LỢI VÀ ĐÚNG QUY ĐỊNH ★',
+  fSlogan:'Đồng hành cùng bạn trên mọi nẻo đường', fRight:'Lái xe an toàn là bảo vệ\nchính bạn và túi tiền\ncủa người thân!'
+};
+const TBP_F=[
+  ['Đầu trang',[['cty1','Tên công ty (dòng 1)'],['cty2','Tên công ty (dòng 2, chữ lớn)'],['ctySlogan','Khẩu hiệu dưới tên công ty'],['tb','Băng đỏ'],['tieuDe','Tiêu đề',1],['hang','Hạng (chữ vàng lớn)'],['pill','Nhãn nhỏ'],['tuTin','Chữ góc phải (mỗi dòng 1 hàng)',1],['badge1','Huy hiệu — dòng 1'],['badge2','Huy hiệu — dòng 2']]],
+  ['4 ô thông tin',[['i1l','Ô 1 — nhãn'],['i1v','Ô 1 — giá trị'],['i1s','Ô 1 — ghi chú'],['i2l','Ô 2 — nhãn'],['i2v','Ô 2 — giá trị'],['i2s','Ô 2 — ghi chú'],['i3l','Ô 3 — nhãn'],['i3v','Ô 3 — giá trị'],['i3s','Ô 3 — ghi chú'],['i4l','Ô 4 — nhãn'],['i4v','Ô 4 — giá trị'],['i4s','Ô 4 — ghi chú']]],
+  ['Lưu ý cho học viên sát hạch lại',[['wT','Tiêu đề'],['wB','Các ý (mỗi dòng 1 ý)',1]]],
+  ['Các bước thực hiện',[['sH','Tiêu đề phần'],['s1t','Bước 1 — tên'],['s1g','Bước 1 — giờ (nhãn vàng, để trống = không hiện)'],['s1b','Bước 1 — các ý',1],['s2t','Bước 2 — tên'],['s2g','Bước 2 — giờ'],['s2m','Bước 2 — chữ trên màn hình'],['s2b','Bước 2 — các ý',1],['s3t','Bước 3 — tên'],['s3g','Bước 3 — giờ'],['s3b','Bước 3 — các ý',1],['s4t','Bước 4 — tên'],['s4g','Bước 4 — giờ'],['s4b','Bước 4 — các ý (ý cuối dấu tích xanh lá)',1]]],
+  ['Dải vàng',[['vang','Nội dung',1]]],
+  ['Những lưu ý bắt buộc',[['lT','Tiêu đề'],['lB','Các ý (mỗi dòng 1 ý, tối đa 6)',1]]],
+  ['Ô mũ bảo hiểm',[['mT','Tiêu đề',1],['mB','Nội dung',1],['mS','Khẩu hiệu',1]]],
+  ['Chân trang',[['note','Dòng đề nghị',1],['fSlogan','Khẩu hiệu dưới tên công ty'],['fRight','Câu bên phải',1]]]];
+const TBP_SLOT={logo:['Logo công ty','tbpLogo','image/png'],hdr:['Ảnh đầu trang (bên phải)','tbpHdr','image/jpeg'],rider1:['Ảnh ô “Lưu ý sát hạch lại”','tbpRider','image/png'],rider2:['Ảnh ô mũ bảo hiểm','tbpRider','image/png']};
+const TBP_C={navy:'#0b2a5c',navy2:'#17428c',blue:'#1f62d0',red:'#d7262e',red2:'#a8141b',yel:'#ffcf33',ink:'#1b2433',gray:'#5b6577',bg:'#eef3fb',green:'#1f9d48'};
+const TBP_W=900, TBP_H=1273;
+function tbpState(){ const P=DB.tbPoster=DB.tbPoster||{}; P.t=P.t||{}; P.img=P.img||{}; P.hide=P.hide||{}; return P; }
+function tbpTexts(){ return {...TBP_DEF,...tbpState().t}; }
+const TBP_THU=['Chủ nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+function tbpVars(V){ const d=parseVN(V.ngay); return {NGAY:V.ngay||'', THU:d?TBP_THU[d.getDay()]:'', TAP_TRUNG:V.tapTrung||'', KHAI_MAC:V.khaiMac||'', DIEM_DANH:V.diemDanh||'', DIA_DIEM:V.diaDiem||''}; }
+const tbpSub=(s,X)=>String(s??'').replace(/\{(NGAY|THU|TAP_TRUNG|KHAI_MAC|DIEM_DANH|DIA_DIEM)\}/g,(m,k)=>X[k]);
+const tbpF=(w,sz,it)=>`${it?'italic ':''}${w} ${sz}px "Be Vietnam Pro"`;
+let TBP_WARN=[];
+/* chữ có **tô đậm**: tách thành từ, mỗi từ gồm các mảnh thường / tô đậm */
+function tbpWords(s){ const W=[]; let cur=null;
+  String(s).split('**').forEach((t,i)=>{ for(const part of t.split(/(\s+)/)){ if(!part) continue; if(/^\s+$/.test(part)){ cur=null; continue; } if(!cur){ cur={parts:[]}; W.push(cur); } cur.parts.push({t:part,hl:i%2===1}); } });
+  return W; }
+function tbpLay(ctx,o,sz){
+  const fN=tbpF(o.wt||500,sz,o.it), fB=tbpF(o.wb||800,sz,o.it), lh=sz*(o.lh||1.32), w=o.w-(o.ind||0); let h=0, wide=false; const items=[];
+  const mw=p=>{ ctx.font=p.hl?fB:fN; return ctx.measureText(p.t).width; }; ctx.font=fN; const sp=ctx.measureText(' ').width;
+  o.items.forEach((s,i)=>{ const lines=[]; let L={ws:[],w:0};
+    for(const wd of tbpWords(s)){ const ww=wd.parts.reduce((t,p)=>t+mw(p),0); wd.w=ww;
+      if(L.ws.length&&L.w+sp+ww>w){ lines.push(L); L={ws:[],w:0}; }
+      L.w+=(L.ws.length?sp:0)+ww; L.ws.push(wd); if(ww>w) wide=true; }
+    if(L.ws.length||!lines.length) lines.push(L);
+    items.push({lines,y:h}); h+=lines.length*lh+(i<o.items.length-1?(o.gap||0)*sz:0); });
+  return {items,h,lh,fN,fB,sz,sp,wide};
 }
+/* khối chữ tự thu nhỏ cho vừa khung; không vừa thì ghi cảnh báo */
+function tbpBlock(ctx,o){
+  o.items=o.items||[o.text]; o.items=o.items.map(s=>String(s??'')).filter((s,i,a)=>s.trim()!==''||a.length===1);
+  let sz=o.size, L; const min=o.size*(o.min||0.7);
+  for(;;){ L=tbpLay(ctx,o,sz); if((L.h<=o.h+0.01&&!L.wide)||sz<=min) break; sz=Math.max(min,sz-0.25); }
+  if(L.h>o.h+0.5||L.wide) TBP_WARN.push(o.label);
+  let y=o.y+(o.va==='m'?(o.h-L.h)/2:o.va==='b'?o.h-L.h:0);
+  ctx.textBaseline='alphabetic';
+  L.items.forEach((it,ii)=>{ it.lines.forEach((ln,li)=>{
+    const by=y+it.y+li*L.lh+L.sz*(o.base||1.0);
+    let x=o.x+(o.ind||0); const aw=o.w-(o.ind||0);
+    if(o.al==='c') x+= (aw-ln.w)/2; else if(o.al==='r') x+= aw-ln.w;
+    if(li===0&&o.mark) o.mark(ctx,o.x,by,L.sz,ii);
+    ln.ws.forEach((wd,wi)=>{ if(wi) x+=L.sp; for(const p of wd.parts){ ctx.font=p.hl?L.fB:L.fN; ctx.fillStyle=p.hl?(o.hc||TBP_C.red):(o.c||TBP_C.ink); ctx.fillText(p.t,x,by); x+=ctx.measureText(p.t).width; } });
+  }); });
+  return L;
+}
+function tbpRR(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function tbpCard(ctx,x,y,w,h,r,fill,stroke,sh){ ctx.save(); if(sh){ ctx.shadowColor='rgba(16,42,92,.13)'; ctx.shadowBlur=14; ctx.shadowOffsetY=4; } tbpRR(ctx,x,y,w,h,r); ctx.fillStyle=fill; ctx.fill(); ctx.restore(); if(stroke){ ctx.save(); tbpRR(ctx,x,y,w,h,r); ctx.strokeStyle=stroke; ctx.lineWidth=1.2; ctx.stroke(); ctx.restore(); } }
+const TBP_IC={
+  cal:'M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M16 2v4 M8 2v4 M3 10h18 M7 14h2 M11 14h2 M15 14h2 M7 17h2 M11 17h2',
+  clock:'M21 12a9 9 0 1 1-18 0a9 9 0 1 1 18 0z M12 7v5l3.5 2',
+  mega:'M3 10v4h3l7 5V5L6 10H3z M16.5 9a4 4 0 0 1 0 6 M19.5 6.5a8 8 0 0 1 0 11',
+  users:'M9 11a4 4 0 1 0 0-8a4 4 0 0 0 0 8z M2 21v-1a6 6 0 0 1 12 0v1 M16 3.3a4 4 0 0 1 0 7.6 M22 21v-1a6 6 0 0 0-4-5.6',
+  alert:'M12 3L2 20.5h20z M12 9.5v5 M12 17.5v.4',
+  chk:'M8 12.3l2.7 2.7 5.3-6',
+  id:'M3 5h18v14H3z M9 11.5a2 2 0 1 0 0-4a2 2 0 0 0 0 4z M5.5 16c.6-2.4 6.4-2.4 7 0 M14.5 9h4 M14.5 12.5h4',
+  phone:'M8 2.5h8a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5z M11 18.5h2',
+  user:'M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8z M5 21a7 7 0 0 1 14 0',
+  file:'M6 2.5h9l4 4V21.5H6z M14.5 2.5v4.5h4.5 M9 12h7 M9 15.5h7 M9 19h4',
+  star:'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z'};
+function tbpIc(ctx,k,x,y,s,col,lw){ ctx.save(); ctx.translate(x,y); ctx.scale(s/24,s/24); ctx.strokeStyle=col; ctx.lineWidth=lw||2.2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke(new Path2D(TBP_IC[k])); ctx.restore(); }
+function tbpCheck(ctx,x,y,s,col){ ctx.save(); ctx.beginPath(); ctx.arc(x+s/2,y+s/2,s/2,0,7); ctx.fillStyle=col; ctx.fill(); ctx.restore(); tbpIc(ctx,'chk',x,y,s,'#fff',3); }
+function tbpImgDraw(ctx,im,x,y,w,h,mode){ if(!im) return; const r=mode==='cover'?Math.max(w/im.width,h/im.height):Math.min(w/im.width,h/im.height); const dw=im.width*r, dh=im.height*r;
+  ctx.save(); if(mode==='cover'){ ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); } ctx.drawImage(im,x+(w-dw)/2,y+(mode==='bottom'?h-dh:(h-dh)/2),dw,dh); ctx.restore(); }
+/* hình minh họa 4 bước — vẽ bằng nét, không phụ thuộc ảnh */
+function tbpArt(ctx,i,x,y,w,h,T){
+  ctx.save(); ctx.beginPath(); tbpRR(ctx,x,y,w,h,8); ctx.clip();
+  const cx=x+w/2;
+  if(i===0){ ctx.fillStyle='#cfdcf3'; ctx.fillRect(x,y+h-14,w,14);
+    ctx.fillStyle=TBP_C.navy; ctx.beginPath(); ctx.moveTo(cx-62,y+34); ctx.lineTo(cx+62,y+34); ctx.lineTo(cx+70,y+44); ctx.lineTo(cx-70,y+44); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.fillRect(cx-60,y+44,120,h-58); ctx.fillStyle='#9fb6dd'; for(let k=0;k<4;k++) ctx.fillRect(cx-52+k*30,y+48,12,h-62);
+    ctx.fillStyle=TBP_C.navy; for(let k=0;k<5;k++){ ctx.beginPath(); ctx.arc(cx-56+k*28,y+h-9,4.2,0,7); ctx.fill(); } }
+  if(i===1){ tbpRR(ctx,cx-58,y+30,116,34,6); ctx.fillStyle=TBP_C.navy; ctx.fill(); tbpRR(ctx,cx-53,y+34,106,26,4); ctx.fillStyle='#79b4f2'; ctx.fill();
+    ctx.fillStyle=TBP_C.navy; ctx.font=tbpF(800,12); ctx.textAlign='center'; const m=T.s2m||''; let fs=12; while(fs>7&&ctx.measureText(m).width>98){ fs-=0.5; ctx.font=tbpF(800,fs); } ctx.fillText(m,cx,y+51); ctx.textAlign='left';
+    ctx.fillStyle=TBP_C.blue; for(let k=0;k<5;k++){ ctx.beginPath(); ctx.arc(cx-44+k*22,y+h-10,5,0,7); ctx.fill(); } }
+  if(i===2){ for(let k=0;k<3;k++){ const dx=cx-58+k*44; ctx.fillStyle=TBP_C.blue; ctx.beginPath(); ctx.arc(dx+15,y+22,6,0,7); ctx.fill();
+      tbpRR(ctx,dx,y+32,30,22,3); ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle=TBP_C.navy; ctx.lineWidth=2; ctx.stroke(); }
+    ctx.fillStyle=TBP_C.navy; ctx.fillRect(cx-66,y+56,132,5); }
+  if(i===3){ ctx.fillStyle='#8fd18f'; ctx.fillRect(x,y,w,h*0.42); ctx.fillStyle='#6f7785'; ctx.fillRect(x,y+h*0.42,w,h*0.58);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.setLineDash([10,8]); ctx.beginPath(); ctx.moveTo(x,y+h*0.74); ctx.lineTo(x+w,y+h*0.74); ctx.stroke(); ctx.setLineDash([]);
+    for(let k=0;k<3;k++){ const dx=cx-44+k*44, by=y+h*0.48; ctx.fillStyle='#f07a1a'; ctx.beginPath(); ctx.moveTo(dx,by-28); ctx.lineTo(dx+9,by); ctx.lineTo(dx-9,by); ctx.closePath(); ctx.fill(); ctx.fillStyle='#fff'; ctx.fillRect(dx-5,by-15,10,4); } }
+  ctx.restore();
+}
+const TBP_IMG={};
+function tbpLoadImg(src){ return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error('ảnh hỏng')); im.src=src; }); }
+async function tbpImages(){
+  const S=tbpState(), out={};
+  for(const [k,[,tid,mime]] of Object.entries(TBP_SLOT)){
+    if(S.hide[k]){ out[k]=null; continue; }
+    const key=(S.img[k]?'c:'+S.img[k].t:'d')+k; if(TBP_IMG[k]&&TBP_IMG[k].key===key){ out[k]=TBP_IMG[k].im; continue; }
+    let im=null;
+    try{ if(S.img[k]){ const buf=await idbGet('tbimg:'+k); if(buf){ const u=URL.createObjectURL(new Blob([buf],{type:S.img[k].type||'image/png'})); im=await tbpLoadImg(u); } } }catch(e){ im=null; }
+    if(!im) im=await tbpLoadImg(`data:${mime};base64,${document.getElementById(tid).textContent.trim()}`);
+    TBP_IMG[k]={key,im}; out[k]=im; }
+  return out;
+}
+async function tbpFonts(){ try{ await Promise.all(['500','600','700','800','900','italic 600','italic 800'].map(w=>document.fonts.load(`${w} 20px "Be Vietnam Pro"`,'ẠĐÊƯƠ'))); }catch(e){} }
+async function tbpDraw(cv,scale,V){
+  await tbpFonts(); const IM=await tbpImages();
+  const T0=tbpTexts(), X=tbpVars(V), T={}; for(const k in T0) T[k]=tbpSub(T0[k],X);
+  cv.width=Math.round(TBP_W*scale); cv.height=Math.round(TBP_H*scale);
+  const ctx=cv.getContext('2d'); ctx.setTransform(scale,0,0,scale,0,0); TBP_WARN=[]; const C=TBP_C, lines=s=>String(s).split('\n');
+  ctx.fillStyle=C.bg; ctx.fillRect(0,0,TBP_W,TBP_H);
+  /* đầu trang */
+  ctx.fillStyle='#bcd7f5'; ctx.fillRect(452,0,448,352); tbpImgDraw(ctx,IM.hdr,452,0,448,352,'cover');
+  const g=ctx.createLinearGradient(0,0,560,352); g.addColorStop(0,'#0a2552'); g.addColorStop(1,C.navy2);
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(560,0); ctx.lineTo(454,352); ctx.lineTo(0,352); ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+  ctx.save(); ctx.globalAlpha=.07; ctx.strokeStyle='#fff'; ctx.lineWidth=26; for(let k=0;k<4;k++){ ctx.beginPath(); ctx.moveTo(300+k*70,0); ctx.lineTo(190+k*70,352); ctx.stroke(); } ctx.restore();
+  tbpCard(ctx,22,16,76,76,13,'#fff'); tbpImgDraw(ctx,IM.logo,26,20,68,68,'contain');
+  tbpBlock(ctx,{text:T.cty1,x:110,y:24,w:440,h:18,size:12.5,wt:700,c:'#fff',label:'Tên công ty (dòng 1)',min:.6});
+  tbpBlock(ctx,{text:T.cty2,x:110,y:43,w:440,h:32,size:27,wt:900,c:'#fff',label:'Tên công ty (dòng 2)',min:.6});
+  tbpBlock(ctx,{text:T.ctySlogan,x:110,y:76,w:440,h:16,size:11.5,wt:600,it:1,c:'#c9d8f5',label:'Khẩu hiệu công ty',min:.6});
+  ctx.save(); ctx.translate(245,135); ctx.rotate(-0.03); ctx.translate(-245,-135);
+  const gr=ctx.createLinearGradient(0,104,0,166); gr.addColorStop(0,'#ec3a3f'); gr.addColorStop(1,C.red2);
+  ctx.save(); ctx.shadowColor='rgba(0,0,0,.3)'; ctx.shadowBlur=10; ctx.shadowOffsetY=4; tbpRR(ctx,22,104,446,62,10); ctx.fillStyle=gr; ctx.fill(); ctx.restore();
+  tbpIc(ctx,'mega',36,115,40,'#fff',2.6);
+  tbpBlock(ctx,{text:T.tb,x:88,y:107,w:368,h:56,size:46,wt:900,c:'#fff',va:'m',base:.92,label:'Băng đỏ',min:.5});
+  ctx.restore();
+  tbpBlock(ctx,{items:lines(T.tieuDe),x:22,y:176,w:430,h:64,size:25,wt:800,c:'#fff',lh:1.22,va:'m',base:.9,label:'Tiêu đề',min:.6});
+  tbpBlock(ctx,{text:T.hang,x:22,y:242,w:425,h:66,size:66,wt:900,c:C.yel,lh:1,va:'m',base:.86,label:'Hạng',min:.5});
+  if(String(T.pill).trim()){ ctx.font=tbpF(800,13,1); const pw=Math.min(300,ctx.measureText(T.pill).width+34);
+    tbpRR(ctx,22,316,pw,28,6); ctx.fillStyle='rgba(255,255,255,.13)'; ctx.fill(); ctx.fillStyle=C.yel; ctx.fillRect(22,316,4,28);
+    tbpBlock(ctx,{text:T.pill,x:36,y:316,w:pw-24,h:28,size:13,wt:800,it:1,c:'#fff',va:'m',base:.92,label:'Nhãn nhỏ',min:.6}); }
+  const tt=tbpBlock(ctx,{items:[lines(T.tuTin).join('\n')].flatMap(s=>s.split('\n')),x:640,y:12,w:244,h:88,size:23,wt:800,it:1,c:C.navy,lh:1.13,al:'r',label:'Chữ góc phải',min:.55});
+  if(String(T.tuTin).trim()){ const uy=12+tt.h+8; ctx.strokeStyle=C.red; ctx.lineWidth=3.5; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(744,uy+3); ctx.lineTo(872,uy-1); ctx.stroke(); }
+  if(String(T.badge1).trim()||String(T.badge2).trim()){
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,.3)'; ctx.shadowBlur=8; tbpRR(ctx,680,280,202,60,14); ctx.fillStyle=C.navy; ctx.fill(); ctx.restore();
+    tbpRR(ctx,680,280,202,60,14); ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(711,307,17,0,7); ctx.fill();
+    ctx.fillStyle=C.navy; ctx.beginPath(); ctx.arc(711,310,11,Math.PI,0); ctx.closePath(); ctx.fill(); ctx.fillStyle=C.red; ctx.fillRect(700,309,22,4);
+    tbpBlock(ctx,{text:T.badge1,x:736,y:286,w:140,h:28,size:24,wt:800,c:'#fff',va:'m',base:.88,label:'Huy hiệu dòng 1',min:.55});
+    tbpBlock(ctx,{text:T.badge2,x:736,y:316,w:140,h:16,size:10.5,wt:500,c:'#dbe6fb',va:'m',label:'Huy hiệu dòng 2',min:.6}); }
+  /* 4 ô thông tin */
+  tbpCard(ctx,22,364,856,90,12,'#fff',null,1);
+  const B=[22,250,520,692,878], IC=['cal','clock','mega','users'];
+  for(let i=0;i<4;i++){ const x=B[i], w=B[i+1]-B[i];
+    if(i){ ctx.fillStyle='#e1e8f3'; ctx.fillRect(x,378,1.2,62); }
+    tbpIc(ctx,IC[i],x+14,380,32,C.blue,2.3);
+    tbpBlock(ctx,{text:T[`i${i+1}l`],x:x+54,y:374,w:w-62,h:28,size:11.5,wt:800,c:C.navy,lh:1.12,va:'b',label:`Ô ${i+1} — nhãn`,min:.65});
+    tbpBlock(ctx,{text:T[`i${i+1}v`],x:x+54,y:403,w:w-62,h:30,size:26,wt:800,c:C.red,va:'m',base:.9,label:`Ô ${i+1} — giá trị`,min:.5});
+    tbpBlock(ctx,{text:T[`i${i+1}s`],x:x+54,y:433,w:w-62,h:15,size:10.5,wt:500,c:C.gray,label:`Ô ${i+1} — ghi chú`,min:.6}); }
+  /* lưu ý sát hạch lại */
+  tbpCard(ctx,22,474,856,92,12,'#fff1f2','#f3a5ab');
+  ctx.font=tbpF(800,13.5); const tw=Math.min(700,ctx.measureText(T.wT).width+48);
+  const gw=ctx.createLinearGradient(0,460,0,488); gw.addColorStop(0,'#ec3a3f'); gw.addColorStop(1,C.red2);
+  tbpRR(ctx,34,460,tw,28,8); ctx.fillStyle=gw; ctx.fill(); tbpIc(ctx,'alert',43,465,18,'#fff',2.4);
+  tbpBlock(ctx,{text:T.wT,x:68,y:460,w:tw-40,h:28,size:13.5,wt:800,c:'#fff',va:'m',base:.92,label:'Lưu ý sát hạch lại — tiêu đề',min:.6});
+  tbpBlock(ctx,{items:lines(T.wB),x:44,y:494,w:694,h:66,size:12.5,wt:500,wb:800,c:C.ink,hc:C.red,ind:14,gap:.2,lh:1.3,label:'Lưu ý sát hạch lại — các ý',min:.66,
+    mark:(c,x,by,sz)=>{ c.fillStyle=C.red; c.beginPath(); c.arc(x+4,by-sz*.33,2.7,0,7); c.fill(); }});
+  tbpImgDraw(ctx,IM.rider1,750,450,126,114,'contain');
+  /* các bước */
+  ctx.font=tbpF(800,19); const hw=Math.min(560,ctx.measureText(T.sH).width+64);
+  ctx.beginPath(); ctx.moveTo(22,576); ctx.lineTo(22+hw,576); ctx.lineTo(22+hw+16,606); ctx.lineTo(22,606); ctx.closePath(); ctx.fillStyle=C.navy; ctx.fill();
+  tbpBlock(ctx,{text:T.sH,x:40,y:576,w:hw-24,h:30,size:19,wt:800,c:'#fff',va:'m',base:.9,label:'Các bước — tiêu đề',min:.6});
+  const cw=(856-3*22)/4, ART=['#e8f0fd','#fdeceb','#eaf0f8','#eef2ee'];
+  for(let i=0;i<4;i++){ const x=22+i*(cw+22), y=614, h=262;
+    tbpCard(ctx,x,y,cw,h,12,'#fff','#dde6f3',1);
+    if(i<3){ ctx.fillStyle=C.blue; ctx.beginPath(); ctx.moveTo(x+cw+7,y+h/2-8); ctx.lineTo(x+cw+16,y+h/2); ctx.lineTo(x+cw+7,y+h/2+8); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle=C.navy; ctx.beginPath(); ctx.arc(x+25,y+26,15,0,7); ctx.fill(); ctx.fillStyle='#fff'; ctx.font=tbpF(800,15); ctx.textAlign='center'; ctx.fillText(String(i+1),x+25,y+31.5); ctx.textAlign='left';
+    tbpBlock(ctx,{text:T[`s${i+1}t`],x:x+48,y:y+10,w:cw-56,h:32,size:12.5,wt:800,c:C.navy,lh:1.12,va:'m',base:.9,label:`Bước ${i+1} — tên`,min:.6});
+    tbpRR(ctx,x+10,y+50,cw-20,80,8); ctx.fillStyle=ART[i]; ctx.fill(); tbpArt(ctx,i,x+10,y+50,cw-20,80,T);
+    const gt=String(T[`s${i+1}g`]||'').trim();
+    if(gt){ ctx.font=tbpF(800,12); const bw=Math.min(cw-30,ctx.measureText(gt).width+20); tbpRR(ctx,x+16,y+55,bw,21,10.5); ctx.fillStyle=C.yel; ctx.fill();
+      tbpBlock(ctx,{text:gt,x:x+26,y:y+55,w:bw-20,h:21,size:12,wt:800,c:C.navy,va:'m',base:.9,label:`Bước ${i+1} — giờ`,min:.6}); }
+    const its=lines(T[`s${i+1}b`]);
+    tbpBlock(ctx,{items:its,x:x+11,y:y+138,w:cw-20,h:116,size:11.3,wt:500,wb:800,c:C.ink,hc:C.red,ind:17,gap:.32,lh:1.3,label:`Bước ${i+1} — các ý`,min:.68,
+      mark:(c,mx,by,sz,ii)=>tbpCheck(c,mx,by-sz*.82,12,i===3&&ii===its.filter(s=>s.trim()).length-1?C.green:C.blue)}); }
+  /* dải vàng */
+  tbpRR(ctx,22,884,856,26,8); ctx.fillStyle='#fff7d9'; ctx.fill(); ctx.setLineDash([5,4]); ctx.strokeStyle='#e9b923'; ctx.lineWidth=1.3; ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#f2b705'; ctx.beginPath(); ctx.arc(40,897,9,0,7); ctx.fill(); ctx.fillStyle='#fff'; ctx.font=tbpF(900,13); ctx.textAlign='center'; ctx.fillText('!',40,902); ctx.textAlign='left';
+  tbpBlock(ctx,{text:T.vang,x:56,y:884,w:812,h:26,size:12,wt:500,wb:800,it:1,c:C.ink,hc:C.navy,va:'m',base:.92,label:'Dải vàng',min:.6});
+  /* những lưu ý bắt buộc */
+  tbpCard(ctx,22,918,510,226,12,'#fff',null,1);
+  ctx.font=tbpF(800,14); const lw=Math.min(480,ctx.measureText(T.lT).width+36); tbpRR(ctx,36,928,lw,28,14); ctx.fillStyle=C.navy; ctx.fill();
+  tbpBlock(ctx,{text:T.lT,x:54,y:928,w:lw-36,h:28,size:14,wt:800,c:'#fff',va:'m',base:.92,label:'Lưu ý bắt buộc — tiêu đề',min:.6});
+  const LI=lines(T.lB).filter(s=>s.trim()).slice(0,6), LIC=['id','phone','user','users','file','star'], sl=LI.length?(1136-964)/LI.length:0;
+  if(lines(T.lB).filter(s=>s.trim()).length>6) TBP_WARN.push('Lưu ý bắt buộc — quá 6 ý (chỉ in 6 ý đầu)');
+  LI.forEach((s,k)=>{ const yy=964+k*sl, ic=LIC[k]||'star';
+    tbpRR(ctx,36,yy+sl/2-14,28,28,7); ctx.fillStyle=ic==='phone'?'#fde7e8':'#e6efff'; ctx.fill(); tbpIc(ctx,ic,40,yy+sl/2-10,20,ic==='phone'?C.red:C.blue,2.1);
+    if(ic==='phone'){ ctx.strokeStyle=C.red; ctx.lineWidth=2.2; ctx.beginPath(); ctx.moveTo(41,yy+sl/2+9); ctx.lineTo(59,yy+sl/2-9); ctx.stroke(); }
+    tbpBlock(ctx,{text:s,x:74,y:yy+1,w:446,h:sl-2,size:11.5,wt:500,wb:800,c:C.ink,hc:C.red,lh:1.27,va:'m',label:`Lưu ý bắt buộc — ý ${k+1}`,min:.65}); });
+  /* mũ bảo hiểm */
+  const gm=ctx.createLinearGradient(546,918,878,1144); gm.addColorStop(0,'#0a2552'); gm.addColorStop(1,C.navy2);
+  tbpCard(ctx,546,918,332,226,12,gm,null,1);
+  tbpBlock(ctx,{items:lines(T.mT),x:564,y:930,w:298,h:46,size:17,wt:800,c:C.yel,lh:1.18,label:'Mũ bảo hiểm — tiêu đề',min:.6});
+  tbpBlock(ctx,{text:T.mB,x:564,y:982,w:298,h:52,size:12,wt:500,wb:800,c:'#fff',hc:C.yel,lh:1.35,label:'Mũ bảo hiểm — nội dung',min:.65});
+  tbpBlock(ctx,{items:lines(T.mS),x:564,y:1072,w:152,h:58,size:19,wt:800,it:1,c:'#fff',lh:1.18,va:'b',label:'Mũ bảo hiểm — khẩu hiệu',min:.55});
+  tbpImgDraw(ctx,IM.rider2,716,1026,156,114,'bottom');
+  /* dòng đề nghị + chân trang */
+  tbpBlock(ctx,{text:T.note,x:22,y:1150,w:856,h:22,size:11.5,wt:800,c:C.navy,al:'c',va:'m',base:.92,label:'Dòng đề nghị',min:.6});
+  const gf=ctx.createLinearGradient(0,1180,900,1273); gf.addColorStop(0,'#0a2552'); gf.addColorStop(1,C.navy2); ctx.fillStyle=gf; ctx.fillRect(0,1180,900,93);
+  ctx.save(); ctx.globalAlpha=.18; ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(552,1180); ctx.lineTo(522,1273); ctx.stroke(); ctx.restore();
+  tbpCard(ctx,22,1192,68,68,11,'#fff'); tbpImgDraw(ctx,IM.logo,26,1196,60,60,'contain');
+  tbpBlock(ctx,{text:T.cty1,x:102,y:1198,w:410,h:16,size:11.5,wt:700,c:'#fff',label:'Chân trang — tên công ty',min:.6});
+  tbpBlock(ctx,{text:T.cty2,x:102,y:1215,w:410,h:28,size:23,wt:900,c:'#fff',label:'Chân trang — tên công ty',min:.6});
+  tbpBlock(ctx,{text:T.fSlogan,x:102,y:1244,w:410,h:16,size:11,wt:600,it:1,c:'#c9d8f5',label:'Chân trang — khẩu hiệu',min:.6});
+  tbpBlock(ctx,{items:lines(T.fRight),x:548,y:1190,w:330,h:74,size:15,wt:800,it:1,c:'#fff',lh:1.2,al:'r',va:'m',label:'Chân trang — câu bên phải',min:.55});
+  TBP_WARN=[...new Set(TBP_WARN)];
+  return TBP_WARN;
+}
+const cvBlob=(cv,type,q)=>new Promise(r=>cv.toBlob(r,type,q));
+async function tbpExport(kind,ex,V){
+  const cv=document.createElement('canvas');
+  const warn=await tbpDraw(cv,kind==='pdf'?2.75:2,V);
+  if(warn.length&&!confirm(`Các ô sau dài quá khung, chữ có thể bị tràn:\n• ${warn.join('\n• ')}\n\nNên rút gọn nội dung. Vẫn xuất?`)) return false;
+  const base=`THONGBAO_${asciiName(ex?ex.khoaThi:'SATHACH')}`;
+  try{
+    if(kind==='png'){
+      const b=await cvBlob(cv,'image/png'); const buf=new Uint8Array(await b.arrayBuffer());
+      const bm=await createImageBitmap(new Blob([buf],{type:'image/png'})); if(bm.width!==cv.width||bm.height!==cv.height) throw new Error(`ảnh đọc lại ${bm.width}×${bm.height}, đúng phải là ${cv.width}×${cv.height}`);
+      saveVerified(buf,base+'.png','image/png'); return true; }
+    const b=await cvBlob(cv,'image/jpeg',0.92); const jp=new Uint8Array(await b.arrayBuffer());
+    const D=pdfDoc(595.28,841.89); const P=D.page(); P.image(D.jpeg(jp,cv.width,cv.height),0,0,595.28,841.89);
+    const buf=await pdfBytes(D,'Thông báo kỳ sát hạch '+(ex?ex.khoaThi:''));
+    const R=await pdfReadBack(buf);
+    if(R.pages.length!==1||R.pages[0].imgs.length!==1||R.pages[0].imgs[0].w!==cv.width||R.pages[0].imgs[0].h!==cv.height) throw new Error('đọc lại PDF không đúng 1 trang A4 chứa ảnh thông báo');
+    saveVerified(buf,base+'.pdf','application/pdf'); return true;
+  }catch(e){ dialog('Dừng xuất file',`<div class="note warn">${ic('alert')}<span>${esc(e.message)}. File chưa được tải về.</span></div>`,[['Đóng','pri']]); return false; }
+}
+function askTB(ex){
+  ex=ex||curExam(); const V=tbValues(ex), S=tbpState();
+  const F=[['ngay','Ngày sát hạch (dd/mm/yyyy)'],['tapTrung','Thời gian tập trung'],['khaiMac','Giờ khai mạc'],['diemDanh','Giờ điểm danh sát hạch lại'],['diaDiem','Địa điểm (Trung tâm sát hạch)']];
+  const T=tbpTexts();
+  const fld=([k,l,ml])=>`<label style="display:block;margin-top:8px">${esc(l)}${S.t[k]!=null?' <span class="tag tl" style="font-size:10.5px">đã sửa</span>':''}${ml?`<textarea data-tp="${k}" rows="${Math.min(6,String(T[k]).split('\n').length+1)}" style="width:100%;font-size:12.5px">${esc(T[k])}</textarea>`:`<input type="text" data-tp="${k}" value="${esc(T[k])}" style="width:100%">`}</label>`;
+  const slot=k=>`<div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><b style="min-width:190px;font-size:13px">${esc(TBP_SLOT[k][0])}</b><span class="muted" style="font-size:12px">${S.hide[k]?'không hiện':S.img[k]?'ảnh riêng: '+esc(S.img[k].name):'ảnh mặc định'}</span><span style="flex:1"></span>
+    <button class="btn sm" data-ti="${k}">Đổi ảnh</button>${S.img[k]||S.hide[k]?`<button class="btn sm" data-tr="${k}">Ảnh mặc định</button>`:''}${S.hide[k]?'':`<button class="btn sm" data-th="${k}">Bỏ ảnh</button>`}</div>`;
+  dialog('Thông báo kỳ sát hạch'+(ex?' — '+ex.khoaThi:''),`<div class="tbp"><div class="tbpL">
+    <div class="muted" style="font-size:12.5px">Mẫu thông báo dạng ảnh: <b>Tải ảnh PNG</b> để gửi nhóm Zalo, <b>Xuất PDF</b> để in A4 dán bảng tin. Mọi chữ và ảnh đều sửa được, tool nhớ cho lần sau.</div>
+    <h3 style="margin:12px 0 2px;font-size:14px">Thông tin chính</h3>
+    <div class="grid">${F.map(([k,l])=>`<label>${l}<input type="text" id="tb_${k}" value="${esc(V[k]||'')}"></label>`).join('')}<label>Thứ (tự tính)<input type="text" id="tb_thu" disabled></label></div>
+    <div class="muted" style="font-size:11.5px;margin-top:6px">Trong các ô chi tiết: <b>{NGAY} {THU} {TAP_TRUNG} {KHAI_MAC} {DIEM_DANH} {DIA_DIEM}</b> tự thay bằng thông tin chính · <b>**chữ**</b> = tô đậm màu nhấn (đỏ / vàng) · mỗi dòng là 1 ý.</div>
+    ${TBP_F.map(([g,fs])=>`<details style="margin-top:8px"><summary><b>${esc(g)}</b></summary>${fs.map(fld).join('')}</details>`).join('')}
+    <details style="margin-top:8px"><summary><b>Ảnh</b></summary>${Object.keys(TBP_SLOT).map(slot).join('')}<div class="muted" style="font-size:11.5px;margin-top:6px">Ảnh nên rõ nét (logo vuông, ảnh đầu trang ngang). Ảnh nền trong suốt (PNG) đẹp nhất cho 2 ô có hình người lái xe.</div></details>
+    <div class="row" style="margin-top:12px;gap:6px"><button class="btn sm" id="tbpReset">${ic('undo')}Về nội dung mặc định</button><button class="btn sm" id="tbpCopy">Sao chép nội dung Zalo (chữ)</button><button class="btn sm" id="tbpXls">Excel mẫu cũ</button></div>
+    <input type="file" id="tbpImgIn" accept="image/png,image/jpeg,image/webp" class="hide">
+  </div><div class="tbpR"><canvas id="tbpCv"></canvas><div id="tbpWarn"></div></div></div>`,
+    [['Đóng',''],['Tải ảnh PNG (gửi Zalo)','',()=>{ tbpExport('png',ex,read()); return false; }],['Xuất PDF (in A4)','pri',()=>{ tbpExport('pdf',ex,read()); return false; }]]);
+  $('#dlg').classList.add('wide','xl');
+  const read=()=>{ const W={}; F.forEach(([k])=>W[k]=$('#tb_'+k).value.trim()); const Tc=tbCfgGet(); ['tapTrung','khaiMac','diemDanh','diaDiem'].forEach(k=>Tc[k]=W[k]); if(ex) ex.tb={ngay:W.ngay}; $('#tb_thu').value=tbpVars(W).THU||'(ngày chưa đúng dạng)'; return W; };
+  let tmr=null;
+  const draw=()=>{ clearTimeout(tmr); tmr=setTimeout(async()=>{ const W=read(); save(); const cv=$('#tbpCv'); if(!cv) return; const warn=await tbpDraw(cv,1,W);
+    $('#tbpWarn').innerHTML=warn.length?`<div class="note warn" style="margin-top:8px">${ic('alert')}<span><b>Dài quá khung</b> (chữ đã thu nhỏ hết mức): ${warn.map(esc).join(' · ')} — nên rút gọn.</span></div>`:`<div class="muted" style="font-size:12px;margin-top:6px">${ic('check')} Mọi ô chữ vừa khung · khổ A4 đứng</div>`; },150); };
+  $('#dlgB').querySelectorAll('input[id^="tb_"]').forEach(i=>i.oninput=draw);
+  $('#dlgB').querySelectorAll('[data-tp]').forEach(i=>i.oninput=()=>{ const k=i.dataset.tp; if(i.value===TBP_DEF[k]) delete S.t[k]; else S.t[k]=i.value; draw(); });
+  $('#tbpReset').onclick=()=>{ if(!confirm('Đưa toàn bộ chữ và ảnh của mẫu thông báo về mặc định?')) return; S.t={}; S.img={}; S.hide={}; save(); askTB(ex); };
+  $('#tbpCopy').onclick=()=>{ const W=read(); copyText(tbText(ex,W)).then(ok=>toast(ok?'Đã sao chép — mở Zalo và dán (Ctrl+V) vào nhóm.':'Không sao chép được.',5000)); };
+  $('#tbpXls').onclick=()=>{ exportTB(ex,read()); };
+  let slotK=null;
+  $('#dlgB').querySelectorAll('[data-ti]').forEach(b=>b.onclick=()=>{ slotK=b.dataset.ti; $('#tbpImgIn').value=''; $('#tbpImgIn').click(); });
+  $('#tbpImgIn').onchange=async e=>{ const f=e.target.files[0]; if(!f||!slotK) return; if(f.size>8*1024*1024){ toast('Ảnh lớn hơn 8 MB.',5000); return; }
+    try{ const buf=await f.arrayBuffer(); await tbpLoadImg(URL.createObjectURL(new Blob([buf],{type:f.type}))); await idbSet('tbimg:'+slotK,buf); S.img[slotK]={name:f.name,type:f.type,t:Date.now()}; delete S.hide[slotK]; save(); askTB(ex); }
+    catch(err){ toast('Không đọc được ảnh: '+err.message,5000); } };
+  $('#dlgB').querySelectorAll('[data-tr]').forEach(b=>b.onclick=()=>{ const k=b.dataset.tr; delete S.img[k]; delete S.hide[k]; idbDel('tbimg:'+k).catch(()=>{}); save(); askTB(ex); });
+  $('#dlgB').querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{ S.hide[b.dataset.th]=true; save(); askTB(ex); });
+  draw();
+}
+
+/* ===== PDF tự tạo (không cần thư viện): nhúng font Liberation Serif (cùng kích thước chữ với Times New Roman), chữ tiếng Việt,
+   và ĐỌC LẠI chính file vừa tạo để đối chiếu trước khi tải về ===== */
+function ttfParse(u8){
+  const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength), T={};
+  const n=dv.getUint16(4); for(let i=0;i<n;i++){ const o=12+16*i; const tag=String.fromCharCode(u8[o],u8[o+1],u8[o+2],u8[o+3]); T[tag]={off:dv.getUint32(o+8),len:dv.getUint32(o+12)}; }
+  for(const k of ['head','hhea','maxp','hmtx','cmap']) if(!T[k]) throw new Error('font hỏng (thiếu bảng '+k+')');
+  const h=T.head.off, upm=dv.getUint16(h+18), bbox=[dv.getInt16(h+36),dv.getInt16(h+38),dv.getInt16(h+40),dv.getInt16(h+42)];
+  const hh=T.hhea.off, asc=dv.getInt16(hh+4), desc=dv.getInt16(hh+6), nhm=dv.getUint16(hh+34), ng=dv.getUint16(T.maxp.off+4);
+  const adv=new Uint16Array(ng); let last=0; for(let g=0;g<ng;g++){ if(g<nhm) last=dv.getUint16(T.hmtx.off+4*g); adv[g]=last; }
+  let cap=Math.round(asc*0.7); if(T['OS/2']&&dv.getUint16(T['OS/2'].off)>=2) cap=dv.getInt16(T['OS/2'].off+88);
+  const ital=T.post?dv.getInt32(T.post.off+4)/65536:0;
+  const c=T.cmap.off, nt=dv.getUint16(c+2); let sub=-1;
+  for(let i=0;i<nt;i++){ const p=dv.getUint16(c+4+8*i), e=dv.getUint16(c+6+8*i), o=dv.getUint32(c+8+8*i); if(dv.getUint16(c+o)!==4) continue; if(p===3&&e===1) sub=c+o; else if(sub<0) sub=c+o; }
+  if(sub<0) throw new Error('font thiếu bảng mã chữ');
+  const segX2=dv.getUint16(sub+6), seg=segX2/2, endO=sub+14, startO=endO+segX2+2, deltaO=startO+segX2, rangeO=deltaO+segX2, map=new Map();
+  for(let i=0;i<seg;i++){ const end=dv.getUint16(endO+2*i), start=dv.getUint16(startO+2*i), delta=dv.getInt16(deltaO+2*i), ro=dv.getUint16(rangeO+2*i);
+    for(let ch=start;ch<=end&&ch!==0xFFFF;ch++){ let g; if(!ro) g=(ch+delta)&0xFFFF; else { g=dv.getUint16(rangeO+2*i+ro+2*(ch-start)); if(g) g=(g+delta)&0xFFFF; } if(g) map.set(ch,g); } }
+  return {u8,upm,bbox,asc,desc,cap,ital,adv,map};
+}
+const PDF_FONTS={};
+function pdfFont(key){ if(!PDF_FONTS[key]) PDF_FONTS[key]=ttfParse(tplBytes(key==='B'?'pdfFontB':'pdfFontR')); return PDF_FONTS[key]; }
+function pdfW(f,str,size){ let w=0; for(const ch of String(str).normalize('NFC')){ const g=f.map.get(ch.codePointAt(0))||0; w+=f.adv[g]; } return w*size/f.upm; }
+async function zDeflate(u8){ if(typeof CompressionStream==='undefined') return null; const s=new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate')); return new Uint8Array(await new Response(s).arrayBuffer()); }
+async function zInflate(u8){ const s=new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate')); return new Uint8Array(await new Response(s).arrayBuffer()); }
+const pn=v=>(Math.round(v*100)/100).toString();
+/* tài liệu: trang đo bằng point, gốc tọa độ ở GÓC TRÊN TRÁI (giống Excel) — đổi sang tọa độ PDF khi ghi */
+function pdfDoc(W,H){
+  const D={W,H,pages:[],fonts:{},imgs:[],missing:new Set()};
+  D.font=key=>{ if(!D.fonts[key]) D.fonts[key]={key,name:'F'+(Object.keys(D.fonts).length+1),f:pdfFont(key),used:new Map()}; return D.fonts[key]; };
+  D.page=()=>{ const ops=[]; const P={ops,
+    text(key,size,x,y,str,align,rgb){ const F=D.font(key); str=String(str??'').normalize('NFC'); if(!str) return;
+      let hex='', w=0; for(const ch of str){ const cp=ch.codePointAt(0); let g=F.f.map.get(cp); if(!g){ D.missing.add(ch); g=0; } F.used.set(g,ch); w+=F.f.adv[g]; hex+=g.toString(16).padStart(4,'0'); }
+      w=w*size/F.f.upm; const x0=align==='c'?x-w/2:align==='r'?x-w:x;
+      ops.push(`BT ${rgb?rgb.map(pn).join(' ')+' rg ':'0 g '}/${F.name} ${pn(size)} Tf 1 0 0 1 ${pn(x0)} ${pn(D.H-y)} Tm <${hex}> Tj ET`); return w; },
+    rect(x,y,w,h,rgb){ ops.push(`${rgb.map(pn).join(' ')} rg ${pn(x)} ${pn(D.H-y-h)} ${pn(w)} ${pn(h)} re f`); },
+    line(x1,y1,x2,y2,lw){ ops.push(`0 G ${pn(lw)} w ${pn(x1)} ${pn(D.H-y1)} m ${pn(x2)} ${pn(D.H-y2)} l S`); },
+    image(im,x,y,w,h){ ops.push(`q ${pn(w)} 0 0 ${pn(h)} ${pn(x)} ${pn(D.H-y-h)} cm /${im.name} Do Q`); }};
+    D.pages.push(P); return P; };
+  D.jpeg=(bytes,w,h)=>{ const im={name:'Im'+(D.imgs.length+1),bytes,w,h}; D.imgs.push(im); return im; };
+  return D;
+}
+async function pdfBytes(D,title){
+  if(D.missing.size) throw new Error('font không có chữ: '+[...D.missing].join(' '));
+  const enc=new TextEncoder(), objs=[]; const alloc=()=>{ objs.push(null); return objs.length; };
+  const setO=(n,dict,stream)=>{ objs[n-1]={dict,stream}; };
+  const cat=alloc(), pages=alloc();
+  const fontRef={};
+  for(const F of Object.values(D.fonts)){
+    const t0=alloc(), cid=alloc(), fd=alloc(), ff=alloc(), tu=alloc(); fontRef[F.name]=t0;
+    const f=F.f, k=1000/f.upm, gl=[...F.used.keys()].sort((a,b)=>a-b);
+    const base=F.key==='B'?'LiberationSerif-Bold':'LiberationSerif';
+    setO(t0,`<< /Type /Font /Subtype /Type0 /BaseFont /${base} /Encoding /Identity-H /DescendantFonts [${cid} 0 R] /ToUnicode ${tu} 0 R >>`);
+    setO(cid,`<< /Type /Font /Subtype /CIDFontType2 /BaseFont /${base} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor ${fd} 0 R /CIDToGIDMap /Identity /DW 1000 /W [${gl.map(g=>`${g} [${Math.round(f.adv[g]*k)}]`).join(' ')}] >>`);
+    setO(fd,`<< /Type /FontDescriptor /FontName /${base} /Flags 34 /FontBBox [${f.bbox.map(v=>Math.round(v*k)).join(' ')}] /ItalicAngle ${f.ital} /Ascent ${Math.round(f.asc*k)} /Descent ${Math.round(f.desc*k)} /CapHeight ${Math.round(f.cap*k)} /StemV ${F.key==='B'?140:80} /FontFile2 ${ff} 0 R >>`);
+    const z=await zDeflate(f.u8); setO(ff,`<< /Length1 ${f.u8.length}${z?' /Filter /FlateDecode':''}`,z||f.u8);
+    const bf=gl.map(g=>`<${g.toString(16).padStart(4,'0')}> <${[...F.used.get(g)].map(ch=>{ const c=ch.codePointAt(0); return c>0xFFFF?((0xD800+((c-0x10000)>>10)).toString(16)+(0xDC00+((c-0x10000)&0x3FF)).toString(16)):c.toString(16).padStart(4,'0'); }).join('')}>`);
+    let cm='/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n';
+    for(let i=0;i<bf.length;i+=100){ const b=bf.slice(i,i+100); cm+=`${b.length} beginbfchar\n${b.join('\n')}\nendbfchar\n`; }
+    cm+='endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend';
+    setO(tu,'<<',enc.encode(cm));
+  }
+  const imRef={}; for(const im of D.imgs){ const n=alloc(); imRef[im.name]=n; setO(n,`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode`,im.bytes); }
+  const fontRes=Object.values(D.fonts).map(F=>`/${F.name} ${fontRef[F.name]} 0 R`).join(' ');
+  const xoRes=D.imgs.length?` /XObject << ${D.imgs.map(im=>`/${im.name} ${imRef[im.name]} 0 R`).join(' ')} >>`:'';
+  const kids=[];
+  for(const P of D.pages){
+    const pg=alloc(), ct=alloc(); kids.push(pg);
+    setO(pg,`<< /Type /Page /Parent ${pages} 0 R /MediaBox [0 0 ${pn(D.W)} ${pn(D.H)}] /Resources << /Font << ${fontRes} >>${xoRes} >> /Contents ${ct} 0 R >>`);
+    const raw=enc.encode(P.ops.join('\n')), z=await zDeflate(raw); setO(ct,`<<${z?' /Filter /FlateDecode':''}`,z||raw);
+  }
+  setO(pages,`<< /Type /Pages /Kids [${kids.map(k=>k+' 0 R').join(' ')}] /Count ${kids.length} >>`);
+  setO(cat,`<< /Type /Catalog /Pages ${pages} 0 R >>`);
+  const info=alloc(), u16=s=>'<FEFF'+[...String(s)].map(ch=>{ const c=ch.codePointAt(0); return c>0xFFFF?'003F':c.toString(16).padStart(4,'0'); }).join('')+'>';
+  const d=new Date(), dd=x=>String(x).padStart(2,'0');
+  setO(info,`<< /Title ${u16(title||'')} /Producer ${u16('TOOLS BC1+BC2+SBD v'+APP_VER)} /CreationDate (D:${d.getFullYear()}${dd(d.getMonth()+1)}${dd(d.getDate())}${dd(d.getHours())}${dd(d.getMinutes())}${dd(d.getSeconds())}) >>`);
+  const parts=[enc.encode('%PDF-1.7\n%\xE2\xE3\xCF\xD3\n')]; let off=parts[0].length; const xref=[];
+  objs.forEach((o,i)=>{ xref.push(off); let head=`${i+1} 0 obj\n`;
+    if(o.stream){ head+=(o.dict.endsWith('>>')?o.dict.slice(0,-2):o.dict)+` /Length ${o.stream.length} >>\nstream\n`; const a=enc.encode(head), b=enc.encode('\nendstream\nendobj\n'); parts.push(a,o.stream,b); off+=a.length+o.stream.length+b.length; }
+    else { const a=enc.encode(head+o.dict+'\nendobj\n'); parts.push(a); off+=a.length; } });
+  let tail=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+xref.map(x=>String(x).padStart(10,'0')+' 00000 n \n').join('');
+  tail+=`trailer\n<< /Size ${objs.length+1} /Root ${cat} 0 R /Info ${info} 0 R >>\nstartxref\n${off}\n%%EOF\n`; parts.push(enc.encode(tail));
+  const out=new Uint8Array(parts.reduce((t,p)=>t+p.length,0)); let p=0; for(const x of parts){ out.set(x,p); p+=x.length; } return out;
+}
+/* đọc lại file PDF: lấy từng đoạn chữ (vị trí, cỡ chữ, nội dung qua bảng ToUnicode) của mọi trang */
+async function pdfReadBack(u8){
+  const s=new TextDecoder('latin1').decode(u8), O={};
+  const re=/(\d+) 0 obj\n/g; let m;
+  while((m=re.exec(s))){ const n=+m[1], st=m.index+m[0].length; const e=s.indexOf('\nendobj',st); const body=s.slice(st,e);
+    const si=body.indexOf('\nstream\n'); if(si<0){ O[n]={dict:body}; continue; }
+    const dict=body.slice(0,si), len=+(dict.match(/\/Length (\d+)/)||[])[1]; const a=st+si+8; let data=u8.slice(a,a+len);
+    if(/\/Filter \/FlateDecode/.test(dict)) data=await zInflate(data);
+    O[n]={dict,data}; re.lastIndex=a+len; }
+  const trailer=s.slice(s.lastIndexOf('trailer')); const root=+(trailer.match(/\/Root (\d+)/)||[])[1];
+  const pagesN=+(O[root].dict.match(/\/Pages (\d+)/)||[])[1]; const kids=[...O[pagesN].dict.match(/\/Kids \[([^\]]*)\]/)[1].matchAll(/(\d+) 0 R/g)].map(x=>+x[1]);
+  const cmapCache={}, dec=new TextDecoder();
+  const uni=fn=>{ if(cmapCache[fn]) return cmapCache[fn]; const tu=+(O[fn].dict.match(/\/ToUnicode (\d+)/)||[])[1]; const M={};
+    for(const x of dec.decode(O[tu].data).matchAll(/<([0-9a-f]{4})> <([0-9a-f]+)>/gi)){ let t=''; for(let i=0;i<x[2].length;i+=4) t+=String.fromCharCode(parseInt(x[2].slice(i,i+4),16)); M[x[1].toLowerCase()]=t; }
+    return cmapCache[fn]=M; };
+  const H=+(O[kids[0]].dict.match(/\/MediaBox \[0 0 [\d.]+ ([\d.]+)\]/)||[])[1];
+  const pages=kids.map(k=>{ const d=O[k].dict; const fonts={}; for(const x of (d.match(/\/Font << ([^>]*) >>/)||['',''])[1].matchAll(/\/(F\d+) (\d+) 0 R/g)) fonts[x[1]]=+x[2];
+    const imgs=(d.match(/\/XObject << ([^>]*) >>/)||['',''])[1].match(/\/Im\d+/g)||[];
+    const ct=+(d.match(/\/Contents (\d+)/)||[])[1]; const txt=dec.decode(O[ct].data), T=[];
+    for(const x of txt.matchAll(/\/(F\d+) ([\d.]+) Tf 1 0 0 1 ([-\d.]+) ([-\d.]+) Tm <([0-9a-f]*)> Tj/gi)){ const M=uni(fonts[x[1]]); let t=''; for(let i=0;i<x[5].length;i+=4) t+=M[x[5].slice(i,i+4).toLowerCase()]??'�';
+      T.push({font:x[1], bold:/Bold/.test(O[fonts[x[1]]].dict), size:+x[2], x:+x[3], y:H-(+x[4]), t}); }
+    return {texts:T, imgs:imgs.map(n=>{ const r=+(d.match(new RegExp(n.replace('/','\\/')+' (\\d+) 0 R'))||[])[1]; const di=O[r].dict; return {w:+(di.match(/\/Width (\d+)/)||[])[1], h:+(di.match(/\/Height (\d+)/)||[])[1]}; })}; });
+  return {pages,H};
+}
+
+/* ===== DS SBD dạng PDF để IN DÁN — đúng bố cục file mẫu (A4 đứng, 6 cột SBD → Nội dung sát hạch, trang 1: 39 người, các trang sau: 46 người) ===== */
+const SBDPDF={W:595.2,H:841.68,X:[31.6,75.6,290.6,366.6,426,479.3,578],RH:16.2,P1:39,PN:46,HEAD:[0.678,0.847,0.902]};
+function sbdPdfPlan(n){ const P=[]; let i=0; P.push([0,Math.min(n,SBDPDF.P1)]); i=SBDPDF.P1; while(i<n){ P.push([i,Math.min(n,i+SBDPDF.PN)]); i+=SBDPDF.PN; } return P; }
+function sbdPdfBuild(ex,cfg,st){
+  const L=SBDPDF, D=pdfDoc(L.W,L.H), X=L.X, cx=i=>(X[i]+X[i+1])/2, mid=(X[0]+X[6])/2;
+  const head=(P,y0)=>{                          // khung tiêu đề cột: nền xanh nhạt, viền đậm
+    P.rect(X[0],y0,X[6]-X[0],35.3,L.HEAD);
+    const T=[['SBD'],['Họ và tên'],['Số CMT'],['Ngày tháng','Sinh'],['Hạng'],['Nội dung','sát hạch']];
+    T.forEach((t,i)=>{ if(t.length===1) P.text('B',10.68,cx(i),y0+21.8,t[0],'c'); else { P.text('B',10.68,cx(i),y0+15.2,t[0],'c'); P.text('B',10.68,cx(i),y0+28.6,t[1],'c'); } });
+    P.line(X[0],y0,X[6],y0,1.1); P.line(X[0],y0+35.3,X[6],y0+35.3,1.1);
+    X.forEach(x=>P.line(x,y0,x,y0+35.3,x===X[0]||x===X[6]?1.1:0.6));
+  };
+  const plan=sbdPdfPlan(ex.rows.length);
+  plan.forEach(([a,b],pi)=>{
+    const P=D.page(); let y;
+    if(pi===0){
+      P.text('B',9.12,161.7,29.5,cfg.dv1,'c'); const w1=P.text('B',9.12,161.7,42.7,cfg.dv2,'c'); P.line(161.7-w1/2,43.9,161.7+w1/2,43.9,0.5);
+      P.text('B',9.12,472.8,29.5,'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM','c'); const w2=P.text('B',9.12,472.8,42.7,'Độc lập - Tự do - Hạnh phúc','c'); P.line(472.8-w2/2,43.9,472.8+w2/2,43.9,0.5);
+      P.text('B',12.12,mid,66.3,'DANH SÁCH THÍ SINH DỰ THI SÁT HẠCH MÔ TÔ','c');
+      P.text('B',12.12,mid,84.6,'Tại: '+cfg.tai,'c');
+      P.text('B',10.68,78.1,101.5,'Khóa thi: '+ex.khoaThi); P.text('B',10.68,369.1,101.5,'Hạng A1:'); P.text('B',10.68,cx(4),101.5,String(st.a1),'c');
+      P.text('B',10.68,78.1,118.6,'Ngày thi: '+(ex.ngayThi||''));
+      head(P,135.6);
+      P.text('B',9.12,mid,179.9,`Hạng ${(ex.rows[0]&&ex.rows[0].hang)||'A1m'}:`,'c');
+      P.line(X[0],181.4,X[6],181.4,1.1); P.line(X[0],170.9,X[0],181.4,0.6); P.line(X[6],170.9,X[6],181.4,0.6);
+      y=181.4;
+    } else { head(P,19.2); y=55.5; P.line(X[0],y,X[6],y,0.6); }
+    const top=y;
+    for(let i=a;i<b;i++){ const r=ex.rows[i];
+      const fit=(k,sz,t,w)=>{ const m=pdfW(pdfFont(k),t,sz); return m>w?sz*w/m:sz; };
+      P.text('B',12.12,cx(0),y+13.4,String(r.sbd),'c'); P.text('R',fit('R',12.12,r.ten,X[2]-X[1]-5),X[1]+2.6,y+13.4,r.ten);
+      P.text('R',10.68,cx(2),y+12.6,r.cmt,'c'); P.text('R',10.68,cx(3),y+12.6,r.ns,'c'); P.text('R',10.68,cx(4),y+12.6,r.hang,'c'); P.text('R',fit('R',10.68,r.nd,X[6]-X[5]-5),X[5]+2.6,y+12.6,r.nd);
+      y+=L.RH; P.line(X[0],y,X[6],y,0.6); }
+    X.forEach(x=>P.line(x,top,x,y,0.6));
+  });
+  return {D,plan};
+}
+async function sbdPdfVerify(buf,ex,cfg,st){
+  const P=[]; let R; try{ R=await pdfReadBack(buf); }catch(e){ return ['Không đọc lại được file PDF vừa tạo: '+e.message]; }
+  const plan=sbdPdfPlan(ex.rows.length), X=SBDPDF.X;
+  if(R.pages.length!==plan.length) P.push(`Số trang ${R.pages.length}, đúng phải là ${plan.length}`);
+  const col=x=>{ for(let i=0;i<6;i++) if(x>=X[i]-1&&x<X[i+1]) return i; return -1; };
+  let k=0;
+  R.pages.forEach((pg,pi)=>{
+    const all=pg.texts.map(t=>t.t).join('|');
+    for(const h of ['SBD','Họ và tên','Số CMT','Ngày tháng','Sinh','Hạng','Nội dung','sát hạch']) if(!pg.texts.some(t=>t.t===h)) P.push(`Trang ${pi+1}: thiếu tiêu đề cột “${h}”`);
+    if(pi===0){ for(const w of [cfg.dv1,cfg.dv2,'Tại: '+cfg.tai,'Khóa thi: '+ex.khoaThi,'Ngày thi: '+(ex.ngayThi||''),'DANH SÁCH THÍ SINH DỰ THI SÁT HẠCH MÔ TÔ',String(st.a1)]) if(!pg.texts.some(t=>t.t===w)) P.push(`Trang 1: thiếu “${w}”`); }
+    const y0=pi===0?181.4:55.5, rows={};
+    for(const t of pg.texts){ if(t.y<y0) continue; const ri=Math.floor((t.y-y0)/SBDPDF.RH+1e-6); (rows[ri]=rows[ri]||[]).push(t); }
+    const [a,b]=plan[pi]||[0,0];
+    Object.keys(rows).map(Number).sort((x,y)=>x-y).forEach(ri=>{
+      const cells=['','','','','',''], r=ex.rows[k];
+      for(const t of rows[ri]){ const c=col(t.x+1); if(c>=0) cells[c]+=t.t; }
+      if(!r){ P.push(`Trang ${pi+1}: dư dòng “${cells.join(' | ')}”`); k++; return; }
+      const want=[String(r.sbd),r.ten,r.cmt,r.ns,r.hang,r.nd].map(v=>String(v??'').normalize('NFC'));
+      want.forEach((w,c)=>{ if(cells[c]!==w) P.push(`SBD ${r.sbd}: cột ${['SBD','Họ và tên','Số CMT','Ngày sinh','Hạng','Nội dung'][c]} trong PDF ghi “${cells[c]}”, đúng phải là “${w}”`); });
+      k++; });
+    if(k!==b) P.push(`Trang ${pi+1}: hết trang ở người thứ ${k}, đúng phải là ${b}`);
+  });
+  if(k!==ex.rows.length) P.push(`PDF có ${k} người, danh sách có ${ex.rows.length} người`);
+  return P;
+}
+async function exportSBDPdf(ex){
+  ex=ex||curExam(); if(!ex||examBad(ex)){ toast('Không có danh sách thi hợp lệ để xuất.'); return false; }
+  const cfg=sbdCfgGet(), st=examStats(ex);
+  let buf;
+  try{ const {D}=sbdPdfBuild(ex,cfg,st); buf=await pdfBytes(D,'DS thí sinh dự thi sát hạch '+ex.khoaThi); }
+  catch(e){ dialog('Dừng xuất file',`<div class="note warn">${ic('alert')}<span>Không tạo được PDF: ${esc(e.message)}</span></div>`,[['Đóng','pri']]); return false; }
+  const P=await sbdPdfVerify(buf,ex,cfg,st);
+  if(P.length){ dialog('Dừng xuất file — phát hiện sai lệch',`<div class="note warn">${ic('alert')}<span>Tool đọc lại file PDF vừa tạo và thấy <b>${P.length}</b> chỗ không khớp với danh sách. File chưa được tải về.</span></div><div style="max-height:300px;overflow:auto;margin-top:10px;font-size:13px">${P.slice(0,60).map(x=>'• '+esc(x)).join('<br>')}</div>`,[['Đóng','pri']]); return false; }
+  const name=`SBD_${asciiName(ex.khoaThi)}.pdf`, plan=sbdPdfPlan(ex.rows.length);
+  saveVerified(buf,name,'application/pdf');
+  dialog('Đã xuất PDF danh sách SBD',`<div class="note ok">${ic('check')}<span>Tool đã đọc lại file <b>${esc(name)}</b>: <b>${ex.rows.length}/${ex.rows.length}</b> người đúng SBD, họ tên, số CMT, ngày sinh, hạng, nội dung — đúng thứ tự file phòng thi.</span></div>
+    <ul style="margin:10px 0 0;padding-left:20px;line-height:1.8"><li>${plan.length} trang A4 đứng — trang 1: ${plan[0][1]} người, các trang sau tối đa ${SBDPDF.PN} người, tiêu đề cột lặp lại mỗi trang</li><li>Khi in: chọn khổ A4, tỉ lệ <b>Thực tế / 100%</b> (không “Vừa trang”)</li></ul>`,[['Đóng','pri']]);
+  return true;
+}
+
 function sbdCfgGet(){ return DB.sbdCfg=DB.sbdCfg||{dv1:'CÔNG AN TỈNH GIA LAI',dv2:'HỘI ĐỒNG SÁT HẠCH',tai:'CÔNG TY CP ĐÀO TẠO VÀ DỊCH VỤ GTVT BÌNH ĐỊNH'}; }
 function printSBD(ex){
   ex=ex||curExam(); if(!ex||examBad(ex)){ toast('Không có danh sách thi hợp lệ để in.'); return; }
@@ -2931,6 +3403,8 @@ function formCells(oid){
   if(oid==='o_bcdn') return `<td><button class="btn sm" data-fbcdn="1">${ic('download')}Tải mẫu</button></td><td class="muted" style="white-space:normal;font-size:12.5px">Mẫu Word cài sẵn (từ file 001_BC_ĐN_TC_SH gốc, có mã {{…}} ở các chỗ thay)</td>`;
   if(oid==='o_bcdt') return `<td><button class="btn sm" data-fbcdt="1">${ic('download')}Tải mẫu</button></td><td class="muted" style="white-space:normal;font-size:12.5px">Mẫu Word cài sẵn (từ file BC_Dao_Tao_Khoa_Hoc gốc, có mã {{…}} ở các chỗ thay)</td>`;
   if(oid==='o_tt') return `<td colspan="2" class="muted" style="white-space:normal;font-size:12.5px">Dùng chung form Danh sách SBD</td>`;
+  if(oid==='o_sbdpdf') return `<td colspan="2" class="muted" style="white-space:normal;font-size:12.5px">Bố cục cố định theo file mẫu (A4 đứng, trang 1: 39 người, trang sau: 46 người); tiêu đề lấy theo mục Số báo danh</td>`;
+  if(oid==='o_tbpng') return `<td colspan="2" class="muted" style="white-space:normal;font-size:12.5px">Sửa chữ, đổi ảnh ngay trong hộp “Thông báo (ảnh / PDF)” ở mục Số báo danh</td>`;
   if(oid==='o_tb') return `<td><button class="btn sm" data-ftb="1">${ic('download')}Tải mẫu</button></td><td class="muted" style="white-space:normal;font-size:12.5px">Mẫu thông báo cài sẵn trong tool (điền các ô C5–C9)</td>`;
   const id=OUT_FORM[oid]; if(!id) return `<td class="muted">—</td><td class="muted">—</td>`;
   const f=(DB.forms||{})[id]||{}, list=f.list||[], cur=list.find(x=>x.fid===f.cur);
@@ -3150,7 +3624,7 @@ async function exportSBD(ex){
   if(ok) dialog('Đã xuất danh sách SBD',`<div class="note ok">${ic('check')}<span>Tool đã đọc lại file <b>SBD_${esc(asciiName(ex.khoaThi))}.xlsx</b> và so từng ô với file phòng thi:</span></div>
     <ul style="margin:10px 0 0;padding-left:20px;line-height:1.8"><li><b>${ex.rows.length}/${ex.rows.length}</b> dòng khớp SBD, họ tên, số CMT, ngày sinh, hạng, nội dung</li>
     <li>Thứ tự giữ nguyên như file phòng thi</li><li>Bảng tổng hợp: Thi mới ${st.moiLT} LT / ${st.moiH} Hình · Thi lại ${st.L} LT / ${st.H} Hình / ${st.LH} LT+Hình</li>
-    ${chk.W.length?`<li style="color:var(--amber)">Còn ${chk.W.length} cảnh báo ở phần kiểm tra toàn vẹn — nên xem lại</li>`:''}</ul>`,[['Đóng',''],['Làm thông báo Zalo','pri',()=>{ setTimeout(()=>askTB(ex),50); }]]);
+    ${chk.W.length?`<li style="color:var(--amber)">Còn ${chk.W.length} cảnh báo ở phần kiểm tra toàn vẹn — nên xem lại</li>`:''}</ul>`,[['Đóng',''],['Làm thông báo','pri',()=>{ setTimeout(()=>askTB(ex),50); }]]);
 }
 /* ===== THI THỬ — mục riêng, ĐỘC LẬP: file tên <khóa>_Thithu; lưu ở DB.thithu, KHÔNG đụng khóa thi (DB.exams), BC1, BC2, SBD của học viên ===== */
 let QTT='';
