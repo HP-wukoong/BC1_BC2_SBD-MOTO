@@ -208,6 +208,8 @@ dialog{border:0;border-radius:14px;padding:0;max-width:580px;width:calc(100% - 3
 dialog::backdrop{background:rgba(17,42,74,.45)}
 dialog.wide{max-width:1180px}
 dialog.xl{max-width:1360px;width:96vw}
+.khv{margin-top:10px;overflow:auto}.khv table{border-collapse:collapse;width:100%;font-size:12.5px}.khv th,.khv td{border:1px solid var(--line);padding:4px 6px;text-align:center;font-weight:500}.khv th:first-child{text-align:left;white-space:nowrap;width:150px}
+.khr{position:relative;height:30px;padding:0!important}.khb{position:absolute;top:6px;bottom:6px;border:1.6px solid #111;border-radius:2px;background:#fff}.khb.th{background:repeating-linear-gradient(90deg,#fff 0 calc(33.33% - 1.6px),#111 calc(33.33% - 1.6px) 33.33%)}
 .tbp{display:grid;grid-template-columns:minmax(300px,430px) 1fr;gap:18px;align-items:start}
 .tbpL{max-height:calc(100vh - 210px);overflow:auto;padding-right:8px}
 .tbpR{position:sticky;top:0;text-align:center}
@@ -316,6 +318,8 @@ details summary{cursor:pointer}
 <script type="text/plain" id="tbTpl">/*TB_TEMPLATE*/</script>
 <script type="text/plain" id="bcdnTpl">/*BCDN_TEMPLATE*/</script>
 <script type="text/plain" id="bcdtTpl">/*BCDT_TEMPLATE*/</script>
+<script type="text/plain" id="khdtTpl">/*KHDT_TEMPLATE*/</script>
+<script type="text/plain" id="khdtParts">/*KHDT_PARTS*/</script>
 <script type="text/plain" id="pdfFontR">/*PDF_FONT_R*/</script>
 <script type="text/plain" id="pdfFontB">/*PDF_FONT_B*/</script>
 <script type="text/plain" id="tbpLogo">/*TBP_LOGO*/</script>
@@ -411,6 +415,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.8','22/10/2026',['Báo cáo 1: nút “Kế hoạch đào tạo (Word)” — giữ định dạng mẫu; phân phối giờ học sửa được (thêm/bớt môn); lịch toàn khóa tự thêm/bớt cột tuần (ISO) theo khai giảng – bế giảng, ô Lý thuyết / Thực hành tự đặt đúng ngày; tool đọc lại từng ô trước khi tải về']],
   ['4.7','21/10/2026',['Số báo danh: nút “PDF dán bảng tin” — file PDF A4 đúng bố cục mẫu (SBD, họ tên, số CMT, ngày sinh, hạng, nội dung; trang 1: 39 người, trang sau: 46), tool đọc lại từng dòng trước khi tải về',
                        'Thông báo kỳ sát hạch làm lại theo mẫu poster: xem trước trực tiếp, sửa được mọi chữ và ảnh, xuất ảnh PNG gửi Zalo và PDF in A4']],
   ['4.6','20/10/2026',['Báo cáo 1: nút “BC đăng ký khóa (Word)” — điền theo khóa: ngày theo khai giảng, mã khóa, số học viên BC1, khai giảng/bế giảng; ngày Phương án đào tạo mặc định 16/07/2026, sửa được khi có công văn mới',
@@ -1234,6 +1239,178 @@ async function exportBCDT(pa){
   saveVerified(buf,`BC_Dao_Tao_Khoa_Hoc_${c.ten}.docx`,'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
   return true;
 }
+/* ===== KẾ HOẠCH ĐÀO TẠO (Word, mục Báo cáo 1) — giữ nguyên định dạng file mẫu; phân phối giờ học và lịch toàn khóa dựng theo khóa ===== */
+const KHDT_PP_MD=[{ten:'Pháp luật về giao thông đường bộ',lt:'07',th:'',hinh:'',kt:'',gc:''},{ten:'Kỹ thuật lái xe',lt:'02',th:'',hinh:'',kt:'',gc:''},{ten:'Thực hành lái xe trên mô tô tập lái',lt:'',th:'',hinh:'03',kt:'',gc:''}];
+function khdtCfg(){ const K=DB.khdt=DB.khdt||{}; if(!Array.isArray(K.pp)) K.pp=JSON.parse(JSON.stringify(KHDT_PP_MD)); if(!Array.isArray(K.gv)) K.gv=['3','','25']; if(!Array.isArray(K.xe)) K.xe=['16','','58']; if(!(K.ltNgay>=1)) K.ltNgay=1; return K; }
+let KHDT_PARTS=null;
+function khdtParts(){ if(!KHDT_PARTS){ const b=tplBytes('khdtParts'); KHDT_PARTS=JSON.parse(new TextDecoder().decode(b)); } return KHDT_PARTS; }
+const dnOf=iso=>{ const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?Date.UTC(+m[1],+m[2]-1,+m[3])/864e5:null; };
+const dnDate=dn=>new Date(dn*864e5);
+const dnIso=dn=>{ const d=dnDate(dn); return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1,2)+'-'+pad(d.getUTCDate(),2); };
+const dnVN=dn=>{ const d=dnDate(dn); return pad(d.getUTCDate(),2)+'/'+pad(d.getUTCMonth()+1,2)+'/'+d.getUTCFullYear(); };
+/* tuần theo ISO 8601 (Thứ Hai → Chủ nhật; tuần 1 là tuần có ngày Thứ Năm đầu tiên của năm) — giống bảng tuần epochconverter */
+function isoWeek(dn){ const wd=(dnDate(dn).getUTCDay()+6)%7, mon=dn-wd, thu=mon+3, t=dnDate(thu), y=t.getUTCFullYear(); return {mon, y, w:1+Math.floor((thu-Date.UTC(y,0,1)/864e5)/7), month:pad(t.getUTCMonth()+1,2)+'-'+y}; }
+function khdtHang(c){ return (c.khdt&&c.khdt.hang)||((String(c.ten||'').match(/^([A-Za-z]+\d*[a-z]*)/)||[])[1])||'A1'; }
+function khdtNum(v){ const s=String(v??'').trim(); if(s==='') return 0; const n=Number(s.replace(',','.')); return isFinite(n)?n:NaN; }
+const khdtFmt=n=>n===''?'':(Number.isInteger(n)&&n<10&&n>=0?'0'+n:String(n));
+function khdtPlan(c){
+  const K=khdtCfg(), X=c.khdt||{}, E=[], W=[];
+  const kg=dnOf(c.khaiGiang), bg=dnOf(c.beGiang);
+  if(kg==null) E.push('Chưa nhập Ngày khai giảng (mục Thông tin khóa).');
+  if(bg==null) E.push('Chưa nhập Ngày bế giảng (mục Thông tin khóa).');
+  if(!String(c.maKhoa||'').trim()) E.push('Chưa nhập Mã khóa BC1 (mục Thông tin khóa).');
+  if(!String(c.soKhoa||'').trim()) E.push('Chưa nhập Số khóa (mục Thông tin khóa).');
+  const P={kg,bg,E,W,weeks:[],hang:khdtHang(c)};
+  if(kg==null||bg==null) return P;
+  if(bg<kg){ E.push('Ngày bế giảng trước ngày khai giảng.'); return P; }
+  P.soNgay=bg-kg+1;
+  if(c.thoiGian&&+c.thoiGian!==P.soNgay) W.push(`Thông tin khóa ghi thời gian đào tạo ${c.thoiGian} ngày, nhưng từ khai giảng đến bế giảng là ${P.soNgay} ngày — file ghi ${P.soNgay} ngày.`);
+  const nLT=Math.max(1,Math.min(P.soNgay,K.ltNgay|0||1));
+  P.lt=[dnOf(X.ltTu)??kg, dnOf(X.ltDen)??(kg+nLT-1)];
+  P.th=[dnOf(X.thTu)??(P.lt[1]+1), dnOf(X.thDen)??bg];
+  for(const [k,[a,b]] of [['Lý thuyết',P.lt],['Thực hành',P.th]]){
+    if(a>b) E.push(`${k}: ngày bắt đầu sau ngày kết thúc.`);
+    if(a<kg||b>bg) E.push(`${k} (${dnVN(a)} – ${dnVN(b)}) nằm ngoài thời gian khóa (${dnVN(kg)} – ${dnVN(bg)}).`); }
+  if(!E.length&&P.th[0]<=P.lt[1]) W.push('Thực hành bắt đầu trước khi hết lý thuyết — hai ô trùng ngày.');
+  for(let m=isoWeek(kg).mon;m<=isoWeek(bg).mon;m+=7) P.weeks.push(isoWeek(m));
+  if(P.weeks.length>9) E.push(`Khóa kéo dài ${P.weeks.length} tuần — bảng lịch quá nhiều cột để in trên 1 trang A4 (tối đa 9).`);
+  const pp=K.pp.filter(r=>String(r.ten||'').trim());
+  if(!pp.length) E.push('Phân phối giờ học chưa có môn nào.');
+  P.pp=pp.map((r,i)=>{ const v=['lt','th','hinh','kt'].map(k=>khdtNum(r[k])); if(v.some(isNaN)) E.push(`Môn “${r.ten}”: số giờ phải là số.`);
+    const t=v.reduce((s,x)=>s+(isNaN(x)?0:x),0);
+    return {STT:String(i+1),TEN:String(r.ten).trim(),TONG:khdtFmt(t),LT:khdtFmt(String(r.lt||'').trim()===''?'':v[0]),TH:khdtFmt(String(r.th||'').trim()===''?'':v[1]),HINH:khdtFmt(String(r.hinh||'').trim()===''?'':v[2]),KT:khdtFmt(String(r.kt||'').trim()===''?'':v[3]),GC:String(r.gc||'').trim()}; });
+  /* bố cục bảng lịch: 2 cột đầu giữ nguyên, các tuần chia đều phần còn lại */
+  const L=khdtParts(), rest=L.tblW-L.leadW[0]-L.leadW[1], n=P.weeks.length, w0=Math.floor(rest/n);
+  P.colW=P.weeks.map((_,i)=>i===n-1?rest-w0*(n-1):w0);
+  const mon0=P.weeks[0].mon, mark=(a,b)=>{ const wi=Math.floor((a-mon0)/7), di=(a-mon0)%7, dayW=P.colW[wi]*635/7, inset=Math.round(dayW*0.1);
+    return {wi, off:Math.round(di*dayW-68580+inset), cx:Math.round((b-a+1)*dayW-2*inset), days:b-a+1}; };
+  if(!E.length){ P.mLT=mark(P.lt[0],P.lt[1]); P.mTH=mark(P.th[0],P.th[1]); }
+  P.months=[]; for(const [i,wk] of P.weeks.entries()){ const g=P.months[P.months.length-1]; if(g&&g.month===wk.month){ g.span++; g.w+=P.colW[i]; } else P.months.push({month:wk.month,span:1,w:P.colW[i]}); }
+  P.gv=K.gv.map(s=>String(s??'').trim()); P.xe=K.xe.map(s=>String(s??'').trim());
+  return P;
+}
+function khdtData(c,P){ return {KHOA:String(c.soKhoa||'').trim(),MA:String(c.maKhoa||'').trim(),HANG:P.hang,SONGAY:String(P.soNgay),TU:dnVN(P.kg),DEN:dnVN(P.bg),
+  GV1:P.gv[0],GV2:P.gv[1],GV3:P.gv[2],XE1:P.xe[0],XE2:P.xe[1],XE3:P.xe[2]}; }
+function khdtLich(P){
+  const L=khdtParts(), sub=(s,o)=>s.replace(/\{\{(\w+)\}\}/g,(m,k)=>k in o?o[k]:m);
+  /* ô hình vẽ bằng khung vectơ (nét luôn rõ dù dài hay ngắn): Lý thuyết = 1 khung; Thực hành = 3 khung liền nhau như phần Ghi chú */
+  let zid=0; const rect=(off,cx,voff)=>{ zid++; const id=9000+zid, cy=190500, pt=v=>(v/12700).toFixed(2);
+    return `<w:r><mc:AlternateContent><mc:Choice Requires="wps"><w:drawing><wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="${251700000+zid}" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1"><wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="column"><wp:posOffset>${off}</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>${voff}</wp:posOffset></wp:positionV><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/><wp:docPr id="${id}" name="KHDT ${id}"/><wp:cNvGraphicFramePr/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:ln w="15875"><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:miter lim="800000"/></a:ln></wps:spPr><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect style="position:absolute;margin-left:${pt(off)}pt;margin-top:${pt(voff)}pt;width:${pt(cx)}pt;height:${pt(cy)}pt;z-index:${zid+10};mso-position-horizontal-relative:text;mso-position-vertical-relative:text" strokeweight="1.25pt"/></w:pict></mc:Fallback></mc:AlternateContent></w:r>`; };
+  const mk=(k,m)=>{ if(k==='LT') return rect(m.off,m.cx,22860); const sw=Math.round(m.cx/3); return [0,1,2].map(i=>rect(m.off+i*sw,i<2?sw:m.cx-2*sw,41275)).join(''); };
+  let x=L.tblOpen+'<w:tblGrid>'+[...L.leadW,...P.colW].map(w=>`<w:gridCol w:w="${w}"/>`).join('')+'</w:tblGrid>';
+  const R=L.rows;
+  x+=R[0].open+R[0].lead+P.months.map(g=>sub(R[0].wk,{W:String(g.w),SPAN:String(g.span),THANG:xmlEsc(g.month)})).join('')+R[0].close;
+  x+=R[1].open+R[1].lead+P.weeks.map((wk,i)=>sub(R[1].wk,{W:String(P.colW[i]),TUAN:String(wk.w)})).join('')+R[1].close;
+  x+=R[2].open+R[2].lead+P.weeks.map((wk,i)=>sub(R[2].wk,{W:String(P.colW[i]),TU_D:pad(dnDate(wk.mon).getUTCDate(),2),DEN_D:pad(dnDate(wk.mon+6).getUTCDate(),2)})).join('')+R[2].close;
+  x+=R[3].open+R[3].lead+P.weeks.map((wk,i)=>sub(R[3].wk,{W:String(P.colW[i]),MARK:i===P.mLT.wi?mk('LT',P.mLT):''})).join('')+R[3].close;
+  x+=R[4].open+R[4].lead+P.weeks.map((wk,i)=>sub(R[4].wk,{W:String(P.colW[i]),MARK:i===P.mTH.wi?mk('TH',P.mTH):''})).join('')+R[4].close;
+  return x+'</w:tbl>';
+}
+function khdtBuild(c,P){
+  const z=zOpen(tplBytes('khdtTpl').buffer); let x=zGet(z,'word/document.xml'); if(!x) throw new Error('mẫu Word hỏng');
+  const D=khdtData(c,P);
+  const ppRow=(x.match(/<w:tr[ >](?:(?!<\/w:tr>).)*?\{\{PP_STT\}\}.*?<\/w:tr>/s)||[])[0]; if(!ppRow) throw new Error('mẫu thiếu dòng phân phối giờ học');
+  x=x.replace(ppRow,()=>P.pp.map(r=>ppRow.replace(/\{\{PP_(\w+)\}\}/g,(m,k)=>xmlEsc(r[k]))).join(''));
+  const lp='<w:p><w:r><w:t>{{LICH}}</w:t></w:r></w:p>'; if(!x.includes(lp)) throw new Error('mẫu thiếu chỗ bảng lịch');
+  x=x.replace(lp,()=>khdtLich(P));
+  const miss=[]; x=x.replace(/\{\{(\w+)\}\}/g,(m,k)=>{ if(!(k in D)){ miss.push(k); return m; } return xmlEsc(D[k]); });
+  if(miss.length) throw new Error('mẫu có mã lạ: '+miss.join(', '));
+  zPut(z,'word/document.xml',x);
+  const now=new Date(); z.FileIndex.forEach(e=>{ e.mt=now; e.ct=now; });
+  const o=XLSX.CFB.write(z,{fileType:'zip',type:'array',compression:true}); return o instanceof Uint8Array?o:new Uint8Array(o);
+}
+/* đọc lại file vừa tạo bằng trình phân tích XML: kiểm tra từng ô bảng, từng tuần, vị trí 2 ô hình Lý thuyết / Thực hành */
+function khdtVerify(buf,c,P){
+  const Pr=[]; let x; try{ x=zGet(zOpen(buf),'word/document.xml'); }catch(e){ return ['Không đọc lại được file Word vừa tạo: '+e.message]; }
+  if(/\{\{\w+\}\}/.test(x)) Pr.push('Còn sót mã chưa thay trong file');
+  const doc=new DOMParser().parseFromString(x,'application/xml'); if(doc.getElementsByTagName('parsererror').length) return ['File Word vừa tạo bị lỗi cấu trúc XML'];
+  const W='http://schemas.openxmlformats.org/wordprocessingml/2006/main', WP='http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
+  const kids=(el,n)=>[...el.childNodes].filter(e=>e.localName===n&&e.namespaceURI===W);
+  const txt=el=>[...el.getElementsByTagNameNS(W,'t')].map(t=>t.textContent).join('');
+  const body=doc.getElementsByTagNameNS(W,'body')[0], tbls=kids(body,'tbl');
+  const D=khdtData(c,P), all=[...body.getElementsByTagNameNS(W,'p')].map(txt).join('\n');
+  for(const s of [`Khóa: ${D.KHOA}`,`Mã Khóa: ${D.MA}`,`Hạng: ${D.HANG}`,`Thời gian đào tạo: ${D.SONGAY} ngày (Từ ngày: ${D.TU} đến ngày ${D.DEN})`,`hiện có: ${D.GV1}/${D.GV2}/${D.GV3}`,`hiện có: ${D.XE1}/${D.XE2}/${D.XE3}`])
+    if(!all.replace(/[  ]+/g,' ').includes(s.replace(/ +/g,' '))) Pr.push(`Không thấy “${s}” trong file`);
+  if(tbls.length<3) return [...Pr,'File thiếu bảng'];
+  const rows=t=>kids(t,'tr').map(r=>kids(r,'tc'));
+  const pp=rows(tbls[1]).slice(2);
+  if(pp.length!==P.pp.length) Pr.push(`Bảng phân phối có ${pp.length} môn, đúng phải là ${P.pp.length}`);
+  P.pp.forEach((r,i)=>{ const cs=pp[i]||[]; ['STT','TEN','TONG','LT','TH','HINH','KT','GC'].forEach((k,j)=>{ const g=cs[j]?txt(cs[j]):'(thiếu ô)'; if(g!==r[k]) Pr.push(`Phân phối giờ, môn ${i+1}, cột ${k}: file ghi “${g}”, đúng phải là “${r[k]}”`); }); });
+  const lr=rows(tbls[2]), n=P.weeks.length;
+  const gridW=[...kids(tbls[2],'tblGrid')[0].childNodes].filter(e=>e.localName==='gridCol').map(e=>+e.getAttributeNS(W,'w'));
+  if(gridW.length!==2+n) Pr.push(`Bảng lịch có ${gridW.length-2} cột tuần, đúng phải là ${n}`);
+  if(gridW.reduce((a,b)=>a+b,0)!==khdtParts().tblW) Pr.push('Tổng độ rộng bảng lịch khác bản mẫu');
+  const span=tc=>{ const g=tc.getElementsByTagNameNS(W,'gridSpan')[0]; return g?+g.getAttributeNS(W,'val'):1; };
+  const m0=lr[0].slice(2); if(m0.length!==P.months.length) Pr.push('Số nhóm tháng sai');
+  P.months.forEach((g,i)=>{ if(!m0[i]||txt(m0[i])!==g.month||span(m0[i])!==g.span) Pr.push(`Tháng ${g.month}: sai nhãn hoặc số tuần gộp`); });
+  P.weeks.forEach((wk,i)=>{ const a=lr[1][2+i], b=lr[2][2+i];
+    if(!a||txt(a)!==String(wk.w)) Pr.push(`Cột tuần ${i+1}: file ghi tuần “${a?txt(a):''}”, đúng phải là ${wk.w}`);
+    const want=pad(dnDate(wk.mon).getUTCDate(),2)+pad(dnDate(wk.mon+6).getUTCDate(),2); if(!b||txt(b)!==want) Pr.push(`Tuần ${wk.w}: ngày ghi “${b?txt(b):''}”, đúng phải là ${want}`); });
+  for(const [ri,m,lab] of [[3,P.mLT,'Lý thuyết'],[4,P.mTH,'Thực hành']]){
+    const found=[]; lr[ri].slice(1).forEach((tc,i)=>{ for(const a of tc.getElementsByTagNameNS(WP,'anchor')){ const off=+a.getElementsByTagNameNS(WP,'posOffset')[0].textContent, cx=+a.getElementsByTagNameNS(WP,'extent')[0].getAttribute('cx'); found.push({wi:i,off,cx}); } });
+    const want=ri===3?1:3;
+    if(found.length!==want) Pr.push(`Dòng ${lab}: có ${found.length} khung, đúng phải là ${want}`);
+    else if(found.some(f=>f.wi!==m.wi)||found[0].off!==m.off||found.reduce((s,f)=>s+f.cx,0)!==m.cx||found.some((f,i)=>i&&f.off!==found[i-1].off+found[i-1].cx)) Pr.push(`Ô hình ${lab} sai vị trí trong file`);
+  }
+  const imgs=doc.getElementsByTagNameNS(WP,'anchor').length; if(imgs!==khdtParts().anchors+2) Pr.push(`Số hình trong file ${imgs}, đúng phải là ${khdtParts().anchors+2}`);
+  return Pr;
+}
+function askKHDT(){
+  const c=C(), K=khdtCfg(); c.khdt=c.khdt||{};
+  const draw=()=>{
+    const P=khdtPlan(c);
+    const days=P.weeks.length?P.weeks.length*7:0, mon0=P.weeks.length?P.weeks[0].mon:0;
+    const bar=(r,cls)=>r&&!P.E.length?`<div class="khb ${cls}" style="left:${(r[0]-mon0)/days*100}%;width:${(r[1]-r[0]+1)/days*100}%"></div>`:'';
+    const pv=P.weeks.length?`<div class="khv"><table><tr><th>Tháng</th>${P.months.map(g=>`<th colspan="${g.span}">${esc(g.month)}</th>`).join('')}</tr>
+      <tr><th>Tuần</th>${P.weeks.map(w=>`<td><b><i>${w.w}</i></b></td>`).join('')}</tr>
+      <tr><th>Từ ngày<br>đến ngày</th>${P.weeks.map(w=>`<td>${pad(dnDate(w.mon).getUTCDate(),2)}<br>${pad(dnDate(w.mon+6).getUTCDate(),2)}</td>`).join('')}</tr>
+      <tr><th>Lý thuyết (H)</th><td colspan="${P.weeks.length}" class="khr">${bar(P.lt,'lt')}</td></tr>
+      <tr><th>Thực hành trong hình (T)</th><td colspan="${P.weeks.length}" class="khr">${bar(P.th,'th')}</td></tr></table></div>`:'';
+    const tot=P.pp?P.pp.reduce((s,r)=>s+(+r.TONG||0),0):0;
+    $('#dlgB').innerHTML=`<div class="muted">Theo mẫu <b>KẾ HOẠCH ĐÀO TẠO</b> — giữ nguyên định dạng file gốc, chỉ thay thông tin của khóa. Phân phối giờ học, số giáo viên/xe nhớ cho các khóa sau; ngày lý thuyết/thực hành nhớ riêng từng khóa.</div>
+      <div class="grid" style="margin-top:10px"><label>Khóa<input type="text" value="${esc(c.soKhoa||'')}" disabled></label><label>Mã khóa<input type="text" value="${esc(c.maKhoa||'')}" disabled></label>
+        <label>Hạng<input type="text" id="khHang" value="${esc(P.hang)}"></label><label>Thời gian đào tạo<input type="text" value="${P.soNgay?P.soNgay+' ngày ('+dnVN(P.kg)+' – '+dnVN(P.bg)+')':''}" disabled></label></div>
+      <h3 style="margin:14px 0 6px;font-size:14px">I. Phân phối giờ học</h3>
+      <div class="imp"><table><thead><tr><th class="c">TT</th><th>Môn học</th><th class="c">Tổng</th><th class="c">LT</th><th class="c">TH</th><th class="c">TH trong hình</th><th class="c">Kiểm tra</th><th>Ghi chú</th><th></th></tr></thead><tbody>
+      ${K.pp.map((r,i)=>`<tr><td class="c">${i+1}</td><td><input type="text" data-pp="${i}" data-k="ten" value="${esc(r.ten)}" style="width:100%;min-width:220px"></td><td class="c"><b>${P.pp&&P.pp[i]?esc(P.pp[i].TONG):''}</b></td>
+        ${['lt','th','hinh','kt'].map(k=>`<td class="c"><input type="text" data-pp="${i}" data-k="${k}" value="${esc(r[k]||'')}" style="width:52px;text-align:center"></td>`).join('')}
+        <td><input type="text" data-pp="${i}" data-k="gc" value="${esc(r.gc||'')}" style="width:100px"></td><td><button class="btn sm ico-only" data-ppx="${i}" title="Xóa môn">${ic('trash')}</button></td></tr>`).join('')}
+      <tr><td></td><td><b>Cộng</b></td><td class="c"><b>${khdtFmt(tot)}</b></td><td colspan="6"><button class="btn sm" id="ppAdd">${ic('plus')}Thêm môn</button> <button class="btn sm" id="ppMd">Về mặc định</button></td></tr></tbody></table></div>
+      <h3 style="margin:14px 0 6px;font-size:14px">II. Lịch học toàn khóa <span class="muted" style="font-weight:400;font-size:12px">— tuần theo chuẩn ISO (Thứ Hai → Chủ nhật), tự thêm/bớt cột theo khai giảng – bế giảng</span></h3>
+      <div class="grid"><label>Lý thuyết từ<input type="date" id="khLT0" value="${P.lt?dnIso(P.lt[0]):''}"></label><label>Lý thuyết đến<input type="date" id="khLT1" value="${P.lt?dnIso(P.lt[1]):''}"></label>
+        <label>Thực hành từ<input type="date" id="khTH0" value="${P.th?dnIso(P.th[0]):''}"></label><label>Thực hành đến<input type="date" id="khTH1" value="${P.th?dnIso(P.th[1]):''}"></label></div>
+      <div class="row" style="margin-top:6px;gap:8px"><span class="muted" style="font-size:12.5px">Mặc định: lý thuyết <input type="number" id="khLTn" min="1" max="30" value="${K.ltNgay}" style="width:56px"> ngày đầu khóa, thực hành từ hôm sau đến bế giảng.</span><button class="btn sm" id="khAuto">Tính lại tự động</button></div>
+      ${pv}
+      <h3 style="margin:14px 0 6px;font-size:14px">III. Số lượng giáo viên, xe tập lái</h3>
+      <div class="grid"><label>Giáo viên: khóa đào tạo / đang sử dụng / tổng hiện có<span style="display:flex;gap:4px">${[0,1,2].map(i=>`<input type="text" data-gv="${i}" value="${esc(K.gv[i])}" style="width:33%">`).join('')}</span></label>
+        <label>Xe tập lái: khóa đào tạo / đang sử dụng / tổng hiện có<span style="display:flex;gap:4px">${[0,1,2].map(i=>`<input type="text" data-xe="${i}" value="${esc(K.xe[i])}" style="width:33%">`).join('')}</span></label></div>
+      ${P.E.length?`<div class="note warn" style="margin-top:10px">${ic('alert')}<span><b>Chưa xuất được:</b><br>${P.E.map(esc).join('<br>')}</span></div>`:''}
+      ${P.W.length?`<div class="note" style="margin-top:8px">${ic('info')}<span>${P.W.map(esc).join('<br>')}</span></div>`:''}`;
+    const B=$('#dlgB');
+    B.querySelectorAll('[data-pp]').forEach(i=>i.onchange=()=>{ K.pp[+i.dataset.pp][i.dataset.k]=i.value; save(); draw(); });
+    B.querySelectorAll('[data-ppx]').forEach(b=>b.onclick=()=>{ K.pp.splice(+b.dataset.ppx,1); save(); draw(); });
+    $('#ppAdd').onclick=()=>{ K.pp.push({ten:'',lt:'',th:'',hinh:'',kt:'',gc:''}); save(); draw(); };
+    $('#ppMd').onclick=()=>{ if(confirm('Đưa phân phối giờ học về mặc định (theo file mẫu)?')){ K.pp=JSON.parse(JSON.stringify(KHDT_PP_MD)); save(); draw(); } };
+    $('#khHang').onchange=e=>{ c.khdt.hang=e.target.value.trim(); save(); draw(); };
+    [['khLT0','ltTu'],['khLT1','ltDen'],['khTH0','thTu'],['khTH1','thDen']].forEach(([id,k])=>$('#'+id).onchange=e=>{ c.khdt[k]=e.target.value; save(); draw(); });
+    $('#khLTn').onchange=e=>{ K.ltNgay=Math.max(1,+e.target.value||1); ['ltTu','ltDen','thTu','thDen'].forEach(k=>delete c.khdt[k]); save(); draw(); };
+    $('#khAuto').onclick=()=>{ ['ltTu','ltDen','thTu','thDen'].forEach(k=>delete c.khdt[k]); save(); draw(); };
+    B.querySelectorAll('[data-gv]').forEach(i=>i.onchange=()=>{ K.gv[+i.dataset.gv]=i.value.trim(); save(); });
+    B.querySelectorAll('[data-xe]').forEach(i=>i.onchange=()=>{ K.xe[+i.dataset.xe]=i.value.trim(); save(); });
+    const b=[...$('#dlgF').querySelectorAll('button')].find(x=>x.textContent==='Xuất file Word'); if(b) b.disabled=!!P.E.length;
+  };
+  dialog('Kế hoạch đào tạo (Word)','',[['Đóng',''],['Xuất file Word','pri',()=>{ if(khdtPlan(c).E.length){ draw(); return false; } setTimeout(exportKHDT,0); }]]);
+  $('#dlg').classList.add('wide'); draw();
+}
+async function exportKHDT(){
+  const c=C(), P=khdtPlan(c);
+  if(P.E.length){ dialog('Chưa xuất được',`<div class="note warn">${ic('alert')}<span>${P.E.map(esc).join('<br>')}</span></div>`,[['Đóng','pri']]); return false; }
+  let buf; try{ buf=khdtBuild(c,P); }catch(e){ dialog('Dừng xuất file',`<div class="note warn">${ic('alert')}<span>${esc(e.message)}</span></div>`,[['Đóng','pri']]); return false; }
+  const Pr=khdtVerify(buf,c,P);
+  if(Pr.length){ dialog('Dừng xuất file — phát hiện sai lệch',`<div class="note warn">${ic('alert')}<span>Tool đọc lại file Word vừa tạo và thấy <b>${Pr.length}</b> chỗ không khớp. File chưa được tải về.</span></div><div style="max-height:300px;overflow:auto;margin-top:10px;font-size:13px">${Pr.slice(0,40).map(x=>'• '+esc(x)).join('<br>')}</div>`,[['Đóng','pri']]); return false; }
+  saveVerified(buf,`KE_HOACH_DAO_TAO_${c.ten}.docx`,'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  return true;
+}
 async function exportTCVP(){
   const c=C(), moi=bc2MoiList(), tl=tlList(false);
   if(!moi.length&&!tl.length){ toast('Chưa có dữ liệu.'); return; }
@@ -1824,7 +2001,7 @@ const NAMES=[
 const OUTNAMES=[['o_bc1','Báo cáo 1 (nộp Sở)','BC1_A1m-42.xlsx'],['o_bc2','Báo cáo 2 (2 sheet: lần đầu và -TL)','BC2_A1m-42.xlsx'],
   ['o_pc08','Báo cáo 2 tách cho PC-08 — phần lần đầu','Danh sách Báo cáo 2 A1m-42_K26A1115_.xlsx'],['o_pc08tl','Báo cáo 2 tách cho PC-08 — phần thi lại','Danh sách Báo cáo 2 A1m-42-TL_K26A1116_.xlsx'],
   ['o_dssh','DS thí sinh dự sát hạch','DSSATHACH_A1m-42.xlsx'],['o_sbd','Danh sách SBD (mẫu Hội đồng sát hạch)','SBD_GLD-2026-K232.xlsx'],['o_tt','Danh sách SBD THI THỬ (mục Thi thử, cùng mẫu SBD)','SBD_THITHU_GLD-2026-K240.xlsx'],['o_gplx','DS thí sinh có GPLX (số GPLX, ngày cấp, ngày hết hạn)','DSGPLX_GLD-2026-K232.xlsx'],
-  ['o_bcdt','BC đăng ký khóa đào tạo (Word, mục Báo cáo 1)','BC_Dao_Tao_Khoa_Hoc_A1m-44.docx'],['o_bcdn','Báo cáo đề nghị tổ chức sát hạch (Word, mục Báo cáo 2)','001_BC_ĐN_TC_SH_A1m-44.docx'],['o_tcvp','DS tra cứu vi phạm (thi mới + thi lại)','TRA_CUU_VI_PHAM_A1m-44_SH_26-10-2026.xlsx'],['o_sbdpdf','DS SBD dạng PDF để in dán bảng tin (mục Số báo danh)','SBD_GLD-2026-K242.pdf'],['o_tbpng','Thông báo kỳ sát hạch dạng ảnh (Zalo) / PDF in A4','THONGBAO_GLD-2026-K232.png / .pdf'],['o_tb','Thông báo kỳ sát hạch — Excel mẫu cũ','THONGBAO_GLD-2026-K232.xlsx'],['o_kt','Danh sách kiểm tra','KIEMTRA_A1m-42.xlsx'],['o_bk','Sao lưu dữ liệu tool','SAOLUU_2026-10-09.json']];
+  ['o_bcdt','BC đăng ký khóa đào tạo (Word, mục Báo cáo 1)','BC_Dao_Tao_Khoa_Hoc_A1m-44.docx'],['o_khdt','Kế hoạch đào tạo (Word, mục Báo cáo 1)','KE_HOACH_DAO_TAO_A1m-47.docx'],['o_bcdn','Báo cáo đề nghị tổ chức sát hạch (Word, mục Báo cáo 2)','001_BC_ĐN_TC_SH_A1m-44.docx'],['o_tcvp','DS tra cứu vi phạm (thi mới + thi lại)','TRA_CUU_VI_PHAM_A1m-44_SH_26-10-2026.xlsx'],['o_sbdpdf','DS SBD dạng PDF để in dán bảng tin (mục Số báo danh)','SBD_GLD-2026-K242.pdf'],['o_tbpng','Thông báo kỳ sát hạch dạng ảnh (Zalo) / PDF in A4','THONGBAO_GLD-2026-K232.png / .pdf'],['o_tb','Thông báo kỳ sát hạch — Excel mẫu cũ','THONGBAO_GLD-2026-K232.xlsx'],['o_kt','Danh sách kiểm tra','KIEMTRA_A1m-42.xlsx'],['o_bk','Sao lưu dữ liệu tool','SAOLUU_2026-10-09.json']];
 const asciiName=t=>strip(String(t||'')).replace(/[^A-Za-z0-9\-]+/g,'-').replace(/^-+|-+$/g,'');
 function parseName(fname){
   // bỏ đuôi file và “ (1)”, “ (2)” do trình duyệt thêm khi tải trùng tên
@@ -2086,7 +2263,7 @@ function vBC1(v,c,ck){
     <span class="search">${ic('search')}<input type="text" id="q1" placeholder="Tìm theo tên, số định danh, địa chỉ" value="${esc(Q.bc1)}"></span>
     <select id="f1"><option value="all">Tất cả</option><option value="loai">Chỉ người bị loại</option><option value="giu">Chỉ người giữ lại</option><option value="gplx">Đã có GPLX</option></select>
     <span class="muted">Hiển thị ${L.length}/${all.length}</span><span style="flex:1"></span>
-    <button class="btn acc" id="xBC1">${ic('download')}Xuất Báo cáo 1</button><button class="btn" id="pBC1" title="In hoặc lưu PDF (chọn “Lưu dưới dạng PDF” trong hộp in)">${ic('print')}In / PDF</button><button class="btn" id="xBCDT" title="Báo cáo đăng ký khóa đào tạo lái xe — file Word, điền theo khóa">${ic('download')}BC đăng ký khóa (Word)</button></div>
+    <button class="btn acc" id="xBC1">${ic('download')}Xuất Báo cáo 1</button><button class="btn" id="pBC1" title="In hoặc lưu PDF (chọn “Lưu dưới dạng PDF” trong hộp in)">${ic('print')}In / PDF</button><button class="btn" id="xBCDT" title="Báo cáo đăng ký khóa đào tạo lái xe — file Word, điền theo khóa">${ic('download')}BC đăng ký khóa (Word)</button><button class="btn" id="xKHDT" title="Kế hoạch đào tạo — file Word: phân phối giờ học, lịch toàn khóa theo tuần, số giáo viên/xe">${ic('download')}Kế hoạch đào tạo (Word)</button></div>
     <div class="note" style="margin-top:12px">${ic('info')}<span>Bấm <b>Loại</b> ở mỗi dòng: người đó vẫn có trong BC1 nhưng <b>bôi vàng</b>, lý do lưu trong tool (không in ra file), và <b>tự bỏ khỏi BC2</b>.</span></div>
   </div>
   <div class="selbar ${SEL.size?'':'hide'}" id="selbar"><b id="selN">${SEL.size}</b>&nbsp;người đã chọn <span id="selHid" style="opacity:.75;margin-left:6px"></span><span style="flex:1"></span><button class="btn sm" id="selClear">Bỏ chọn</button><button class="btn sm danger" id="selDel">${ic('trash')}Xóa các dòng đã chọn</button></div>
@@ -2099,7 +2276,7 @@ function vBC1(v,c,ck){
     <td class="c"><button class="btn sm ico-only" data-ed="${s.cccd}" title="Sửa thông tin">${ic('edit')}</button></td></tr>`;}).join('')}</tbody></table></div>`;
   $('#f1').value=Q.f1;
   bindList('q1','f1','bc1','f1');
-  $('#xBC1').onclick=exportBC1; $('#pBC1').onclick=printBC1; $('#xBCDT').onclick=askBCDT;
+  $('#xBC1').onclick=exportBC1; $('#pBC1').onclick=printBC1; $('#xBCDT').onclick=askBCDT; $('#xKHDT').onclick=askKHDT;
 }
 function vBC2(v,c){
   const moi=bc2MoiList();
@@ -3401,6 +3578,7 @@ const OUT_FORM={o_bc1:'bc1',o_bc2:'bc2',o_dssh:'dssh',o_sbd:'sbd'};
 function formCells(oid){
   if(oid==='o_pc08'||oid==='o_pc08tl') return `<td colspan="2" class="muted" style="white-space:normal;font-size:12.5px">Dùng chung form Báo cáo 2 — ${oid==='o_pc08'?'sheet 1 (Lần đầu)':'sheet 2 (Thi lại)'}</td>`;
   if(oid==='o_bcdn') return `<td><button class="btn sm" data-fbcdn="1">${ic('download')}Tải mẫu</button></td><td class="muted" style="white-space:normal;font-size:12.5px">Mẫu Word cài sẵn (từ file 001_BC_ĐN_TC_SH gốc, có mã {{…}} ở các chỗ thay)</td>`;
+  if(oid==='o_khdt') return `<td colspan="2" class="muted" style="white-space:normal;font-size:12.5px">Mẫu Word cài sẵn (từ file KẾ HOẠCH ĐÀO TẠO gốc); phân phối giờ học, lịch, số giáo viên/xe sửa trong hộp “Kế hoạch đào tạo”</td>`;
   if(oid==='o_bcdt') return `<td><button class="btn sm" data-fbcdt="1">${ic('download')}Tải mẫu</button></td><td class="muted" style="white-space:normal;font-size:12.5px">Mẫu Word cài sẵn (từ file BC_Dao_Tao_Khoa_Hoc gốc, có mã {{…}} ở các chỗ thay)</td>`;
   if(oid==='o_tt') return `<td colspan="2" class="muted" style="white-space:normal;font-size:12.5px">Dùng chung form Danh sách SBD</td>`;
   if(oid==='o_sbdpdf') return `<td colspan="2" class="muted" style="white-space:normal;font-size:12.5px">Bố cục cố định theo file mẫu (A4 đứng, trang 1: 39 người, trang sau: 46 người); tiêu đề lấy theo mục Số báo danh</td>`;
