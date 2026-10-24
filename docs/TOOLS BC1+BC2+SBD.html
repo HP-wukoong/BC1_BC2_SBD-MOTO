@@ -699,6 +699,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.9.3','24/10/2026',['Báo cáo 1: khi in không lặp lại dòng tiêu đề cột ở các trang sau (cả file Excel, form đã sửa và In / PDF)']],
   ['4.9.2','24/10/2026',['In ấn: ô trong bảng có chữ dài hơn bề rộng cột (họ tên, nơi cư trú dài…) tự “thu nhỏ cho vừa ô” — không còn chữ tràn đè lên viền / bị cắt khi in; áp dụng cả khi xuất theo form đã sửa. Ô vừa thì giữ nguyên']],
   ['4.9.1','24/10/2026',['Rà soát toàn vẹn: ngày sinh không có thật (31/02…) hoặc sau hôm nay báo LỖI; số CCCD ghi 052.077.016.704 / có dấu cách được nhận đúng; họ tên, địa chỉ chuẩn Unicode dựng sẵn và bỏ khoảng trắng thừa khi nạp','Trước khi xuất BC1, BC2, PC-08, DS sát hạch: còn LỖI ở Kiểm tra dữ liệu thì tool hỏi lại']],
   ['4.9','24/10/2026',['Cảnh báo lịch nộp ở đầu trang vẫn báo việc của tất cả các khóa (ghi rõ tên khóa)','Kiểm tra dữ liệu: nút Xác nhận / Giữ theo hồ sơ / Lấy theo file GPLX / Sửa cho từng cảnh báo; mục “Đã xác nhận” bỏ xác nhận được','Dấu ! cạnh các nút: rê chuột hoặc chạm để xem nút làm gì (tắt/bật ở mục Hướng dẫn)']],
@@ -2828,7 +2829,7 @@ const ptab=(H,rows,cls,W)=>`<table style="table-layout:auto">${W?`<colgroup>${W.
 function vnDate(iso){ if(!iso) return '…'; const [y,m,d]=iso.split('-'); return `${d} tháng ${m} năm ${y}`; }
 function printBC1(){
   const c=C(), L=bc1List(); if(!L.length){ toast('Chưa có học viên.'); return; }
-  printHTML('BC1 '+c.ten,`<h1>DANH SÁCH HỌC VIÊN</h1><div class="c"><i>( Kèm theo văn bản số ${esc(c.vanBan)})</i></div>
+  printHTML('BC1 '+c.ten,`<style>thead{display:table-row-group!important}</style><h1>DANH SÁCH HỌC VIÊN</h1><div class="c"><i>( Kèm theo văn bản số ${esc(c.vanBan)})</i></div>
     <div style="margin:8px 0 4px;font-weight:bold;line-height:1.5">Học lái xe hạng: A1 &nbsp; Khóa ${esc(c.maKhoa)}<br>Thời gian đào tạo: ${esc(c.thoiGian)} ngày<br>Khai giảng ngày: ${isoToVN(c.khaiGiang)}<br>Bế giảng ngày: ${isoToVN(c.beGiang)}</div>
     ${ptab(['STT','Họ và tên','Ngày, tháng, năm sinh','Số CCCD/CC/HC','Nơi thường trú','Số giấy phép lái xe đã có','Hạng giấy phép lái xe đã có','Ghi Chú'],
       L.map((s,i)=>({y:s.biLoai,v:[i+1,s.ten,s.ns,s.cccd,s.dc,s.soGPLX||'',s.hangHS||s.hangG||'','']})),['n','','m','m','','m','m',''],[4.43,33,12.57,14.71,37.57,13.43,11,12.57])}
@@ -3472,7 +3473,7 @@ function bc1Row(s,i){ return {STT:i+1,HO_TEN:s.ten,NGAY_SINH:s.ns,CCCD:s.cccd,NO
 const YEL={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFF00'}};
 function bc1Sheet(wb,name,S,R){
   const ws=wb.addWorksheet(name.slice(0,31),{pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,
-    margins:{left:0.48,right:0.3,top:0.5,bottom:0.5,header:0.3,footer:0.3},printTitlesRow:'9:11'}});
+    margins:{left:0.48,right:0.3,top:0.5,bottom:0.5,header:0.3,footer:0.3}}});   // BC1: không lặp dòng tiêu đề ở các trang sau
   [4.43,33,12.57,14.71,37.57,13.43,11,12.57].forEach((w,i)=>ws.getColumn(i+1).width=w);
   const mg=(r)=>ws.mergeCells(`A${r}:H${r}`);
   put(ws,'A1','DANH SÁCH HỌC VIÊN',TNR(16,{bold:true}),AC); mg(1);
@@ -3508,7 +3509,8 @@ async function exportBC1(){
   const common=P=>{ if(ids.size!==L.length) P.push('Số học viên trong BC1 khác số học viên học mới trong tool'); return P; };
   const F=await formLoad('bc1'); if(F===false) return;
   let wb, verify;
-  if(F){ const r=await formRun(F,'bc1',[{src:0,name:sheetName,S,rows:R,hook:'loai'}]); if(!r) return; wb=r.wb; verify=back=>common(verifyForm(back,r)); }
+  if(F){ const r=await formRun(F,'bc1',[{src:0,name:sheetName,S,rows:R,hook:'loai'}]); if(!r) return; wb=r.wb;
+    verify=back=>common(verifyForm(back,r)); }
   else{
   wb=new ExcelJS.Workbook(); wb.creator='So Sat Hach A1';
   bc1Sheet(wb,sheetName,S,R);
@@ -3803,6 +3805,8 @@ async function fillForm(buf,id,plans){
     const r=fillSheet(ws,p,I.R); used.push(ws); res.push({name:p.name.slice(0,31),orig,R:I.R,d:r.d,chk:r.chk,yel:r.yel,n:p.rows.length}); }
   wb.worksheets.slice().forEach(w=>{ if(!used.includes(w)) wb.removeWorksheet(w.id); });
   used.forEach((w,i)=>w.name='__tmp'+i); used.forEach((w,i)=>{ w.name=res[i].name; });
+  if(id==='bc1') used.forEach(w=>{ if(w.pageSetup) delete w.pageSetup.printTitlesRow; });   // BC1: không lặp dòng tiêu đề ở các trang sau
+  try{ fitCellsWb(wb); }catch(e){}                                                        // chữ dài hơn ô → thu nhỏ cho vừa (giống bản không dùng form)
   let out=await wb.xlsx.writeBuffer();
   const items=res.filter(s=>DR[s.orig]).map(s=>({name:s.name,R:s.R,d:s.d,...DR[s.orig]}));
   if(items.length) out=injectDrawings(out,items);
