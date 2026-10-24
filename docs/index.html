@@ -209,6 +209,10 @@ textarea{width:100%;min-height:130px;font-family:Consolas,"Cascadia Mono",monosp
 .imp{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-top:12px}
 .tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11.5px;font-weight:600;background:var(--sunken);color:var(--ink2)}
 .tag.moi{background:var(--brand-tint);color:var(--brand-ink)}.tag.tl{background:var(--amber-tint);color:var(--amber)}.tag.gplx{background:var(--ok-tint);color:var(--ok)}
+.kta{display:inline-flex;gap:4px;align-items:center}
+.hlp{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#fff4dc;color:#b26b00;border:1px solid #f0c36a;font:800 11px/1 'Be Vietnam Pro',sans-serif;margin:0 -4px 0 -12px;position:relative;top:-15px;z-index:2;cursor:help;vertical-align:middle;flex:none;user-select:none;box-shadow:0 0 0 2px #fff}
+.hlp:hover,.hlp:focus{background:#ffcf33;color:#14213d;outline:none}
+#hlpTip{position:fixed;z-index:99999;max-width:320px;background:#14213d;color:#fff;padding:8px 11px;border-radius:8px;font-size:12.5px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.25);pointer-events:none;display:none}
 .lv-err{color:var(--seal);font-weight:600}.lv-warn{color:var(--amber);font-weight:600}.lv-info{color:var(--brand);font-weight:600}
 .gc{font-weight:600;padding:3px 6px;border-radius:6px;border:1px solid var(--line);min-width:148px}
 .gc.empty{background:var(--seal-tint);border-color:#EFC2BD}
@@ -699,6 +703,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.9','24/10/2026',['Cảnh báo lịch nộp ở đầu trang chỉ hiện việc của khóa đang mở (khóa khác xem ở Tổng quan)','Kiểm tra dữ liệu: nút Xác nhận / Giữ theo hồ sơ / Lấy theo file GPLX / Sửa cho từng cảnh báo; mục “Đã xác nhận” bỏ xác nhận được','Dấu ! cạnh các nút: rê chuột hoặc chạm để xem nút làm gì (tắt/bật ở mục Hướng dẫn)']],
   ['4.8','22/10/2026',['Báo cáo 1: nút “Kế hoạch đào tạo (Word)” — giữ định dạng mẫu; phân phối giờ học sửa được (thêm/bớt môn); lịch toàn khóa tự thêm/bớt cột tuần (ISO) theo khai giảng – bế giảng, ô Lý thuyết / Thực hành tự đặt đúng ngày; tool đọc lại từng ô trước khi tải về']],
   ['4.7','21/10/2026',['Số báo danh: nút “PDF dán bảng tin” — file PDF A4 đúng bố cục mẫu (SBD, họ tên, số CMT, ngày sinh, hạng, nội dung; trang 1: 39 người, trang sau: 46), tool đọc lại từng dòng trước khi tải về',
                        'Thông báo kỳ sát hạch làm lại theo mẫu poster: xem trước trực tiếp, sửa được mọi chữ và ảnh, xuất ảnh PNG gửi Zalo và PDF in A4']],
@@ -1933,29 +1938,30 @@ function cccdVsDob(id,ns){
   return P.join('; ');
 }
 function checks(){
-  const c=C(), out=[]; const add=(lv,s,msg)=>out.push({lv,s,msg});
+  const c=C(), out=[], acked=[]; const add=(lv,s,msg,k)=>{ const x={lv,s,msg,k}; if(k&&s&&s.ack&&s.ack[k]){ x.ack=s.ack[k]; acked.push(x); } else out.push(x); };
   const at = c.ngaySH? new Date(c.ngaySH) : (c.beGiang? new Date(c.beGiang): null);
   const ids=new Set(c.students.map(s=>s.cccd));
   for(const s of c.students){
     const nh=normHang(s.hangHS), ng=normHang(s.hangG);
-    if(s.hangHS&&s.hangG&&nh!==ng) add('warn',s,`Hạng GPLX lệch: hồ sơ ghi “${s.hangHS}”, file GPLX ghi “${s.hangG}”. Báo cáo đang lấy theo hồ sơ.`);
-    if(!s.hangHS&&s.hangG) add('info',s,`Hồ sơ không ghi hạng, file GPLX có hạng “${s.hangG}” — báo cáo sẽ dùng hạng này.`);
-    if(s.loai==='moi'&&s.hangHS&&!s.soGPLX) add('warn',s,`Có hạng “${s.hangHS}” nhưng thiếu số GPLX (cột 6 BC1 sẽ trống).`);
-    if(!s.srcs.includes('hoso')) add('info',s,`Không có trong file hồ sơ (nguồn: ${s.srcs.join(', ')||'nhập tay'}).${s.biLoai?' Đang bị loại.':''}`);
-    if(s.cccd.length===9) add('info',s,'Số định danh 9 số (CMND cũ).');
+    if(s.hangHS&&s.hangG&&nh!==ng) add('warn',s,`Hạng GPLX lệch: hồ sơ ghi “${s.hangHS}”, file GPLX ghi “${s.hangG}”. Báo cáo đang lấy theo hồ sơ.`,'hang:'+s.hangHS+'>'+s.hangG);
+    if(!s.hangHS&&s.hangG) add('info',s,`Hồ sơ không ghi hạng, file GPLX có hạng “${s.hangG}” — báo cáo sẽ dùng hạng này.`,'hangG:'+s.hangG);
+    if(s.loai==='moi'&&s.hangHS&&!s.soGPLX) add('warn',s,`Có hạng “${s.hangHS}” nhưng thiếu số GPLX (cột 6 BC1 sẽ trống).`,'soGPLX:'+s.hangHS);
+    if(!s.srcs.includes('hoso')) add('info',s,`Không có trong file hồ sơ (nguồn: ${s.srcs.join(', ')||'nhập tay'}).${s.biLoai?' Đang bị loại.':''}`,'nohs');
+    if(s.cccd.length===9) add('info',s,'Số định danh 9 số (CMND cũ).','cmnd9:'+s.cccd);
     else if(s.cccd.length!==12) add('err',s,`Số định danh ${s.cccd.length} số — sai định dạng.`);
     else { const m=cccdVsDob(s.cccd,s.ns); if(m) add('err',s,`Số CCCD không khớp ngày sinh: ${m}. Kiểm tra lại số CCCD hoặc ngày sinh.`); }
     const a=ageAt(s.ns,at); if(a!=null&&a<18&&!s.biLoai) add('err',s,`Chưa đủ 18 tuổi tại ngày ${c.ngaySH?'sát hạch':'bế giảng'} (${a} tuổi).`);
-    if(!parseVN(s.ns)) add('warn',s,`Ngày sinh không đúng dạng dd/mm/yyyy: “${s.ns}”.`);
-    if(!s.biLoai&&s.sk.toLowerCase()!=='x') add('warn',s,'Chưa có dấu “x” giấy CNSK hợp lệ.');
+    if(!parseVN(s.ns)) add('warn',s,`Ngày sinh không đúng dạng dd/mm/yyyy: “${s.ns}”.`,'ns:'+s.ns);
+    if(!s.biLoai&&s.sk.toLowerCase()!=='x') add('warn',s,'Chưa có dấu “x” giấy CNSK hợp lệ.','sk:'+s.sk);
     if(s.loai==='tl'&&!s.biLoai&&!s.gcTL) add('warn',s,'Thi lại nhưng chưa chọn nội dung L / H / L+H.');
-    if(c.sbd.locked&&!s.biLoai&&!s.sbd) add('warn',s,'Không có trong danh sách phòng thi đã nạp (chưa có SBD).');
+    if(c.sbd.locked&&!s.biLoai&&!s.sbd) add('warn',s,'Không có trong danh sách phòng thi đã nạp (chưa có SBD).','nosbd');
     if(!s.ten) add('err',s,'Thiếu họ tên.');
-    if(!s.biLoai&&!String(s.dc||'').trim()) add('warn',s,'Thiếu nơi cư trú (cột Nơi cư trú trên báo cáo sẽ trống).');
+    if(!s.biLoai&&!String(s.dc||'').trim()) add('warn',s,'Thiếu nơi cư trú (cột Nơi cư trú trên báo cáo sẽ trống).','dc');
   }
   for(const id in c.gplx){ if(!ids.has(id)) out.push({lv:'info',s:{ten:upper(c.gplx[id].ten),cccd:id,loai:''},msg:'Có trong file GPLX nhưng không có trong danh sách khóa này.'}); }
   for(const m of (c.conflicts||[])) out.push({lv:'warn',s:null,msg:m});
   const order={err:0,warn:1,info:2}; out.sort((a,b)=>order[a.lv]-order[b.lv]);
+  out.acked=acked;
   return out;
 }
 
@@ -2024,7 +2030,7 @@ function whenTxt(m){ return m.from===m.to ? `${THU[m.fromD.getDay()]} ${fmtD(m.f
 function stTxt(m){ return m.st==='done'?'Đã xong': m.st==='act'?(m.n===0?'Hạn chót hôm nay':`Đến hạn, còn ${m.n} ngày`): m.st==='over'?`Quá hạn ${m.n} ngày`:`Còn ${m.n} ngày nữa`; }
 function renderAlerts(){
   const el=$('#alerts'); const items=[];
-  for(const c of Object.values(DB.courses)){
+  for(const c of [C()].filter(Boolean)){            // chỉ việc của khóa đang mở — khóa khác xem ở Tổng quan các khóa
     const L=mocList(c);
     for(const m of L){ if(m.st==='act'||m.st==='over') items.push({c,m}); }
     const nx=L.find(m=>m.st==='wait'); if(nx&&nx.n<=3) items.push({c,m:nx});
@@ -2034,7 +2040,7 @@ function renderAlerts(){
   const row=({c,m},hid)=>{
     const cls=m.st==='over'?'over':m.st==='act'?'act':'next', icn=m.st==='over'?'stop':m.st==='act'?'alert':'bell';
     const todo=m.steps.filter((_,i)=>!m.done[i]);
-    const multi=Object.keys(DB.courses).length>1;
+    const multi=false;
     return `<div class="al ${cls} ${hid?'hide xtra':''}" data-goc="${c.id}" title="Mở Lịch nộp"><span class="bar"></span><span class="ic">${ic(icn)}</span>
       <span class="tx"><b>${multi?'Khóa '+esc(c.ten)+': ':''}${esc(m.title)}</b><span class="sm">${whenTxt(m)} — còn lại: ${todo.map(esc).join(', ')}</span></span>
       <span class="when">${stTxt(m)}</span></div>`; };
@@ -2116,7 +2122,7 @@ function vMOC(v,c){
   v.innerHTML=remindCard()+`<div class="card"><div class="row"><h2 style="margin:0">Khóa ${esc(c.ten)}</h2><span style="flex:1"></span>
     <button class="btn sm" id="mocAll">${ic('check')}Đánh dấu xong hết</button><button class="btn sm" id="mocReset">Bỏ tích hết</button><button class="btn sm" id="mocEdit">${ic('edit')}Sửa mốc</button></div>
     <div style="margin-top:6px">Khai giảng: ${dTxt(kg)} &nbsp;·&nbsp; Bế giảng: ${dTxt(isoDate(c.beGiang))} &nbsp;·&nbsp; Ký BC2: ${dTxt(isoDate(c.ngayKy))} &nbsp;·&nbsp; Sát hạch: ${dTxt(sh)} &nbsp;<a href="#" id="goCfg">sửa ngày</a></div>
-    <div class="muted" style="margin-top:4px">Cảnh báo hiện ở đầu mọi trang khi tới hạn (kể cả khi đang mở khóa khác). Rơi vào thứ Bảy / Chủ nhật thì nên làm sớm hơn.</div></div>
+    <div class="muted" style="margin-top:4px">Cảnh báo ở đầu trang chỉ hiện việc của khóa đang mở; việc của các khóa khác xem ở mục Tổng quan các khóa. Rơi vào thứ Bảy / Chủ nhật thì nên làm sớm hơn.</div></div>
   <div class="tl">${L.map(m=>{
     if(m.st==='nodate') return `<div class="ms"><h3>${esc(m.title)} <span class="st wait">Chưa có ngày ${BASE_LB[m.base]}</span></h3>
       <div class="when">${relTxt(m)} · nhập ngày ${BASE_LB[m.base]} ở Thông tin khóa để tool tính mốc</div>${stepsHtml(c,m)}</div>`;
@@ -2735,13 +2741,27 @@ function vSBD(v){
 
 /* ---- Kiểm tra ---- */
 function vKT(v,c,ck){
-  const lab={err:'Lỗi',warn:'Cảnh báo',info:'Ghi chú'};
-  v.innerHTML=`<div class="stats">${statBox(ck.filter(x=>x.lv==='err').length,'Lỗi','r')}${statBox(ck.filter(x=>x.lv==='warn').length,'Cảnh báo','y')}${statBox(ck.filter(x=>x.lv==='info').length,'Ghi chú')}</div>
-  <div class="card"><div class="row"><span class="muted">Các mục ở đây <b>không in</b> vào báo cáo nộp Sở. Xuất ra file riêng để đối chiếu.</span><span style="flex:1"></span><button class="btn" id="xKT">${ic('download')}Xuất danh sách kiểm tra</button>${c.conflicts&&c.conflicts.length?'<button class="btn" id="clrConf">Xóa ghi nhận xung đột</button>':''}</div></div>
-  <div class="card tblwrap"><table><thead><tr><th>Mức</th><th>Họ và tên</th><th class="c">Số định danh</th><th class="c">DS</th><th>Nội dung</th><th class="c">Sửa</th></tr></thead><tbody>
-  ${ck.map(x=>`<tr><td class="lv-${x.lv}">${lab[x.lv]}</td><td>${esc(x.s?x.s.ten:'')}</td><td class="c">${esc(x.s?x.s.cccd:'')}</td><td class="c">${x.s&&x.s.loai?`<span class="tag ${x.s.loai}">${x.s.loai==='moi'?'Mới':'TL'}</span>`:''}</td><td>${esc(x.msg)}</td><td class="c">${x.s&&find(x.s.cccd)?`<button class="btn sm ico-only" data-ed="${x.s.cccd}" title="Sửa thông tin">${ic('edit')}</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="c muted">Không có vấn đề nào.</td></tr>'}
-  </tbody></table></div>`;
+  const lab={err:'Lỗi',warn:'Cảnh báo',info:'Ghi chú'}, AK=ck.acked||[];
+  const act=x=>{ const ed=x.s&&find(x.s.cccd)?`<button class="btn sm ico-only" data-ed="${x.s.cccd}" title="Sửa thông tin người này">${ic('edit')}</button>`:'';
+    if(!x.k||x.lv==='err') return ed;
+    const id=esc(x.s.cccd), k=esc(x.k);
+    if(/^hang:/.test(x.k)) return `<span class="kta"><button class="btn sm" data-ack="${id}" data-k="${k}" data-how="Giữ theo hồ sơ" title="Báo cáo vẫn ghi hạng theo hồ sơ (${esc(x.s.hangHS)}); cảnh báo này không hiện lại">Giữ theo hồ sơ</button><button class="btn sm" data-useg="${id}" title="Đổi hạng của người này thành “${esc(x.s.hangG)}” theo file GPLX — báo cáo sẽ ghi hạng mới">Lấy theo file GPLX</button>${ed}</span>`;
+    return `<span class="kta"><button class="btn sm" data-ack="${id}" data-k="${k}" data-how="Đã xác nhận" title="Đã kiểm tra, giữ nguyên — cảnh báo này không hiện lại (bỏ xác nhận được ở bảng bên dưới)">${ic('check')}Xác nhận</button>${ed}</span>`; };
+  v.innerHTML=`<div class="stats">${statBox(ck.filter(x=>x.lv==='err').length,'Lỗi','r')}${statBox(ck.filter(x=>x.lv==='warn').length,'Cảnh báo','y')}${statBox(ck.filter(x=>x.lv==='info').length,'Ghi chú')}${statBox(AK.length,'Đã xác nhận')}</div>
+  <div class="card"><div class="row"><span class="muted">Chỉ kiểm tra dữ liệu của <b>khóa ${esc(c.ten)}</b>. Các mục ở đây <b>không in</b> vào báo cáo nộp Sở. Cảnh báo / ghi chú đã kiểm tra thì bấm <b>Xác nhận</b> (hoặc <b>Giữ theo hồ sơ</b>) để không hiện lại; muốn đổi dữ liệu thì bấm <b>Sửa</b>.</span><span style="flex:1"></span><button class="btn" id="xKT">${ic('download')}Xuất danh sách kiểm tra</button>${c.conflicts&&c.conflicts.length?'<button class="btn" id="clrConf">Xóa ghi nhận xung đột</button>':''}</div></div>
+  <div class="card tblwrap"><table><thead><tr><th>Mức</th><th>Họ và tên</th><th class="c">Số định danh</th><th class="c">DS</th><th>Nội dung</th><th class="c">Xử lý</th></tr></thead><tbody>
+  ${ck.map(x=>`<tr><td class="lv-${x.lv}">${lab[x.lv]}</td><td>${esc(x.s?x.s.ten:'')}</td><td class="c">${esc(x.s?x.s.cccd:'')}</td><td class="c">${x.s&&x.s.loai?`<span class="tag ${x.s.loai}">${x.s.loai==='moi'?'Mới':'TL'}</span>`:''}</td><td style="white-space:normal;min-width:260px">${esc(x.msg)}</td><td class="c" style="white-space:nowrap">${act(x)}</td></tr>`).join('')||'<tr><td colspan="6" class="c muted">Không có vấn đề nào.</td></tr>'}
+  </tbody></table></div>
+  ${AK.length?`<details class="card"><summary><b>Đã xác nhận (${AK.length})</b> <span class="muted">— không tính vào số cảnh báo; tự hiện lại nếu dữ liệu thay đổi</span></summary>
+    <div class="imp" style="margin-top:10px"><table><thead><tr><th>Mức</th><th>Họ và tên</th><th class="c">Số định danh</th><th>Nội dung</th><th>Xử lý</th><th>Lúc / người</th><th></th></tr></thead><tbody>
+    ${AK.map(x=>`<tr><td class="lv-${x.lv}">${lab[x.lv]}</td><td>${esc(x.s.ten)}</td><td class="c">${esc(x.s.cccd)}</td><td>${esc(x.msg)}</td><td><b>${esc(x.ack.how||'Đã xác nhận')}</b></td><td class="muted" style="white-space:nowrap">${new Date(x.ack.t).toLocaleString('vi-VN')}${x.ack.u?' · '+esc(x.ack.u):''}</td><td><button class="btn sm" data-unack="${esc(x.s.cccd)}" data-k="${esc(x.k)}">Bỏ xác nhận</button></td></tr>`).join('')}
+    </tbody></table></div></details>`:''}`;
   v.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>editPerson(b.dataset.ed));
+  v.querySelectorAll('[data-ack]').forEach(b=>b.onclick=()=>{ const st=c.students.find(x=>x.cccd===b.dataset.ack); if(!st) return; st.ack=st.ack||{}; st.ack[b.dataset.k]={t:nowIso(),u:userName(),how:b.dataset.how}; save(); render(); toast(`${st.ten}: ${b.dataset.how.toLowerCase()} — cảnh báo này không hiện lại.`); });
+  v.querySelectorAll('[data-unack]').forEach(b=>b.onclick=()=>{ const st=c.students.find(x=>x.cccd===b.dataset.unack); if(st&&st.ack){ delete st.ack[b.dataset.k]; if(!Object.keys(st.ack).length) delete st.ack; save(); render(); } });
+  v.querySelectorAll('[data-useg]').forEach(b=>b.onclick=()=>{ const st=c.students.find(x=>x.cccd===b.dataset.useg); if(!st) return;
+    if(!confirm(`${st.ten}: đổi hạng GPLX từ “${st.hangHS}” (hồ sơ) thành “${st.hangG}” (file GPLX)?\nBáo cáo xuất sau đó sẽ ghi hạng “${st.hangG}”.`)) return;
+    audCtx('Kiểm tra dữ liệu','Lấy hạng GPLX theo file GPLX'); st.hangHS=st.hangG; save(); render(); toast(`${st.ten}: đã lấy hạng “${st.hangG}” theo file GPLX.`); });
   $('#xKT').onclick=()=>exportKT(ck);
   if($('#clrConf')) $('#clrConf').onclick=()=>{c.conflicts=[];save();render();};
 }
@@ -4944,9 +4964,73 @@ async function vDL(v){
 }
 
 /* ================== HƯỚNG DẪN ================== */
+/* ===== DẤU “!” GIẢI THÍCH NÚT — rê chuột / chạm vào để xem ngay, không mở hộp thoại, không làm chậm thao tác ===== */
+const HELP={
+  btnDoImp:'Nạp các file trong bảng vào khóa đang mở theo cột “Nạp vào”. Tool tự lưu 1 bản trước khi nạp — hoàn tác được.',
+  btnCancelImp:'Bỏ các file vừa chọn, không nạp gì.',
+  btnUndo:'Quay lại dữ liệu trước lần nạp / xóa gần nhất.', btnUndoLast:'Quay lại dữ liệu trước thao tác gần nhất.',
+  btnAddMoi:'Thêm tay 1 học viên học mới (khi không có trong file hồ sơ).', btnAddTL:'Thêm tay 1 thí sinh thi lại.',
+  btnPaste:'Dán danh sách từ Excel (Ctrl+V) rồi áp dụng vào khóa.',
+  xBC1:'Xuất file Excel Báo cáo 1 nộp Sở. Tool đọc lại file, so từng ô rồi mới cho tải.',
+  pBC1:'In nhanh hoặc lưu PDF Báo cáo 1 (chọn “Lưu dưới dạng PDF” trong hộp in).',
+  xBCDT:'Word “Báo cáo đăng ký khóa đào tạo lái xe”: ngày theo khai giảng, mã khóa, số học viên BC1. Ngày Phương án sửa được khi có công văn mới.',
+  xKHDT:'Word “Kế hoạch đào tạo”: phân phối giờ học (sửa được), lịch toàn khóa theo tuần, ô Lý thuyết / Thực hành tự đặt theo ngày, số giáo viên / xe.',
+  xBC2:'Xuất Báo cáo 2 (sheet lần đầu + sheet thi lại -TL).', pBC2:'In nhanh Báo cáo 2.',
+  xPC08:'Tách Báo cáo 2 thành 2 file gửi PC-08 (lần đầu và thi lại).',
+  xDSSH:'Danh sách thí sinh dự sát hạch (mới + thi lại).', pDSSH:'In nhanh danh sách thí sinh dự sát hạch.',
+  xBCDN:'Word “Báo cáo đề nghị tổ chức sát hạch” — mã trong ngoặc lấy từ 2 file XML (thi mới / thi lại).',
+  xTCVP:'Excel tra cứu vi phạm: họ tên + số CCCD người thi mới và thi lại.',
+  xSBD:'Excel danh sách SBD theo mẫu Hội đồng sát hạch, đúng thứ tự file phòng thi (GLĐ).',
+  xGPLX:'Lọc riêng thí sinh đã có GPLX: số GPLX, ngày cấp, ngày hết hạn (theo file GPLX_<khóa>).',
+  pSBD:'In nhanh danh sách SBD bằng trình duyệt.',
+  pdfSBD:'File PDF A4 để in dán bảng tin: SBD, họ tên, số CMT, ngày sinh, hạng, nội dung. Khi in chọn tỉ lệ 100%.',
+  tbSBD:'Thông báo kỳ sát hạch dạng poster: sửa chữ / ảnh, tải ảnh PNG gửi Zalo hoặc PDF in A4.',
+  exAdd:'Nạp thêm file phòng thi (tên bắt đầu bằng GLĐ) cho khóa thi khác.', exDel:'Xóa khóa thi này khỏi tool (SBD đã gán vẫn giữ).',
+  pickSrv:'Chọn file máy chủ phòng thi lý thuyết (GLĐ-…).',
+  ttPick:'Nạp file thi thử — tên phải có đuôi _Thithu. Chạy riêng, không ảnh hưởng BC1 / BC2 / SBD.',
+  xTT:'Excel SBD thi thử, cùng mẫu với mục Số báo danh.', ttDel:'Xóa danh sách thi thử này (không ảnh hưởng dữ liệu khác).',
+  xKT:'Xuất toàn bộ lỗi / cảnh báo của khóa này ra Excel để rà soát.', clrConf:'Xóa các ghi chú xung đột khi nạp (sau khi đã xem xong).',
+  mocAll:'Tích xong mọi việc trong lịch nộp của khóa.', mocReset:'Bỏ tích mọi việc.', mocEdit:'Sửa tên việc, số ngày trước / sau mốc.',
+  btnBackup:'Lưu 1 bản sao toàn bộ dữ liệu (về máy hoặc thư mục Google Drive đã liên kết).', btnRestore:'Lấy lại dữ liệu từ file sao lưu — xem trước rồi mới áp dụng.',
+  dlBk:'Tải file sao lưu về máy.', dlRs:'Khôi phục từ file sao lưu (.json).', dlUndo:'Chọn 1 bản tự lưu trước đó để quay lại.',
+  dvLink:'Chọn thư mục Google Drive trên máy để tool tự sao lưu vào đó.', dvNow:'Sao lưu ngay vào thư mục Drive.', dvGet:'Lấy dữ liệu mới nhất từ thư mục Drive.', dvOff:'Thôi sao lưu vào thư mục Drive.',
+  bfSave:'Lưu 1 bản sao lưu thủ công (đặt tên theo giờ) vào thư mục sao lưu.', bfReload:'Đọc lại danh sách file trong thư mục sao lưu.',
+  hsVer:'So mã kiểm tra từng file trong Kho hồ sơ — phát hiện file bị hỏng / sửa.', hsZip:'Đóng gói toàn bộ hồ sơ của khóa thành 1 file ZIP.',
+  stRun:'Tool tự chạy thử các chức năng chính và báo kết quả.', delCourse:'Xóa hẳn khóa này (tool tự lưu 1 bản trước khi xóa).',
+  tqX:'Xuất thống kê mọi khóa ra Excel.', audX:'Xuất nhật ký thay đổi của khóa ra Excel.',
+  selDel:'Xóa các dòng đang chọn khỏi khóa.', selClear:'Bỏ chọn các dòng.',
+  usCh:'Đổi tên người đang thao tác (ghi vào nhật ký).', scSet:'Đặt mã PIN để mã hóa bản sao lưu.', scOff:'Gỡ mã PIN.',
+  khAuto:'Tính lại ngày lý thuyết / thực hành theo khai giảng – bế giảng.', ppAdd:'Thêm 1 môn vào phân phối giờ học.', ppMd:'Đưa phân phối giờ học về như file mẫu.',
+  tbpCopy:'Sao chép nội dung thông báo dạng chữ để dán vào Zalo.', tbpXls:'Xuất thông báo theo mẫu Excel cũ.', tbpReset:'Đưa mọi chữ và ảnh của poster về mặc định.'
+};
+const HELP_DLG={'Xuất file Word':'Tạo file Word, tool đọc lại và đối chiếu từng ô trước khi tải về.','Tải ảnh PNG (gửi Zalo)':'Ảnh poster nét cao để gửi nhóm Zalo.','Xuất PDF (in A4)':'PDF A4 300 dpi để in dán.','Thay bằng file mới':'Bỏ danh sách cũ, dùng nguyên danh sách file mới.','Giữ file cũ':'Không nạp file mới, giữ danh sách đã có.'};
+function helpOn(){ return !(DB.ui&&DB.ui.helpOff); }
+let HLP_T=null;
+function helpDecorate(){
+  if(!helpOn()){ document.querySelectorAll('.hlp').forEach(x=>x.remove()); return; }
+  const put=(el,txt)=>{ const n=el.nextElementSibling; if(n&&n.classList.contains('hlp')) return; const h=document.createElement('span'); h.className='hlp'; h.tabIndex=0; h.textContent='!'; h.dataset.h=txt; h.setAttribute('aria-label',txt); el.after(h); };
+  for(const id in HELP){ const el=document.getElementById(id); if(el&&el.offsetParent!==null) put(el,HELP[id]); }
+  document.querySelectorAll('#dlgF button').forEach(b=>{ const t=HELP_DLG[b.textContent.trim()]; if(t) put(b,t); });
+}
+function helpInit(){
+  const tip=document.createElement('div'); tip.id='hlpTip'; document.body.appendChild(tip);
+  const show=h=>{ tip.textContent=h.dataset.h; tip.style.display='block'; const r=h.getBoundingClientRect(), w=tip.offsetWidth, ht=tip.offsetHeight;
+    let x=Math.min(window.innerWidth-w-8,Math.max(8,r.left+r.width/2-w/2)), y=r.bottom+8; if(y+ht>window.innerHeight-8) y=r.top-ht-8; tip.style.left=x+'px'; tip.style.top=y+'px'; };
+  const hide=()=>{ tip.style.display='none'; };
+  document.addEventListener('mouseover',e=>{ const h=e.target.closest&&e.target.closest('.hlp'); if(h) show(h); });
+  document.addEventListener('mouseout',e=>{ if(e.target.closest&&e.target.closest('.hlp')) hide(); });
+  document.addEventListener('focusin',e=>{ if(e.target.classList&&e.target.classList.contains('hlp')) show(e.target); });
+  document.addEventListener('focusout',e=>{ if(e.target.classList&&e.target.classList.contains('hlp')) hide(); });
+  document.addEventListener('click',e=>{ const h=e.target.closest&&e.target.closest('.hlp'); if(h){ e.preventDefault(); e.stopPropagation(); show(h); } else hide(); },true);
+  document.addEventListener('scroll',hide,true);
+  new MutationObserver(()=>{ clearTimeout(HLP_T); HLP_T=setTimeout(helpDecorate,30); }).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['open']});
+  helpDecorate();
+}
+
 function vHD(v){
   const steps=(DB.mocTpl||[]).map(m=>`<li><b>${esc(m.title)}</b> <span class="muted">— ${esc(relTxt(m))}</span><ul style="margin:2px 0 6px;padding-left:18px">${m.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></li>`).join('');
-  v.innerHTML=`<div class="card"><h2>Quy trình một khóa</h2><ol style="line-height:1.7;padding-left:20px">${steps}</ol><div class="muted" style="font-size:13px">Ngày cụ thể và nhắc việc của từng khóa ở mục <b>Lịch nộp</b>; sửa mốc ở đó.</div></div>
+  v.innerHTML=`<div class="card"><div class="row"><h2 style="margin:0">Dấu <span class="hlp" style="pointer-events:none">!</span> giải thích nút</h2><span class="muted">Rê chuột (hoặc chạm) vào dấu ! cạnh mỗi nút để xem nút đó làm gì.</span><span style="flex:1"></span><button class="btn sm" id="hlpTg">${helpOn()?'Tắt dấu !':'Bật dấu !'}</button></div></div>
+  <div class="card"><h2>Quy trình một khóa</h2><ol style="line-height:1.7;padding-left:20px">${steps}</ol><div class="muted" style="font-size:13px">Ngày cụ thể và nhắc việc của từng khóa ở mục <b>Lịch nộp</b>; sửa mốc ở đó.</div></div>
   <div class="card"><h2>Làm việc với tool</h2><ol style="line-height:1.8;padding-left:20px">
     <li><b>Khóa mới</b> (thanh bên) → nhập Thông tin khóa (ngày khai giảng, bế giảng, ký BC2, sát hạch).</li>
     <li><b>Nạp dữ liệu</b>: kéo file hồ sơ (A1m-xx.xls), file thi lại (A1m-xx_TL), _LOCTL, GPLX, XML Báo cáo 2 (tool hỏi gán thi mới / thi lại), file GLĐ của phòng thi.</li>
@@ -4962,6 +5046,7 @@ function vHD(v){
     <li>Đặt <b>mã PIN</b> nếu máy dùng chung — bản sao lưu cũng được mã hóa.</li></ul></div>
   <div class="card"><h2>Phím tắt & mẹo</h2><ul style="line-height:1.8;padding-left:20px"><li>Danh sách thi lại: chọn ô Nội dung rồi bấm <b>L</b> / <b>H</b> / <b>B</b> (LT + H).</li><li>Ô <b>Tìm người mọi khóa</b> (thanh bên): gõ tên hoặc CCCD → Enter → bấm <b>Lịch sử</b> để xem người đó qua mọi khóa, mọi kỳ thi.</li>
     <li>Bấm số phiên bản (góc trái trên) để xem tool đã thay đổi gì.</li></ul></div>`;
+  $('#hlpTg').onclick=()=>{ DB.ui=DB.ui||{}; DB.ui.helpOff=helpOn(); save(); render(); helpDecorate(); };
 }
 
 /* ================== THANH BÊN: người thao tác + Drive ================== */
@@ -5024,6 +5109,7 @@ $('#btnRestore').onclick=()=>$('#restoreFile').click();
 $('#restoreFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; const t=await f.text(); e.target.value=''; restoreFlow(t,'file '+f.name); };
 document.addEventListener('dragover',e=>e.preventDefault());
 document.addEventListener('drop',e=>{ e.preventDefault(); if(e.dataTransfer.files.length&&!e.target.closest('#drop')) handleFiles(e.dataTransfer.files); });
+try{ helpInit(); }catch(e){}
 boot();
 /* Web app (GitHub Pages): cài được như ứng dụng, mở được khi mất mạng */
 if(/^https?:$/.test(location.protocol)&&'serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(e=>logErr('Service worker: '+e.message,'sw')); }); }
