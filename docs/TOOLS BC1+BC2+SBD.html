@@ -195,6 +195,7 @@ tr.picked td{background:#E3ECF8!important}
 .asum .ic{color:var(--seal)} .asum.act .ic{color:var(--amber)}
 .asum .tx{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .asum .go{color:var(--brand);font-weight:500;font-size:13px;white-space:nowrap}
+.achips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.achip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px;font:500 12.5px inherit;cursor:pointer;white-space:nowrap;color:var(--ink)}.achip.o{border-color:#f1a7a1;color:var(--seal)}.achip.a{border-color:#f0c36a;color:#9a5b00}.achip.cur{font-weight:700;box-shadow:inset 0 0 0 1px currentColor}.achip:hover{background:var(--hover)}
 .why{font-size:12px;color:#6E5600;margin-left:6px}
 
 input[type=text],input[type=date],input[type=number],select,textarea{border:1px solid var(--line);border-radius:7px;padding:6px 9px;background:var(--surface);color:var(--ink)}
@@ -2046,10 +2047,12 @@ function renderAlerts(){
   else if(TAB!=='nap' && items.length){
     const no=items.filter(x=>x.m.st==='over').length, na=items.filter(x=>x.m.st==='act').length, nw=items.length-no-na;
     const parts=[no&&`${no} việc quá hạn`, na&&`${na} việc đang đến hạn`, nw&&`${nw} việc sắp tới`].filter(Boolean).join(', ');
-    const first=items[0];
-    el.innerHTML=`<div class="asum ${no?'':'act'}" id="asum"><span class="ic">${ic(no?'stop':'alert')}</span><span class="tx"><b>${parts}</b> <span class="muted">— gần nhất: ${Object.keys(DB.courses).length>1?'khóa '+esc(first.c.ten)+': ':''}${esc(first.m.title)} (${stTxt(first.m).toLowerCase()})</span></span><span class="go">Xem lịch nộp</span></div>`;
-    $('#asum').onclick=()=>{ const cur=items.find(x=>x.c.id===DB.cur)||first; if(cur.c.id!==DB.cur){ DB.cur=cur.c.id; pending=[]; SEL.clear(); save(); } TAB='moc'; render(); window.scrollTo(0,0); };
-    $('#asum').title=items.some(x=>x.c.id===DB.cur)?'Mở Lịch nộp của khóa đang mở':'Chuyển sang khóa '+first.c.ten+' và mở Lịch nộp';
+    const first=items[0], byC=[];
+    for(const x of items){ let g=byC.find(y=>y.c===x.c); if(!g){ g={c:x.c,o:0,a:0,w:0}; byC.push(g); } g[x.m.st==='over'?'o':x.m.st==='act'?'a':'w']++; }
+    const multiC=Object.keys(DB.courses).length>1;
+    const chip=g=>`<button class="achip ${g.o?'o':g.a?'a':''} ${g.c.id===DB.cur?'cur':''}" data-gc="${g.c.id}" title="Mở Lịch nộp khóa ${esc(g.c.ten)}">${esc(g.c.ten)}: ${[g.o&&g.o+' quá hạn',g.a&&g.a+' đến hạn',g.w&&g.w+' sắp tới'].filter(Boolean).join(', ')}</button>`;
+    el.innerHTML=`<div class="asum ${no?'':'act'}" id="asum" data-gc="${first.c.id}" title="Mở Lịch nộp khóa ${esc(first.c.ten)}"><span class="ic">${ic(no?'stop':'alert')}</span><span class="tx"><b>${parts}</b> <span class="muted">— gần nhất: ${multiC?'khóa '+esc(first.c.ten)+': ':''}${esc(first.m.title)} (${stTxt(first.m).toLowerCase()})</span></span>${multiC&&byC.length>1?`<span class="achips">${byC.map(chip).join('')}</span>`:`<span class="go">Xem lịch nộp${multiC?' khóa '+esc(first.c.ten):''}</span>`}</div>`;
+    el.querySelectorAll('[data-gc]').forEach(a=>a.onclick=e=>{ e.stopPropagation(); const id=a.dataset.gc; if(id!==DB.cur){ DB.cur=id; pending=[]; SEL.clear(); } TAB='moc'; save(); render(); window.scrollTo(0,0); });
   }
   else el.innerHTML=items.length?`<div class="alist">${items.map((x,i)=>row(x,i>=SHOW)).join('')}${more>0?`<button class="amore" id="amore">Xem thêm ${more} việc</button>`:''}</div>`:'';
   if($('#amore')) $('#amore').onclick=e=>{ e.stopPropagation(); el.querySelectorAll('.xtra').forEach(x=>x.classList.remove('hide')); e.target.remove(); };
