@@ -703,6 +703,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.9.1','24/10/2026',['Rà soát toàn vẹn: ngày sinh không có thật (31/02…) hoặc sau hôm nay báo LỖI; số CCCD ghi 052.077.016.704 / có dấu cách được nhận đúng; họ tên, địa chỉ chuẩn Unicode dựng sẵn và bỏ khoảng trắng thừa khi nạp','Trước khi xuất BC1, BC2, PC-08, DS sát hạch: còn LỖI ở Kiểm tra dữ liệu thì tool hỏi lại']],
   ['4.9','24/10/2026',['Cảnh báo lịch nộp ở đầu trang vẫn báo việc của tất cả các khóa (ghi rõ tên khóa)','Kiểm tra dữ liệu: nút Xác nhận / Giữ theo hồ sơ / Lấy theo file GPLX / Sửa cho từng cảnh báo; mục “Đã xác nhận” bỏ xác nhận được','Dấu ! cạnh các nút: rê chuột hoặc chạm để xem nút làm gì (tắt/bật ở mục Hướng dẫn)']],
   ['4.8','22/10/2026',['Báo cáo 1: nút “Kế hoạch đào tạo (Word)” — giữ định dạng mẫu; phân phối giờ học sửa được (thêm/bớt môn); lịch toàn khóa tự thêm/bớt cột tuần (ISO) theo khai giảng – bế giảng, ô Lý thuyết / Thực hành tự đặt đúng ngày; tool đọc lại từng ô trước khi tải về']],
   ['4.7','21/10/2026',['Số báo danh: nút “PDF dán bảng tin” — file PDF A4 đúng bố cục mẫu (SBD, họ tên, số CMT, ngày sinh, hạng, nội dung; trang 1: 39 người, trang sau: 46), tool đọc lại từng dòng trước khi tải về',
@@ -940,9 +941,10 @@ function fmtDate(v){
   return s;
 }
 function isoToVN(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
-function parseVN(s){ const m=String(s||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m? new Date(+m[3],+m[2]-1,+m[1]) : null; }
+function parseVN(s){ const m=String(s||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if(!m) return null; const d=new Date(+m[3],+m[2]-1,+m[1]); return d.getFullYear()===+m[3]&&d.getMonth()===+m[2]-1&&d.getDate()===+m[1]?d:null; }   // ngày không có thật (31/02…) → null
 function normId(v){
-  let s=String(v??'').trim().replace(/\.0+$/,'').replace(/[\s']/g,'');
+  let s=String(v??'').trim().replace(/\.0+$/,'').replace(/[\s'\u00a0]/g,'');
+  if(/^\d{3}[.\-]\d{3}[.\-]\d{3}([.\-]\d{3})?$/.test(s)) s=s.replace(/[.\-]/g,'');   // 052.077.016.704 / 052-077-016-704
   if(/^\d+$/.test(s)){ if(s.length===11) s='0'+s; else if(s.length===8) s='0'+s; }
   return s;
 }
@@ -950,7 +952,7 @@ function normHang(h){
   return String(h||'').toUpperCase().split(/[|\/,;+ ]+/).filter(Boolean)
     .map(x=>x.replace(/M$/,'').replace(/\.0(\d)$/,'$1')).sort().join('|');   // Cm=C, B.01=B1
 }
-function upper(s){ return String(s||'').trim().replace(/\s+/g,' ').toUpperCase(); }
+function upper(s){ return String(s||'').normalize('NFC').trim().replace(/\s+/g,' ').toUpperCase(); }
 /* Nội dung thi lại: mã lưu trong tool → chữ hiển thị / in ra */
 const GC_LABEL={'L':'SH lại LT','H':'SH lại H','L+H':'SH lại LT + H'};
 /* Đọc mọi cách viết: L, LT, H, L+H, LT+H, “SH lại LT + H”… → L / H / L+H
@@ -1242,7 +1244,7 @@ function applyImport(){
                  ten:'',ns:'',dc:'',sk:'',hangHS:'',soGPLX:'',maDK:'',soHS:''}; c.students.push(s); add++; }
       else { upd++; if(s.loai!==(p.target==='tlr'?'tl':p.target)){ conf.push(`${upper(r.ten)} (${r.id}): đang ở danh sách ${s.loai==='moi'?'HỌC MỚI':'THI LẠI'}, file “${p.file}” lại xếp vào ${p.target==='moi'?'HỌC MỚI':'THI LẠI'} — giữ nguyên, cần kiểm tra.`);} }
       const strong = src==='hoso';
-      const set=(k,v)=>{ if(v!==''&&v!=null && (strong||!s[k])) s[k]=v; };
+      const set=(k,v)=>{ if(typeof v==='string') v=v.normalize('NFC').replace(/\s+/g,' ').trim(); if(v!==''&&v!=null && (strong||!s[k])) s[k]=v; };   // chữ Unicode dựng sẵn (NFC), bỏ khoảng trắng thừa
       set('ten',upper(r.ten)); set('ns',r.ns); set('dc',r.dc); set('sk',r.sk||(strong?'':'x')); set('hangHS',r.hang);
       set('soGPLX',r.sogplx); set('maDK',r.madk); set('soHS',r.sohs);
       if(r.gc && s.loai==='tl' && strong){ const g=parseGC(r.gc); if(g) s.gcTL=g; }
@@ -1756,7 +1758,7 @@ function examCheck(ex){
   } else W.push('Có SBD không phải số — kiểm tra lại cột SBD.');
   ex.rows.forEach(r=>{
     if(!/^\d{9}$|^\d{12}$/.test(r.cmt)) W.push(`SBD ${r.sbd} ${r.ten}: số CMT “${r.cmt}” không phải 9 hoặc 12 chữ số.`);
-    if(!parseVN(r.ns)) W.push(`SBD ${r.sbd} ${r.ten}: ngày sinh “${r.ns}” không đúng dạng dd/mm/yyyy.`);
+    if(!parseVN(r.ns)) W.push(`SBD ${r.sbd} ${r.ten}: ngày sinh “${r.ns}” không đúng dạng dd/mm/yyyy hoặc không có thật.`);
     { const m=cccdVsDob(r.cmt,r.ns); if(m) W.push(`SBD ${r.sbd} ${r.ten}: số CMT không khớp ngày sinh — ${m}.`); }
     const kk=ndClass(r.nd), gg=gplxHang(r);
     if(kk==='moi'&&gg) W.push(`SBD ${r.sbd} ${r.ten}: file ghi “${r.nd}” nhưng hồ sơ có GPLX hạng ${gg} — theo quy tắc tính vào cột Hình. Kiểm tra lại có phải “Sát hạch H” không.`);
@@ -1951,7 +1953,8 @@ function checks(){
     else if(s.cccd.length!==12) add('err',s,`Số định danh ${s.cccd.length} số — sai định dạng.`);
     else { const m=cccdVsDob(s.cccd,s.ns); if(m) add('err',s,`Số CCCD không khớp ngày sinh: ${m}. Kiểm tra lại số CCCD hoặc ngày sinh.`); }
     const a=ageAt(s.ns,at); if(a!=null&&a<18&&!s.biLoai) add('err',s,`Chưa đủ 18 tuổi tại ngày ${c.ngaySH?'sát hạch':'bế giảng'} (${a} tuổi).`);
-    if(!parseVN(s.ns)) add('warn',s,`Ngày sinh không đúng dạng dd/mm/yyyy: “${s.ns}”.`,'ns:'+s.ns);
+    if(!parseVN(s.ns)) add('err',s,/^\d{2}\/\d{2}\/\d{4}$/.test(s.ns)?`Ngày sinh “${s.ns}” không có thật — kiểm tra lại.`:`Ngày sinh không đúng dạng dd/mm/yyyy: “${s.ns}”.`);
+    else if(parseVN(s.ns)>new Date()) add('err',s,`Ngày sinh “${s.ns}” sau ngày hôm nay.`);
     if(!s.biLoai&&s.sk.toLowerCase()!=='x') add('warn',s,'Chưa có dấu “x” giấy CNSK hợp lệ.','sk:'+s.sk);
     if(s.loai==='tl'&&!s.biLoai&&!s.gcTL) add('warn',s,'Thi lại nhưng chưa chọn nội dung L / H / L+H.');
     if(c.sbd.locked&&!s.biLoai&&!s.sbd) add('warn',s,'Không có trong danh sách phòng thi đã nạp (chưa có SBD).','nosbd');
@@ -2435,6 +2438,7 @@ function pc08Codes(c){
 async function exportPC08(){
   const c=C(), moi=bc2MoiList(), tl=tlList(false), K=pc08Codes(c);
   if(!moi.length&&!tl.length){ toast('Chưa có dữ liệu.'); return; }
+  if(!errGate('File PC-08',new Set([...moi,...tl].map(s=>s.cccd)))) return;
   const need=[moi.length&&!K.moi&&'lần đầu', tl.length&&!K.tl&&'thi lại'].filter(Boolean);
   if(need.length){ dialog('Chưa có mã file XML',`<div class="note warn">${ic('alert')}<span>Chưa biết mã file XML cho phần <b>${need.join(' và ')}</b> để đặt tên file PC-08.<br>Nạp file XML Báo cáo 2 (vd <b>BC2_A1A2_52003_52_52003K26A1115.xml</b>) ở mục Nạp dữ liệu, hoặc nhập “Mã khóa trong tên BC2” ở Thông tin khóa (2 mã cách nhau dấu cách: lần đầu trước, thi lại sau).</span></div>`,[['Đóng','pri']]); return; }
   const miss=tl.filter(s=>!s.gcTL).length;
@@ -3473,9 +3477,13 @@ function bc1Sheet(wb,name,S,R){
   ws.pageSetup.printArea=`A$1:H$${fr}`;
   return ws;
 }
+/* trước khi xuất file nộp: còn LỖI ở Kiểm tra dữ liệu thì hỏi lại (không chặn hẳn, vì có lỗi người dùng đã biết) */
+function errGate(label,ids){ const E=checks().filter(x=>x.lv==='err'&&x.s&&(!ids||ids.has(x.s.cccd))); if(!E.length) return true;
+  return confirm(`${label}: khóa ${C().ten} còn ${E.length} LỖI ở mục Kiểm tra dữ liệu:\n${E.slice(0,6).map(x=>'• '+x.s.ten+' — '+x.msg).join('\n')}${E.length>6?'\n…':''}\n\nNên sửa xong rồi mới xuất. Vẫn xuất?`); }
 async function exportBC1(){
   const c=C(); const L=bc1List();
   if(!L.length){ toast('Chưa có học viên.'); return; }
+  if(!errGate('Báo cáo 1',new Set(L.map(s=>s.cccd)))) return;
   const thieu=[!c.maKhoa&&'Mã khóa BC1',!c.khaiGiang&&'Ngày khai giảng',!c.beGiang&&'Ngày bế giảng'].filter(Boolean);
   if(thieu.length && !confirm(`Chưa nhập: ${thieu.join(', ')} (mục Thông tin khóa).\nDòng tiêu đề BC1 sẽ bị trống phần này. Vẫn xuất?`)) return;
   const sheetName=('HẠNG '+c.ten).toUpperCase().slice(0,31), S=bc1Scal(c,L.length), R=L.map(bc1Row);
@@ -3972,6 +3980,7 @@ function dsshSheet(wb,name,S,R,isTL){
 async function exportDSSH(){
   const c=C(), moi=bc2MoiList(), tl=tlList(false);
   if(!moi.length&&!tl.length){ toast('Chưa có dữ liệu.'); return; }
+  if(!errGate('DS thí sinh dự sát hạch',new Set([...moi,...tl].map(s=>s.cccd)))) return;
   const miss=tl.filter(s=>!s.gcTL);
   if(miss.length){ dialog('Chưa hoàn thiện danh sách thi lại',`<div class="note warn">${ic('alert')}<span>Còn <b>${miss.length}</b> người thi lại chưa có nội dung SH lại (LT / H / LT + H): ${miss.slice(0,8).map(x=>esc(x.ten)).join(', ')}${miss.length>8?'…':''}.<br>Hoàn thiện ở mục Báo cáo 2 (hoặc nạp file _LOCTL) rồi xuất lại.</span></div>`,[['Đóng','pri']]); return; }
   if(!moi.length&&!confirm('Khóa này chưa có danh sách thi lần đầu — chỉ xuất sheet thi lại?')) return;
@@ -4000,6 +4009,7 @@ async function exportDSSH(){
 async function exportBC2(){
   const c=C();
   const moi=bc2MoiList(), tl=tlList(false);
+  if((moi.length||tl.length)&&!errGate('Báo cáo 2',new Set([...moi,...tl].map(s=>s.cccd)))) return;
   const miss=tl.filter(s=>!s.gcTL).length;
   if(miss&&!confirm(`Còn ${miss} người thi lại chưa chọn L/H/L+H (sẽ ghi “SH lại”). Vẫn xuất?`)) return;
   if(!moi.length&&!tl.length){ toast('Chưa có dữ liệu.'); return; }
