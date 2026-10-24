@@ -1,6 +1,6 @@
 {
   "name": "bc1-bc2-sbd-moto",
-  "version": "4.8.0",
+  "version": "4.9.0",
   "private": true,
   "description": "TOOLS BC1+BC2+SBD — báo cáo đào tạo & danh sách sát hạch mô tô hạng A1",
   "scripts": {
