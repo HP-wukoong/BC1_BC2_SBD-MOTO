@@ -704,6 +704,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.9.2','24/10/2026',['In ấn: ô trong bảng có chữ dài hơn bề rộng cột (họ tên, nơi cư trú dài…) tự “thu nhỏ cho vừa ô” — không còn chữ tràn đè lên viền / bị cắt khi in; áp dụng cả khi xuất theo form đã sửa. Ô vừa thì giữ nguyên']],
   ['4.9.1','24/10/2026',['Rà soát toàn vẹn: ngày sinh không có thật (31/02…) hoặc sau hôm nay báo LỖI; số CCCD ghi 052.077.016.704 / có dấu cách được nhận đúng; họ tên, địa chỉ chuẩn Unicode dựng sẵn và bỏ khoảng trắng thừa khi nạp','Trước khi xuất BC1, BC2, PC-08, DS sát hạch: còn LỖI ở Kiểm tra dữ liệu thì tool hỏi lại']],
   ['4.9','24/10/2026',['Cảnh báo lịch nộp ở đầu trang vẫn báo việc của tất cả các khóa (ghi rõ tên khóa)','Kiểm tra dữ liệu: nút Xác nhận / Giữ theo hồ sơ / Lấy theo file GPLX / Sửa cho từng cảnh báo; mục “Đã xác nhận” bỏ xác nhận được','Dấu ! cạnh các nút: rê chuột hoặc chạm để xem nút làm gì (tắt/bật ở mục Hướng dẫn)']],
   ['4.8','22/10/2026',['Báo cáo 1: nút “Kế hoạch đào tạo (Word)” — giữ định dạng mẫu; phân phối giờ học sửa được (thêm/bớt môn); lịch toàn khóa tự thêm/bớt cột tuần (ISO) theo khai giảng – bế giảng, ô Lý thuyết / Thực hành tự đặt đúng ngày; tool đọc lại từng ô trước khi tải về']],
@@ -3420,7 +3421,25 @@ const THIN={style:'thin'}; const BOX={top:THIN,left:THIN,bottom:THIN,right:THIN}
 function put(ws,addr,val,font,al,extra={}){ const c=ws.getCell(addr); c.value=val; if(font) c.font=font; if(al) c.alignment=al; Object.assign(c,extra); return c; }
 const AC={horizontal:'center',vertical:'middle',wrapText:true}, AL={horizontal:'left',vertical:'middle',wrapText:true}, ALn={horizontal:'left',vertical:'middle'};
 /* Ghi file → đọc lại chính file đó → so từng ô với dữ liệu nguồn. Có sai lệch thì KHÔNG cho tải về. */
+/* chống mất chữ khi in: ô trong bảng (có viền, không xuống dòng, không gộp) mà chữ dài hơn bề rộng cột thì bật “thu nhỏ cho vừa ô”
+   — đo bằng số liệu font Liberation Serif (cùng kích thước Times New Roman); chữ vừa ô thì không đụng tới */
+function fitCellsWb(wb){
+  let n=0; const cells=[];
+  for(const ws of wb.worksheets){
+    ws.eachRow({includeEmpty:false},row=>row.eachCell({includeEmpty:false},cell=>{
+      const v=cell.value; if(typeof v!=='string'||!v||cell.isMerged) return;
+      const al=cell.alignment||{}; if(al.wrapText||al.shrinkToFit) return;
+      const b=cell.border||{}; if(!(b.left&&b.left.style)&&!(b.right&&b.right.style)) return;
+      const f=cell.font||{}; if(f.name&&!/times new roman/i.test(f.name)) return;
+      const w=ws.getColumn(cell.col).width||8.43, px=Math.trunc(w*7+5), avail=(px-5)*0.75;
+      const tw=pdfW(pdfFont(f.bold?'B':'R'),v,f.size||11);
+      if(tw>avail){ cell.alignment={...al,shrinkToFit:true}; n++; if(cells.length<20) cells.push(ws.name+'!'+cell.address); }
+    }));
+  }
+  return {n,cells};
+}
 async function download(wb,name,verify,post){
+  try{ const F=fitCellsWb(wb); if(F.n) console.info('Thu nhỏ chữ cho vừa ô:',F.n,F.cells.join(', ')); }catch(e){}
   let buf=await wb.xlsx.writeBuffer();
   if(post){ try{ buf=await post(buf); }catch(e){ dialog('Dừng xuất file',`<div class="note warn">${ic('alert')}<span>Lỗi khi hoàn thiện định dạng file: ${esc(e.message)}. File chưa được tải về.</span></div>`,[['Đóng','pri']]); return false; } }
   if(verify){
