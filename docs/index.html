@@ -703,7 +703,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
-  ['4.9','24/10/2026',['Cảnh báo lịch nộp ở đầu trang chỉ hiện việc của khóa đang mở (khóa khác xem ở Tổng quan)','Kiểm tra dữ liệu: nút Xác nhận / Giữ theo hồ sơ / Lấy theo file GPLX / Sửa cho từng cảnh báo; mục “Đã xác nhận” bỏ xác nhận được','Dấu ! cạnh các nút: rê chuột hoặc chạm để xem nút làm gì (tắt/bật ở mục Hướng dẫn)']],
+  ['4.9','24/10/2026',['Cảnh báo lịch nộp ở đầu trang vẫn báo việc của tất cả các khóa (ghi rõ tên khóa)','Kiểm tra dữ liệu: nút Xác nhận / Giữ theo hồ sơ / Lấy theo file GPLX / Sửa cho từng cảnh báo; mục “Đã xác nhận” bỏ xác nhận được','Dấu ! cạnh các nút: rê chuột hoặc chạm để xem nút làm gì (tắt/bật ở mục Hướng dẫn)']],
   ['4.8','22/10/2026',['Báo cáo 1: nút “Kế hoạch đào tạo (Word)” — giữ định dạng mẫu; phân phối giờ học sửa được (thêm/bớt môn); lịch toàn khóa tự thêm/bớt cột tuần (ISO) theo khai giảng – bế giảng, ô Lý thuyết / Thực hành tự đặt đúng ngày; tool đọc lại từng ô trước khi tải về']],
   ['4.7','21/10/2026',['Số báo danh: nút “PDF dán bảng tin” — file PDF A4 đúng bố cục mẫu (SBD, họ tên, số CMT, ngày sinh, hạng, nội dung; trang 1: 39 người, trang sau: 46), tool đọc lại từng dòng trước khi tải về',
                        'Thông báo kỳ sát hạch làm lại theo mẫu poster: xem trước trực tiếp, sửa được mọi chữ và ảnh, xuất ảnh PNG gửi Zalo và PDF in A4']],
@@ -2030,7 +2030,7 @@ function whenTxt(m){ return m.from===m.to ? `${THU[m.fromD.getDay()]} ${fmtD(m.f
 function stTxt(m){ return m.st==='done'?'Đã xong': m.st==='act'?(m.n===0?'Hạn chót hôm nay':`Đến hạn, còn ${m.n} ngày`): m.st==='over'?`Quá hạn ${m.n} ngày`:`Còn ${m.n} ngày nữa`; }
 function renderAlerts(){
   const el=$('#alerts'); const items=[];
-  for(const c of [C()].filter(Boolean)){            // chỉ việc của khóa đang mở — khóa khác xem ở Tổng quan các khóa
+  for(const c of Object.values(DB.courses)){        // mọi khóa — để không sót hạn nộp của khóa đang không mở
     const L=mocList(c);
     for(const m of L){ if(m.st==='act'||m.st==='over') items.push({c,m}); }
     const nx=L.find(m=>m.st==='wait'); if(nx&&nx.n<=3) items.push({c,m:nx});
@@ -2040,7 +2040,7 @@ function renderAlerts(){
   const row=({c,m},hid)=>{
     const cls=m.st==='over'?'over':m.st==='act'?'act':'next', icn=m.st==='over'?'stop':m.st==='act'?'alert':'bell';
     const todo=m.steps.filter((_,i)=>!m.done[i]);
-    const multi=false;
+    const multi=Object.keys(DB.courses).length>1;
     return `<div class="al ${cls} ${hid?'hide xtra':''}" data-goc="${c.id}" title="Mở Lịch nộp"><span class="bar"></span><span class="ic">${ic(icn)}</span>
       <span class="tx"><b>${multi?'Khóa '+esc(c.ten)+': ':''}${esc(m.title)}</b><span class="sm">${whenTxt(m)} — còn lại: ${todo.map(esc).join(', ')}</span></span>
       <span class="when">${stTxt(m)}</span></div>`; };
@@ -2049,8 +2049,9 @@ function renderAlerts(){
     const no=items.filter(x=>x.m.st==='over').length, na=items.filter(x=>x.m.st==='act').length, nw=items.length-no-na;
     const parts=[no&&`${no} việc quá hạn`, na&&`${na} việc đang đến hạn`, nw&&`${nw} việc sắp tới`].filter(Boolean).join(', ');
     const first=items[0];
-    el.innerHTML=`<div class="asum ${no?'':'act'}" id="asum"><span class="ic">${ic(no?'stop':'alert')}</span><span class="tx"><b>${parts}</b> <span class="muted">— gần nhất: ${esc(first.m.title)} (${stTxt(first.m).toLowerCase()})</span></span><span class="go">Xem lịch nộp</span></div>`;
-    $('#asum').onclick=()=>{ TAB='moc'; render(); window.scrollTo(0,0); };
+    el.innerHTML=`<div class="asum ${no?'':'act'}" id="asum"><span class="ic">${ic(no?'stop':'alert')}</span><span class="tx"><b>${parts}</b> <span class="muted">— gần nhất: ${Object.keys(DB.courses).length>1?'khóa '+esc(first.c.ten)+': ':''}${esc(first.m.title)} (${stTxt(first.m).toLowerCase()})</span></span><span class="go">Xem lịch nộp</span></div>`;
+    $('#asum').onclick=()=>{ const cur=items.find(x=>x.c.id===DB.cur)||first; if(cur.c.id!==DB.cur){ DB.cur=cur.c.id; pending=[]; SEL.clear(); save(); } TAB='moc'; render(); window.scrollTo(0,0); };
+    $('#asum').title=items.some(x=>x.c.id===DB.cur)?'Mở Lịch nộp của khóa đang mở':'Chuyển sang khóa '+first.c.ten+' và mở Lịch nộp';
   }
   else el.innerHTML=items.length?`<div class="alist">${items.map((x,i)=>row(x,i>=SHOW)).join('')}${more>0?`<button class="amore" id="amore">Xem thêm ${more} việc</button>`:''}</div>`:'';
   if($('#amore')) $('#amore').onclick=e=>{ e.stopPropagation(); el.querySelectorAll('.xtra').forEach(x=>x.classList.remove('hide')); e.target.remove(); };
@@ -2122,7 +2123,7 @@ function vMOC(v,c){
   v.innerHTML=remindCard()+`<div class="card"><div class="row"><h2 style="margin:0">Khóa ${esc(c.ten)}</h2><span style="flex:1"></span>
     <button class="btn sm" id="mocAll">${ic('check')}Đánh dấu xong hết</button><button class="btn sm" id="mocReset">Bỏ tích hết</button><button class="btn sm" id="mocEdit">${ic('edit')}Sửa mốc</button></div>
     <div style="margin-top:6px">Khai giảng: ${dTxt(kg)} &nbsp;·&nbsp; Bế giảng: ${dTxt(isoDate(c.beGiang))} &nbsp;·&nbsp; Ký BC2: ${dTxt(isoDate(c.ngayKy))} &nbsp;·&nbsp; Sát hạch: ${dTxt(sh)} &nbsp;<a href="#" id="goCfg">sửa ngày</a></div>
-    <div class="muted" style="margin-top:4px">Cảnh báo ở đầu trang chỉ hiện việc của khóa đang mở; việc của các khóa khác xem ở mục Tổng quan các khóa. Rơi vào thứ Bảy / Chủ nhật thì nên làm sớm hơn.</div></div>
+    <div class="muted" style="margin-top:4px">Cảnh báo hiện ở đầu mọi trang khi tới hạn — của tất cả các khóa, kể cả khóa đang không mở. Rơi vào thứ Bảy / Chủ nhật thì nên làm sớm hơn.</div></div>
   <div class="tl">${L.map(m=>{
     if(m.st==='nodate') return `<div class="ms"><h3>${esc(m.title)} <span class="st wait">Chưa có ngày ${BASE_LB[m.base]}</span></h3>
       <div class="when">${relTxt(m)} · nhập ngày ${BASE_LB[m.base]} ở Thông tin khóa để tool tính mốc</div>${stepsHtml(c,m)}</div>`;
