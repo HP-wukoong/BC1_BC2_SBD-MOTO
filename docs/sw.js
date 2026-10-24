@@ -1,5 +1,5 @@
 /* TOOLS BC1+BC2+SBD — service worker: mở được khi mất mạng, tự lấy bản mới khi có mạng */
-const CACHE = 'tools-bc1-bc2-sbd-4.9';
+const CACHE = 'tools-bc1-bc2-sbd-4.9.1';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/favicon-64.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
