@@ -1,0 +1,1179 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sửa NDSH XML</title>
+<meta name="theme-color" content="#0f2747">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%230f2747%27/%3E%3Ctext x=%2732%27 y=%2742%27 font-family=%27Arial%27 font-weight=%27700%27 font-size=%2726%27 fill=%27%23fff%27 text-anchor=%27middle%27%3ESH%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#eef1f5;--card:#fff;--ink:#16202e;--mut:#5f6b7a;--line:#dde2e9;--head:#0f2747;--head2:#16365f;
+  --pri:#1d5bb8;--ok:#127a46;--okbg:#e5f4eb;--warn:#8a5a00;--warnbg:#fff3d1;--bad:#b3261e;--badbg:#fde7e5;
+  --chg:#1d5bb8;--chgbg:#e7effb;--name:#a84a06;--namebg:#ffefe1;--bar:#2d6fd1;--bar0:#b9c3d0;--tip:#e39b00;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Segoe UI",Roboto,Arial,sans-serif}
+header{background:linear-gradient(90deg,var(--head),var(--head2));color:#fff;padding:12px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;border-bottom:3px solid #c9a227}
+header .logo{width:40px;height:40px;border-radius:8px;background:#ffffff1a;display:grid;place-items:center;font-weight:700;letter-spacing:.5px;border:1px solid #ffffff40;flex:none}
+header h1{font-size:16.5px;margin:0;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+header .sub{opacity:.8;font-size:12.5px}
+header .hbtns{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header .hb{font:inherit;font-size:12.5px;color:#fff;background:#ffffff14;border:1px solid #ffffff55;border-radius:6px;padding:4px 10px;cursor:pointer}
+header .hb:hover{background:#ffffff2a}
+header .ver{font-size:12px;opacity:.8;border:1px solid #ffffff55;border-radius:4px;padding:2px 8px}
+nav.tabs{max-width:1320px;margin:12px auto 0;padding:0 16px;display:flex;gap:6px}
+nav.tabs button{font:inherit;font-weight:600;border:1px solid var(--line);border-bottom:0;background:#e3e8ef;color:var(--mut);padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer}
+nav.tabs button.on{background:var(--card);color:var(--head)}
+main{max-width:1320px;margin:0 auto;padding:0 16px 16px}
+.pane{border-top:2px solid var(--card);padding-top:14px}
+.steps{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.steps div{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--mut)}
+.steps div b{display:block;color:var(--ink);font-size:13.5px}
+.steps div.done{border-color:#9fd3b5;background:var(--okbg)} .steps div.done b{color:var(--ok)}
+.steps div.cur{border-color:var(--pri);box-shadow:0 0 0 1px var(--pri) inset}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.2px}
+.card h3{font-size:14px;margin:18px 0 8px;display:flex;align-items:center;gap:8px}
+.n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--pri);color:#fff;font-size:12px;flex:none}
+.drop{display:block;border:2px dashed #b9c1cc;border-radius:8px;padding:16px;text-align:center;cursor:pointer;color:var(--mut);transition:.15s;background:#ffffff80}
+.drop:hover,.drop.over{border-color:var(--pri);background:#f2f6fd;color:var(--pri)}
+.drop input{display:none}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:2px 14px;margin-top:10px;font-size:13px}
+.kv span{color:var(--mut)} .kv b{font-weight:600;word-break:break-word}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-top:10px}
+label.f{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
+select,input[type=text]{font:inherit;padding:5px 8px;border:1px solid #c5ccd6;border-radius:6px;background:#fff;color:var(--ink);min-width:120px}
+input[type=text]{min-width:0}
+.mode{display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:#f6f8fb;border:1px solid var(--line);border-radius:8px}
+.mode label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.mode label.dis{opacity:.45;cursor:not-allowed}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 10px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer;background:#fff;font-size:13px;user-select:none}
+.chip b{margin-left:4px}.chip.on{outline:2px solid var(--pri)}
+.c-chg{background:var(--chgbg);color:var(--chg)}.c-ok{background:var(--okbg);color:var(--ok)}
+.c-warn{background:var(--warnbg);color:var(--warn)}.c-bad{background:var(--badbg);color:var(--bad)}.c-name{background:var(--namebg);color:var(--name)}
+.tblwrap{overflow:auto;max-height:58vh;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:5px 9px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:#e9edf3;z-index:1;font-weight:600}
+td.c,th.c{text-align:center} td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
+td.w{white-space:normal;min-width:260px}
+tr.st-chg td{background:#f4f8ff} tr.st-bad td{background:#fff5f4}
+tfoot td{font-weight:700;background:#f3f5f8;border-top:2px solid #c5ccd6}
+.tag{display:inline-block;border-radius:4px;padding:0 6px;font-size:12px;margin-right:4px}
+.arrow{font-weight:700;color:var(--chg)}
+.btn{font:inherit;border:0;border-radius:7px;padding:9px 18px;cursor:pointer;background:var(--pri);color:#fff;font-weight:600}
+.btn.sec{background:#e6ebf2;color:var(--ink)} .btn.ok{background:var(--ok)} .btn.sm{padding:5px 12px;font-size:13px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.banner{display:none;padding:10px 14px;border-radius:8px;margin-bottom:10px;border-left:4px solid}
+.banner.warn{display:block;background:var(--warnbg);color:var(--warn);border-color:#e0a800}
+.banner.bad{display:block;background:var(--badbg);color:var(--bad);border-color:var(--bad)}
+.banner.ok{display:block;background:var(--okbg);color:var(--ok);border-color:var(--ok)}
+.banner.info{display:block;background:var(--chgbg);color:var(--chg);border-color:var(--pri)}
+.checks{list-style:none;margin:10px 0 0;padding:0;font-size:13.5px}
+.checks li{padding:6px 10px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+.checks .ic{width:20px;flex:none;text-align:center;font-weight:700}
+.checks .ok .ic{color:var(--ok)} .checks .bad .ic{color:var(--bad)} .checks .warn .ic{color:var(--warn)} .checks .run .ic{color:var(--mut)}
+.checks small{display:block;color:var(--mut);word-break:break-all}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fafbfd}
+.kpi .l{font-size:12px;color:var(--mut)} .kpi .v{font-size:22px;font-weight:700}
+.bar{height:10px;background:var(--bar);border-radius:3px;display:inline-block;vertical-align:middle}
+.delta-p{color:var(--ok);font-weight:700}.delta-m{color:var(--bad);font-weight:700}
+details summary{cursor:pointer;color:var(--pri);font-weight:600}
+textarea{width:100%;min-height:180px;font:13px/1.5 Consolas,monospace;border:1px solid #c5ccd6;border-radius:6px;padding:8px;background:#fff;color:var(--ink)}
+.small{font-size:12px;color:var(--mut)}
+.hide{display:none!important}
+.ack{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border:1px solid #e0a800;background:var(--warnbg);border-radius:8px;margin-top:10px;color:var(--warn)}
+code{background:#eef1f5;padding:0 4px;border-radius:3px}
+.set{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:860px){.set{grid-template-columns:1fr}}
+.set .blk{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fbfcfd}
+.set .blk h4{margin:0 0 6px;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.st-ok{color:var(--ok);font-weight:600}.st-bad{color:var(--bad);font-weight:600}.st-warn{color:var(--warn);font-weight:600}
+/* dấu ! giải thích */
+.lh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+h2 .tip,h3 .tip,h4 .tip{margin-left:auto}
+.tip{font-style:normal;width:18px;height:18px;border-radius:50%;background:var(--tip);color:#fff;font-weight:800;font-size:11.5px;display:inline-grid;place-items:center;cursor:help;flex:none;user-select:none;text-transform:none;letter-spacing:0;transition:.12s}
+.tip:hover,.tip:focus,.tip.on{background:#b97900;outline:none;box-shadow:0 0 0 3px #e39b0040}
+#pop{position:fixed;z-index:60;width:390px;max-width:calc(100vw - 24px);background:#fff;border:1px solid var(--line);border-top:4px solid var(--tip);border-radius:8px;box-shadow:0 10px 32px #0f274740;padding:12px 14px;font-size:13px;line-height:1.5;color:var(--ink);display:none;max-height:70vh;overflow:auto}
+#pop h4{margin:0 0 8px;font-size:14px;color:var(--head)}
+#pop .ps{margin-top:8px}
+#pop .ps>b{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;color:#8a5a00;margin-bottom:1px}
+#pop .ps p{margin:0}
+#pop .ex{background:#f3f6fa;border-radius:6px;padding:6px 8px;margin-top:4px;font-size:12.5px}
+#pop code{font-size:12px}
+/* hộp thoại + thông báo */
+dialog#dlg{border:0;border-radius:12px;padding:0;max-width:min(720px,calc(100vw - 24px));width:100%;box-shadow:0 20px 60px #0f274766;color:var(--ink)}
+dialog#dlg::backdrop{background:#0f274766}
+#dlg .db{padding:16px 20px;max-height:72vh;overflow:auto}
+#dlg .db h2{margin:0 0 8px;font-size:16px;color:var(--head)}
+#dlg .df{display:flex;gap:8px;justify-content:flex-end;padding:10px 16px;border-top:1px solid var(--line);background:#f6f8fb;border-radius:0 0 12px 12px}
+#dlg input[type=range]{width:100%}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#16202e;color:#fff;padding:9px 16px;border-radius:8px;font-size:13.5px;box-shadow:0 8px 24px #0005;z-index:80;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100vw - 32px)}
+#toast.on{opacity:1}
+/* ảnh nền (giống tool A1 quản lý thi lại CSHN) */
+#bgLayer{display:none}
+html.hasbg body{background:transparent}
+html.hasbg #bgLayer{display:block;position:fixed;inset:0;z-index:-1;background:var(--bg) center/cover no-repeat;transform:translateZ(0);will-change:transform;contain:strict;pointer-events:none}
+html.hasbg #bgLayer i{position:absolute;inset:0;background:var(--bg)}
+html.bgglass .card,html.bgglass .steps div,html.bgglass .kpi{background:color-mix(in srgb,var(--card) 86%,transparent)}
+html.hasbg nav.tabs button:not(.on){background:color-mix(in srgb,#e3e8ef 88%,transparent)}
+/* biên bản in A4 */
+#bb{display:none}
+@media print{
+  @page{size:A4;margin:14mm 14mm 16mm 18mm}
+  #bgLayer,#pop,.tip,#toast,dialog{display:none!important}
+  body{background:#fff!important}
+  body.pbb>*:not(#bb){display:none!important}
+  body.pbb #bb{display:block}
+  body:not(.pbb) header,body:not(.pbb) nav,body:not(.pbb) .steps,body:not(.pbb) .noprint{display:none!important}
+}
+#bb{font:13px/1.45 "Times New Roman",Times,serif;color:#000}
+#bb .hd{display:grid;grid-template-columns:1fr 1fr;text-align:center;font-size:13px}
+#bb .hd b{display:block}
+#bb .hd u{text-decoration:none;border-bottom:1px solid #000;padding-bottom:1px}
+#bb h1{text-align:center;font-size:16px;margin:16px 0 2px}
+#bb .sub{text-align:center;font-style:italic;margin-bottom:10px}
+#bb h2{font-size:13.5px;margin:12px 0 4px}
+#bb table{border-collapse:collapse;width:100%;font-size:12px;margin-top:4px}
+#bb th,#bb td{border:1px solid #000;padding:3px 5px;white-space:normal;position:static;background:none}
+#bb th{font-weight:700;text-align:center}
+#bb .kv2{display:grid;grid-template-columns:160px 1fr;gap:1px 8px}
+#bb .mono{font-family:Consolas,monospace;font-size:10.5px;word-break:break-all}
+#bb .sign{display:grid;grid-template-columns:1fr 1fr;text-align:center;margin-top:18px;page-break-inside:avoid}
+#bb .sign b{display:block} #bb .sign i{display:block;margin-bottom:64px}
+#bb tr{page-break-inside:avoid}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">SH</div>
+  <div>
+    <h1>Công cụ hiệu chỉnh nội dung sát hạch — File XML kỳ sát hạch</h1>
+    <div class="sub">Đổi đúng giá trị &lt;NOI_DUNG_SH&gt; theo số định danh trong danh sách thi lại · Xử lý trên máy, không gửi dữ liệu ra ngoài</div>
+  </div>
+  <div class="hbtns">
+    <button class="hb" id="hHist" title="Các lần hiệu chỉnh đã làm trên máy này">Lịch sử</button>
+    <button class="hb" id="hSet" title="Bảng mã, tên gọi khác, thư mục nhật ký">Cài đặt</button>
+    <button class="hb" id="hBg" title="Đặt ảnh nền cho tool">Ảnh nền</button>
+    <span class="ver" id="ver"></span>
+  </div>
+</header>
+<nav class="tabs" role="tablist">
+  <button class="on" data-tab="fix" role="tab">① Hiệu chỉnh file XML</button>
+  <button data-tab="cmp" role="tab">② Kiểm tra file đã sửa</button>
+</nav>
+<main>
+<section class="pane" id="tabFix">
+  <div class="steps" id="steps">
+    <div id="st1"><b>1. Nạp file XML</b>Từ PC-08 gửi về</div>
+    <div id="st2"><b>2. Nạp danh sách thi lại</b>File Excel</div>
+    <div id="st3"><b>3. Đối chiếu</b>Xem trước từng hồ sơ</div>
+    <div id="st4"><b>4. Kiểm định</b>Tạo file &amp; kiểm tra toàn vẹn</div>
+    <div id="st5"><b>5. Thống kê &amp; tải về</b>Toàn bộ file mới</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2><span class="n">1</span>File XML kỳ sát hạch<i class="tip" data-tip="xml" tabindex="0" role="button" aria-label="Giải thích">!</i></h2>
+      <label class="drop" id="dropX"><input type="file" id="fX" accept=".xml">Bấm chọn hoặc kéo thả file .xml vào đây</label>
+      <div id="mX"></div>
+    </div>
+    <div class="card">
+      <h2><span class="n">2</span>Danh sách thi lại (Excel)<i class="tip" data-tip="excel" tabindex="0" role="button" aria-label="Giải thích">!</i></h2>
+      <label class="drop" id="dropE"><input type="file" id="fE" accept=".xls,.xlsx,.xlsm">Bấm chọn hoặc kéo thả file .xls / .xlsx</label>
+      <div id="mE" class="small" style="margin-top:8px"></div>
+      <div class="row hide" id="colsBox">
+        <label class="f"><span class="lh">Sheet<i class="tip" data-tip="sheet" tabindex="0" role="button" aria-label="Giải thích">!</i></span><select id="sSheet"></select></label>
+        <label class="f"><span class="lh">Cột số định danh<i class="tip" data-tip="cccd" tabindex="0" role="button" aria-label="Giải thích">!</i></span><select id="sCccd"></select></label>
+        <label class="f"><span class="lh">Cột Số (mã NDSH)<i class="tip" data-tip="num" tabindex="0" role="button" aria-label="Giải thích">!</i></span><select id="sNum"></select></label>
+        <label class="f"><span class="lh">Cột Nội dung<i class="tip" data-tip="label" tabindex="0" role="button" aria-label="Giải thích">!</i></span><select id="sLabel"></select></label>
+        <label class="f"><span class="lh">Cột Họ tên<i class="tip" data-tip="name" tabindex="0" role="button" aria-label="Giải thích">!</i></span><select id="sName"></select></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card hide" id="cardRes">
+    <h2><span class="n">3</span>Đối chiếu &amp; xem trước</h2>
+    <div class="banner" id="bannerMode"></div>
+    <div class="banner" id="banner"></div>
+    <div class="mode">
+      <b>Lấy mã mới theo:</b>
+      <label id="lbModeEx"><input type="radio" name="mode" value="excel" checked> Cột “Số” trong Excel</label>
+      <label><input type="radio" name="mode" value="map"> Bảng mã (suy từ cột Nội dung)</label><span style="margin-left:auto"><i class="tip" data-tip="mode" tabindex="0" role="button" aria-label="Giải thích">!</i></span>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="tblwrap"><table id="tbl"><thead><tr>
+      <th><input type="checkbox" id="chkAll" title="Chọn/bỏ tất cả dòng sẽ đổi"></th>
+      <th class="c">#</th><th>Họ tên (Excel)</th><th>Số định danh</th><th>Nội dung (Excel)</th>
+      <th class="c">Số Excel</th><th class="c">Bảng mã</th><th class="c">XML hiện tại</th><th class="c">Mã mới</th><th>Ghi chú</th>
+    </tr></thead><tbody></tbody></table></div>
+    <p class="small">Chỉ những dòng được tích ✔ mới bị đổi. Dòng lệch tên mặc định bỏ tích để kiểm tra lại.</p>
+    <details><summary>Hồ sơ trong XML không có trong danh sách Excel (giữ nguyên, không đụng tới)</summary><div id="other" class="small" style="margin-top:8px"></div></details>
+  </div>
+
+  <div class="card hide" id="cardOut">
+    <h2><span class="n">4</span>Tạo file &amp; kiểm định toàn vẹn</h2>
+    <div class="actions">
+      <button class="btn" id="bRun">Tạo file &amp; kiểm định</button>
+      <span class="small" id="runInfo"></span>
+    </div>
+    <ul class="checks" id="checks"></ul>
+  </div>
+
+  <div class="card hide" id="cardStat">
+    <h2><span class="n">5</span>Thống kê toàn bộ file XML mới</h2>
+    <div class="kpis" id="kpis"></div>
+    <div class="tblwrap"><table id="tStat"></table></div>
+    <h3>Theo khóa học (MA_KHOA_HOC)</h3>
+    <div class="tblwrap"><table id="tKhoa"></table></div>
+    <div class="ack hide" id="ackBox"><input type="checkbox" id="ack"><label for="ack" id="ackTxt"></label></div>
+    <div class="actions" style="margin-top:12px">
+      <label class="f" style="flex:1;min-width:280px"><span class="lh">Tên file XML tải về<i class="tip" data-tip="outname" tabindex="0" role="button" aria-label="Giải thích">!</i></span><input type="text" id="outName"></label>
+      <button class="btn ok" id="bDl" disabled>Tải file XML đã hiệu chỉnh</button>
+      <button class="btn sec" id="bCsv">Xuất báo cáo (CSV)</button>
+      <button class="btn sec" id="bPrint">In biên bản (A4)</button>
+      <i class="tip" data-tip="bb" tabindex="0" role="button" aria-label="Giải thích" style="align-self:center">!</i>
+    </div>
+    <div class="small" id="logInfo" style="margin-top:8px"></div>
+  </div>
+</section>
+
+<section class="pane hide" id="tabCmp">
+  <div class="card">
+    <h2>Kiểm tra file XML đã sửa<i class="tip" data-tip="cmp" tabindex="0" role="button" aria-label="Giải thích">!</i></h2>
+    <p class="small" style="margin-top:-4px">So file gốc PC-08 gửi với file đã sửa (bằng tool này, sửa tay hay công cụ khác). Tool liệt kê từng người bị đổi mã và phát hiện mọi thay đổi khác ngoài NOI_DUNG_SH.</p>
+    <div class="grid">
+      <div><b class="small">File GỐC (PC-08 gửi)</b><label class="drop" id="dropA"><input type="file" id="fA" accept=".xml">Chọn / kéo thả file XML gốc</label><div class="small" id="mA" style="margin-top:6px"></div></div>
+      <div><b class="small">File ĐÃ SỬA</b><label class="drop" id="dropB"><input type="file" id="fB" accept=".xml">Chọn / kéo thả file XML đã sửa</label><div class="small" id="mB" style="margin-top:6px"></div></div>
+    </div>
+    <div class="actions" style="margin-top:12px"><button class="btn" id="bCmp" disabled>So sánh &amp; kiểm tra</button><span class="small" id="cmpInfo"></span></div>
+    <div class="banner" id="cmpVerdict" style="margin-top:12px"></div>
+    <ul class="checks" id="cmpChecks"></ul>
+  </div>
+  <div class="card hide" id="cmpRes">
+    <div class="kpis" id="cmpKpis"></div>
+    <h3>Hồ sơ bị đổi mã nội dung sát hạch</h3>
+    <div class="tblwrap"><table id="cmpTbl"></table></div>
+    <div id="cmpOtherBox" class="hide"><h3 style="color:var(--bad)">Thay đổi NGOÀI NOI_DUNG_SH</h3><div class="tblwrap"><table id="cmpOther"></table></div></div>
+    <h3>Thống kê nội dung sát hạch: gốc → đã sửa</h3>
+    <div class="tblwrap"><table id="cmpStat"></table></div>
+    <div class="actions" style="margin-top:12px"><button class="btn sec" id="bCmpCsv">Xuất kết quả kiểm tra (CSV)</button></div>
+  </div>
+</section>
+
+<div class="card hide" id="cardSet">
+  <h2>Cài đặt<span class="small" style="text-transform:none;font-weight:400">· lưu trên máy này, mở lại tool vẫn còn</span><button class="btn sec sm" id="setClose" style="margin-left:auto">Đóng</button></h2>
+  <div class="set">
+    <div class="blk">
+      <h4>Bảng mã nội dung sát hạch<i class="tip" data-tip="map" tabindex="0" role="button" aria-label="Giải thích">!</i></h4>
+      <p class="small" style="margin:0 0 6px">Mỗi dòng: <code>mã = nội dung</code>. Mã mới phải có trong bảng này mới được ghi vào XML.</p>
+      <textarea id="mapTxt" spellcheck="false"></textarea>
+      <div class="actions" style="margin-top:6px"><button class="btn sm" id="bMapSave">Lưu bảng mã</button><button class="btn sec sm" id="bMapDef">Về mặc định</button><span class="small" id="mapInfo"></span></div>
+    </div>
+    <div class="blk">
+      <h4>Tên gọi khác của nội dung<i class="tip" data-tip="alias" tabindex="0" role="button" aria-label="Giải thích">!</i></h4>
+      <p class="small" style="margin:0 0 6px">Mỗi dòng: <code>cách viết 1, cách viết 2, … = nội dung trong bảng mã</code>. Không phân biệt hoa/thường, khoảng trắng, đuôi ngày.</p>
+      <textarea id="aliasTxt" spellcheck="false"></textarea>
+      <div class="actions" style="margin-top:6px"><button class="btn sm" id="bAliasSave">Lưu tên gọi khác</button><button class="btn sec sm" id="bAliasDef">Về mặc định</button><span class="small" id="aliasInfo"></span></div>
+    </div>
+    <div class="blk">
+      <h4>Thư mục lưu nhật ký (nên chọn thư mục Google Drive)<i class="tip" data-tip="logdir" tabindex="0" role="button" aria-label="Giải thích">!</i></h4>
+      <div id="logDirSt" class="small"></div>
+      <div class="actions" style="margin-top:8px"><button class="btn sm" id="bLogPick">Chọn thư mục…</button><button class="btn sec sm" id="bLogTest">Ghi thử</button><button class="btn sec sm" id="bLogOff">Bỏ liên kết</button></div>
+      <label class="small" style="display:flex;gap:6px;margin-top:8px;align-items:center"><input type="checkbox" id="logXml"> Lưu kèm bản sao file XML đã sửa vào thư mục này</label>
+    </div>
+    <div class="blk">
+      <h4>Biên bản in<i class="tip" data-tip="unit" tabindex="0" role="button" aria-label="Giải thích">!</i></h4>
+      <label class="f">Tên đơn vị (góc trái biên bản, xuống dòng bằng Enter)<textarea id="unitTxt" style="min-height:58px;font:14px/1.5 inherit;font-family:inherit" spellcheck="false"></textarea></label>
+      <label class="f" style="margin-top:6px">Địa danh ghi ngày tháng<input type="text" id="placeTxt" placeholder="VD: Hoài Nhơn"></label>
+      <div class="actions" style="margin-top:6px"><button class="btn sm" id="bUnitSave">Lưu</button></div>
+    </div>
+  </div>
+</div>
+</main>
+
+<div id="bb" aria-hidden="true"></div>
+<div id="pop" role="tooltip"></div>
+<div id="toast" role="status"></div>
+<dialog id="dlg"><div class="db" id="dlgB"></div><div class="df" id="dlgF"></div></dialog>
+<script>/*XLSX*/</script>
+<script>/*CORE*/</script>
+<script>
+'use strict';
+const APP_VER = '3.0';
+const DEFAULT_MAP = `1 = SH lần đầu L+H
+2 = SH lại L
+3 = SH lại L+H
+4 = SH lại L+H+Đ
+5 = SH lại H+Đ
+6 = SH lại Đ
+7 = SH lại H
+8 = Sát hạch H
+9 = Sát hạch H,
+12 = SH lại L+M+H+Đ
+13 = SH lại M+H+Đ
+14 = SH lại L+M
+15 = SH lại M+Đ
+16 = SH lại M
+17 = SH lại M+H
+18 = SH lại L+Đ
+19 = SH lại L+M+Đ
+20 = SH lại L+M+H
+21 = SH lần đầu`;
+const DEFAULT_ALIAS = `L, V-L, LT, V-LT, SH lại LT, SH lại lý thuyết = SH lại L
+H, V-H, SH lại hình = SH lại H
+L+H, V-L+H, LT+H, V-LT+H, SH lại LT+H, SH lại LT+hình = SH lại L+H`;
+const DEFAULT_UNIT = 'CÔNG TY CỔ PHẦN ĐÀO TẠO VÀ DỊCH VỤ\nGIAO THÔNG VẬN TẢI BÌNH ĐỊNH';
+const DSIG = 'http://www.w3.org/2000/09/xmldsig#';
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = n => Number(n || 0).toLocaleString('vi-VN');
+const tick = () => new Promise(r => setTimeout(r, 30));
+const pad2 = n => String(n).padStart(2, '0');
+const stamp = d => `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}-${pad2(d.getHours())}${pad2(d.getMinutes())}`;
+const safeName = (s, max) => String(s || '').normalize('NFC').replace(/[\\/:*?"<>|\s]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, max || 150);
+const S = { xml:null, xmlName:'', recs:[], byCccd:new Map(), dupX:new Set(), head:{}, wb:null, wbName:'', rows:[], filter:'all', items:[],
+  label2num:new Map(), num2label:new Map(), alias:new Map(), uncheck:new Set(), check:new Set(), out:null, outOk:false, report:null, stats:null,
+  auto:{}, sheetScores:[], autoSheet:'', modeForced:false };
+
+/* ---------- Lưu trữ an toàn (không bao giờ làm tool lỗi nếu trình duyệt chặn) ---------- */
+const LS = { get(k, d){ try { const v = localStorage.getItem('suaNDSH.' + k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem('suaNDSH.' + k, JSON.stringify(v)); return true; } catch(e){ return false; } } };
+const IDB = { db:null,
+  async open(){ if (this.db) return this.db; if (!window.indexedDB) throw new Error('no idb');
+    this.db = await new Promise((res, rej) => { const r = indexedDB.open('suaNDSH', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); return this.db; },
+  async get(k){ try { const db = await this.open(); return await new Promise((res, rej) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch(e){ return undefined; } },
+  async put(k, v){ try { const db = await this.open(); await new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'), o = t.objectStore('kv'); (v == null ? o.delete(k) : o.put(v, k)); t.oncomplete = res; t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); return true; } catch(e){ return false; } } };
+
+/* ---------- Thông báo, hộp thoại, bắt lỗi chung ---------- */
+let toastT = null;
+function toast(msg, ms){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms || 3200); }
+let dlgClose = null;
+function dialog(html, onOk, okText, opts){
+  const d = $('#dlg'); if (d.open) d.close();
+  $('#dlgB').innerHTML = html;
+  $('#dlgF').innerHTML = (onOk ? `<button class="btn" id="dlgOk">${esc(okText || 'Đồng ý')}</button>` : '') + `<button class="btn sec" id="dlgX">${onOk ? 'Hủy' : 'Đóng'}</button>`;
+  $('#dlgX').onclick = () => d.close();
+  if (onOk) $('#dlgOk').onclick = async () => { $('#dlgOk').disabled = true; try { if ((await onOk()) !== false) d.close(); } catch(e){ toast('Lỗi: ' + e.message, 5000); } finally { const b = $('#dlgOk'); if (b) b.disabled = false; } };
+  d.showModal(); return d;
+}
+window.addEventListener('error', e => { console.error(e.error || e.message); toast('Có lỗi không mong muốn: ' + (e.message || '') + ' — dữ liệu không bị ghi. Hãy tải lại trang.', 7000); });
+window.addEventListener('unhandledrejection', e => { console.error(e.reason); toast('Có lỗi không mong muốn: ' + ((e.reason && e.reason.message) || e.reason) + ' — dữ liệu không bị ghi.', 7000); });
+
+/* ---------- Bảng mã + tên gọi khác ---------- */
+function parseMap(txt){
+  const l2n = new Map(), n2l = new Map(), errs = [], warns = [];
+  txt.split(/\r?\n/).forEach((line, i) => { if (!line.trim()) return; const m = line.match(/^\s*(\d{1,3})\s*=\s*(.+?)\s*$/);
+    if (!m) { errs.push(`dòng ${i+1}: “${line.trim()}” không đúng dạng mã = nội dung`); return; }
+    const code = String(+m[1]), k = XCore.normLabel(m[2]);
+    if (n2l.has(code)) errs.push(`mã ${code} bị khai báo 2 lần`);
+    if (l2n.has(k) && l2n.get(k) !== code) warns.push(`“${m[2]}” giống nội dung mã ${l2n.get(k)} — chữ này được hiểu là mã ${l2n.get(k)}`);
+    if (!l2n.has(k)) l2n.set(k, code);
+    n2l.set(code, m[2]); });
+  return { l2n, n2l, errs, warns };
+}
+function parseAlias(txt, l2n){
+  const al = new Map(), errs = [];
+  txt.split(/\r?\n/).forEach((line, i) => { if (!line.trim()) return; const p = line.split('=');
+    if (p.length !== 2) { errs.push(`dòng ${i+1}: thiếu hoặc thừa dấu =`); return; }
+    const canon = XCore.normLabel(p[1]); if (!l2n.has(canon)) errs.push(`dòng ${i+1}: “${p[1].trim()}” không có trong bảng mã`);
+    p[0].split(',').map(s => XCore.normLabel(s)).filter(Boolean).forEach(a => al.set(a, canon)); });
+  return { al, errs };
+}
+function applySettings(){
+  const m = parseMap(LS.get('map', DEFAULT_MAP)); S.label2num = m.l2n; S.num2label = m.n2l;
+  const a = parseAlias(LS.get('alias', DEFAULT_ALIAS), m.l2n); S.alias = a.al;
+}
+function resolveLabel(v){
+  const k = XCore.normLabel(v); if (!k) return '';
+  if (S.label2num.has(k)) return S.label2num.get(k);
+  const c = S.alias.get(k); return c ? (S.label2num.get(c) || '') : '';
+}
+function initSettingsUI(){
+  $('#mapTxt').value = LS.get('map', DEFAULT_MAP); $('#aliasTxt').value = LS.get('alias', DEFAULT_ALIAS);
+  $('#unitTxt').value = LS.get('unit', DEFAULT_UNIT); $('#placeTxt').value = LS.get('place', '');
+  $('#logXml').checked = !!LS.get('logXml', false);
+  $('#mapInfo').textContent = LS.get('map', null) === null ? 'Đang dùng bảng mã mặc định' : 'Đang dùng bảng mã đã lưu';
+  $('#aliasInfo').textContent = '';
+}
+$('#bMapSave').onclick = () => { const m = parseMap($('#mapTxt').value);
+  if (m.errs.length) { $('#mapInfo').innerHTML = `<span class="st-bad">Chưa lưu: ${esc(m.errs.slice(0,3).join('; '))}</span>`; return; }
+  if (!m.n2l.size) { $('#mapInfo').innerHTML = '<span class="st-bad">Bảng mã trống</span>'; return; }
+  LS.set('map', $('#mapTxt').value); applySettings(); const a = parseAlias(LS.get('alias', DEFAULT_ALIAS), S.label2num);
+  $('#mapInfo').innerHTML = `<span class="st-ok">Đã lưu ${m.n2l.size} mã</span>` + (m.warns.length ? ` · <span class="st-warn">Lưu ý: ${esc(m.warns.join('; '))}</span>` : '') + (a.errs.length ? ` · <span class="st-warn">Tên gọi khác: ${esc(a.errs[0])}</span>` : '');
+  build(); toast('Đã lưu bảng mã'); };
+$('#bMapDef').onclick = () => { $('#mapTxt').value = DEFAULT_MAP; try { localStorage.removeItem('suaNDSH.map'); } catch(e){} applySettings(); $('#mapInfo').textContent = 'Đã về bảng mã mặc định'; build(); };
+$('#bAliasSave').onclick = () => { const a = parseAlias($('#aliasTxt').value, S.label2num);
+  if (a.errs.length) { $('#aliasInfo').innerHTML = `<span class="st-bad">Chưa lưu: ${esc(a.errs.slice(0,3).join('; '))}</span>`; return; }
+  LS.set('alias', $('#aliasTxt').value); applySettings(); $('#aliasInfo').innerHTML = `<span class="st-ok">Đã lưu ${a.al.size} cách viết</span>`; if (S.wb) fillCols(+$('#sCccd').value); toast('Đã lưu tên gọi khác'); };
+$('#bAliasDef').onclick = () => { $('#aliasTxt').value = DEFAULT_ALIAS; try { localStorage.removeItem('suaNDSH.alias'); } catch(e){} applySettings(); $('#aliasInfo').textContent = 'Đã về mặc định'; if (S.wb) fillCols(+$('#sCccd').value); };
+$('#bUnitSave').onclick = () => { LS.set('unit', $('#unitTxt').value.trim() || DEFAULT_UNIT); LS.set('place', $('#placeTxt').value.trim()); toast('Đã lưu thông tin biên bản'); };
+$('#logXml').onchange = e => LS.set('logXml', e.target.checked);
+$('#hSet').onclick = () => { $('#cardSet').classList.remove('hide'); $('#cardSet').scrollIntoView({ behavior:'smooth', block:'start' }); renderLogDir(); };
+$('#setClose').onclick = () => $('#cardSet').classList.add('hide');
+
+/* ---------- Thẻ chuyển mục ---------- */
+$$('nav.tabs button').forEach(b => b.onclick = () => { $$('nav.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  $('#tabFix').classList.toggle('hide', b.dataset.tab !== 'fix'); $('#tabCmp').classList.toggle('hide', b.dataset.tab !== 'cmp'); });
+
+/* ---------- Băm: SHA-1 (kiểm chữ ký) & SHA-256 (nhật ký) ---------- */
+function sha1js(bytes){
+  const H=[0x67452301,0xEFCDAB89,0x98BADCFE,0x10325476,0xC3D2E1F0], W=new Int32Array(80), L=bytes.length;
+  const nb=((L+9+63)>>6)<<6, blk=new Uint8Array(64);
+  for(let off=0;off<nb;off+=64){
+    for(let i=0;i<64;i++){ const p=off+i; blk[i]= p<L?bytes[p]: p===L?0x80:0; }
+    if(off+64===nb){ const bits=L*8, hi=Math.floor(bits/4294967296); blk[56]=hi>>>24;blk[57]=hi>>>16&255;blk[58]=hi>>>8&255;blk[59]=hi&255; blk[60]=bits>>>24&255;blk[61]=bits>>>16&255;blk[62]=bits>>>8&255;blk[63]=bits&255; }
+    for(let i=0;i<16;i++) W[i]=(blk[i*4]<<24)|(blk[i*4+1]<<16)|(blk[i*4+2]<<8)|blk[i*4+3];
+    for(let i=16;i<80;i++){ const x=W[i-3]^W[i-8]^W[i-14]^W[i-16]; W[i]=(x<<1)|(x>>>31); }
+    let [a,b,c,d,e]=H;
+    for(let i=0;i<80;i++){ const f= i<20?((b&c)|(~b&d))+0x5A827999 : i<40?(b^c^d)+0x6ED9EBA1 : i<60?((b&c)|(b&d)|(c&d))+0x8F1BBCDC : (b^c^d)+0xCA62C1D6;
+      const t=(((a<<5)|(a>>>27))+f+e+W[i])|0; e=d; d=c; c=(b<<30)|(b>>>2); b=a; a=t; }
+    H[0]=H[0]+a|0;H[1]=H[1]+b|0;H[2]=H[2]+c|0;H[3]=H[3]+d|0;H[4]=H[4]+e|0;
+  }
+  const o=new Uint8Array(20); H.forEach((h,i)=>{o[i*4]=h>>>24;o[i*4+1]=h>>>16&255;o[i*4+2]=h>>>8&255;o[i*4+3]=h&255;}); return o;
+}
+async function sha(alg, bytes){
+  if (window.crypto && crypto.subtle) { try { return new Uint8Array(await crypto.subtle.digest(alg, bytes)); } catch(e){} }
+  if (alg === 'SHA-1') return sha1js(bytes);
+  return null;
+}
+const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const hex = u8 => u8 ? Array.from(u8, x => x.toString(16).padStart(2, '0')).join('') : '(không khả dụng)';
+
+/* ---------- DOMParser: CHỈ để kiểm tra, không bao giờ dùng để ghi file ---------- */
+function parseDoc(bytes){
+  const txt = new TextDecoder('utf-8', { ignoreBOM:false }).decode(bytes);
+  const doc = new DOMParser().parseFromString(txt, 'application/xml');
+  const pe = doc.getElementsByTagName('parsererror')[0];
+  return pe ? { err: pe.textContent.slice(0, 300) } : { doc };
+}
+function c14n(doc){
+  const root = doc.documentElement, out = []; let unsupported = '';
+  const escT = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\r/g,'&#xD;');
+  const escA = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/\t/g,'&#x9;').replace(/\n/g,'&#xA;').replace(/\r/g,'&#xD;');
+  (function walk(n){
+    for (let c = n.firstChild; c; c = c.nextSibling) {
+      if (c.nodeType === 1) {
+        if (c.parentNode === root && c.localName === 'Signature' && c.namespaceURI === DSIG) continue;
+        if (c.namespaceURI) unsupported = 'namespace';
+        const at = Array.from(c.attributes).map(a => [a.name, a.value]).sort((x, y) => x[0] < y[0] ? -1 : 1);
+        if (at.some(a => a[0].startsWith('xmlns') || a[0].includes(':'))) unsupported = 'namespace';
+        out.push('<' + c.nodeName); for (const [k, v] of at) out.push(' ' + k + '="' + escA(v) + '"'); out.push('>');
+        walk(c); out.push('</' + c.nodeName + '>');
+      } else if (c.nodeType === 3 || c.nodeType === 4) { if (!/^[ \t\n\r]*$/.test(c.data)) out.push(escT(c.data)); }
+      else if (c.nodeType === 7) unsupported = 'pi';
+    }
+  })({ firstChild: root });
+  return { text: out.join(''), unsupported };
+}
+async function sigCheck(doc){
+  const root = doc.documentElement;
+  const sig = Array.from(root.children).find(e => e.localName === 'Signature' && e.namespaceURI === DSIG);
+  if (!sig) return { present:false };
+  const dv = ((sig.getElementsByTagNameNS(DSIG, 'DigestValue')[0] || {}).textContent || '').trim();
+  const ref = sig.getElementsByTagNameNS(DSIG, 'Reference')[0];
+  const uri = ref ? ref.getAttribute('URI') : null;
+  const tr = Array.from(sig.getElementsByTagNameNS(DSIG, 'Transform')).map(t => t.getAttribute('Algorithm') || '');
+  const dmEl = sig.getElementsByTagNameNS(DSIG, 'DigestMethod')[0], dm = dmEl ? (dmEl.getAttribute('Algorithm') || '') : '';
+  if (uri !== '' || !/sha1$/.test(dm) || tr.length !== 1 || !/enveloped-signature$/.test(tr[0])) return { present:true, dv, supported:false };
+  const c = c14n(doc); if (c.unsupported) return { present:true, dv, supported:false };
+  const d = b64(await sha('SHA-1', new TextEncoder().encode(c.text)));
+  return { present:true, dv, supported:true, computed:d, valid: d === dv };
+}
+
+/* ---------- Đọc file ---------- */
+function hookDrop(zone, input, fn){
+  const z = $(zone);
+  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('over'); });
+  z.addEventListener('dragleave', () => z.classList.remove('over'));
+  z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('over'); const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) fn(f); });
+  $(input).addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) fn(f); });
+}
+const headTag = (txt, t) => (txt.match(new RegExp('<' + t + '>([^<]*)</' + t + '>')) || [])[1] ?? '';
+function countBytes(buf, s){ const p = new TextEncoder().encode(s); let n = 0, i = 0; while ((i = XCore.find(buf, p, i)) >= 0) { n++; i += p.length; } return n; }
+function readHead(buf){
+  const t = new TextDecoder().decode(buf.subarray(0, 6000));
+  const H = { tong: headTag(t,'TONG_SO_BAN_GHI'), ky: headTag(t,'MAKYSH'), ngay: headTag(t,'NGAYSH'), qd: headTag(t,'SOQD'), ngayqd: headTag(t,'NGAYQD'),
+    dv: headTag(t,'TEN_DV_GUI'), gui: headTag(t,'NGAY_GUI'), mgd: headTag(t,'MA_GIAO_DICH') };
+  H.ndsAll = countBytes(buf, '<NOI_DUNG_SH'); H.bom = buf[0]===0xEF && buf[1]===0xBB && buf[2]===0xBF;
+  H.crlf = XCore.find(buf, new Uint8Array([13,10]), 0, 6000) >= 0;
+  H.sig = countBytes(buf, '<Signature ') + countBytes(buf, '<Signature>');
+  const d = H.ngay.match(/^(\d{4})-(\d{2})-(\d{2})$/); H.ngayVN = d ? `${d[3]}/${d[2]}/${d[1]}` : H.ngay;
+  return H;
+}
+async function readFileBytes(f){ if (f.size > 400 * 1048576) throw new Error('File quá lớn (> 400 MB)'); return new Uint8Array(await f.arrayBuffer()); }
+
+hookDrop('#dropX', '#fX', async f => {
+  $('#mX').innerHTML = '<div class="small" style="margin-top:8px">Đang đọc…</div>'; await tick();
+  try {
+    const buf = await readFileBytes(f);
+    const recs = XCore.scan(buf);
+    if (!recs.length) throw new Error('Không tìm thấy khối <NGUOI_LX> nào — có đúng file XML kỳ sát hạch không?');
+    const H = readHead(buf);
+    Object.assign(S, { xml:buf, xmlName:f.name, recs, head:H, byCccd:new Map(), dupX:new Set(), out:null, outOk:false });
+    for (const r of recs) { if (S.byCccd.has(r.cccd)) S.dupX.add(r.cccd); else S.byCccd.set(r.cccd, r); }
+    const errs = recs.filter(r => r.err).length, warn = [];
+    if (H.tong && +H.tong !== recs.length) warn.push(`TONG_SO_BAN_GHI = ${H.tong} nhưng đếm được ${recs.length} hồ sơ`);
+    if (H.ndsAll !== recs.length) warn.push(`Có ${H.ndsAll} thẻ NOI_DUNG_SH nhưng ${recs.length} hồ sơ`);
+    if (errs) warn.push(`${errs} hồ sơ có cấu trúc bất thường (sẽ không sửa)`);
+    if (S.dupX.size) warn.push(`${S.dupX.size} số định danh bị trùng trong XML (sẽ không sửa)`);
+    $('#mX').innerHTML = `<div class="kv">
+      <span>File</span><b>${esc(f.name)} · ${(buf.length/1048576).toFixed(1)} MB</b>
+      <span>Mã kỳ sát hạch</span><b>${esc(H.ky)}</b><span>Ngày sát hạch</span><b>${esc(H.ngayVN)}</b>
+      <span>Quyết định</span><b>${esc(H.qd)} (${esc(H.ngayqd)})</b><span>Đơn vị gửi</span><b>${esc(H.dv)} · ${esc(H.gui)}</b>
+      <span>Số hồ sơ</span><b>${fmt(recs.length)}${H.tong ? ` / khai báo ${esc(H.tong)}` : ''}</b>
+      <span>Chữ ký số</span><b>${H.sig ? 'Có (XML Signature)' : 'Không có'}</b></div>` +
+      (warn.length ? `<div class="banner bad" style="margin-top:8px">${warn.map(esc).join('<br>')}</div>` : '');
+    S.uncheck.clear(); S.check.clear();
+    if (S.wb) autoDetect(); else build();
+  } catch (e) { S.xml = null; $('#mX').innerHTML = `<div class="banner bad" style="margin-top:8px">Lỗi: ${esc(e.message)}</div>`; build(); }
+  steps();
+});
+hookDrop('#dropE', '#fE', async f => {
+  $('#mE').textContent = 'Đang đọc…'; await tick();
+  try {
+    const wb = XLSX.read(await readFileBytes(f), { type:'array' });
+    if (!wb.SheetNames || !wb.SheetNames.length) throw new Error('File không có sheet nào');
+    S.wb = wb; S.wbName = f.name;
+    $('#mE').innerHTML = `<b>${esc(f.name)}</b> · ${wb.SheetNames.length} sheet`;
+    $('#colsBox').classList.remove('hide');
+    $('#sSheet').innerHTML = wb.SheetNames.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    S.uncheck.clear(); S.check.clear();
+    autoDetect();
+  } catch (e) { S.wb = null; $('#colsBox').classList.add('hide'); $('#mE').innerHTML = `<span style="color:var(--bad)">Không đọc được Excel: ${esc(e.message)}</span>`; build(); }
+  steps();
+});
+
+/* ---------- Nhận diện cột ---------- */
+const colName = i => { let s = ''; i++; while (i > 0) { const m = (i-1) % 26; s = String.fromCharCode(65+m) + s; i = Math.floor((i-1)/26); } return s; };
+const sheetRows = n => { const ws = S.wb && S.wb.Sheets[n]; return ws ? XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:'' }) : []; };
+const asInt = v => { if (typeof v === 'number' && Number.isInteger(v)) return String(v); const s = String(v ?? '').trim(); return /^\d{1,3}$/.test(s) ? String(+s) : ''; };
+const width = rows => rows.reduce((m, r) => Math.max(m, r.length), 0);
+function autoDetect(){
+  let best = { score:-1, sheet:S.wb.SheetNames[0], col:0 }; const scores = [];
+  for (const n of S.wb.SheetNames) {
+    const rows = sheetRows(n), w = width(rows); let sb = 0;
+    for (let c = 0; c < w; c++) { let sc = 0; for (const r of rows) { const k = XCore.normCccd(r[c]); if (k && (!S.xml || S.byCccd.has(k))) sc++; }
+      if (sc > sb) sb = sc; if (sc > best.score) best = { score:sc, sheet:n, col:c }; }
+    scores.push({ sheet:n, score:sb });
+  }
+  S.sheetScores = scores.sort((a, b) => b.score - a.score); S.autoSheet = best.sheet;
+  $('#sSheet').value = best.sheet; fillCols(best.col);
+}
+function fillCols(cccdCol){
+  const rows = sheetRows($('#sSheet').value); S.rows = rows;
+  const w = Math.max(1, width(rows));
+  const hdr = c => { for (let i = 0; i < Math.min(rows.length, 14); i++) { const v = rows[i][c]; if (typeof v === 'string' && v.trim() && !XCore.normCccd(v) && !/^\(\d+\)$/.test(v.trim())) return v.replace(/\s+/g, ' ').slice(0, 18); } return ''; };
+  const opts = sel => `<option value="-1">(không dùng)</option>` + Array.from({ length:w }, (_, c) => `<option value="${c}" ${c === sel ? 'selected' : ''}>${colName(c)}${hdr(c) ? ' – ' + esc(hdr(c)) : ''}</option>`).join('');
+  if (cccdCol === undefined || cccdCol < 0 || cccdCol >= w) { let b = { sc:-1, c:0 }; for (let c = 0; c < w; c++) { let sc = 0; for (const r of rows) { const k = XCore.normCccd(r[c]); if (k && (!S.xml || S.byCccd.has(k))) sc++; } if (sc > b.sc) b = { sc, c }; } cccdCol = b.c; }
+  const dataRows = rows.filter(r => XCore.normCccd(r[cccdCol]));
+  const pick = (fn, prefer) => { let b = { sc:0, c:-1 }; for (let c = 0; c < w; c++) { if (c === cccdCol) continue; let sc = 0; for (const r of dataRows) if (fn(r[c])) sc++; if (sc && prefer && prefer(c)) sc += 0.5; if (sc > b.sc) b = { sc, c }; } return b.c; };
+  const labCol = pick(v => typeof v === 'string' && !!resolveLabel(v));
+  // Cột Số: giá trị là mã có trong bảng mã; cộng điểm khi khớp cột Nội dung; LOẠI cột STT (số tăng dần liên tục)
+  const isSeq = c => { const v = dataRows.map(r => asInt(r[c])).filter(Boolean).map(Number); if (v.length < 3) return false; let k = 0; for (let i = 1; i < v.length; i++) if (v[i] === v[i-1] + 1) k++; return k >= 0.6 * (v.length - 1); };
+  let numCol = -1, nbest = 0;
+  for (let c = 0; c < w; c++) { if (c === cccdCol || c === labCol || isSeq(c) || /^(STT|TT|SỐ\s*TT)$/i.test(hdr(c).trim())) continue;
+    let sc = 0; for (const r of dataRows) { const n = asInt(r[c]); if (n && S.num2label.has(n)) { sc++; if (labCol >= 0 && resolveLabel(r[labCol]) === n) sc += 0.5; } }
+    if (sc && /^\s*Số\s*$/i.test(hdr(c))) sc += 0.25;
+    if (sc > nbest) { nbest = sc; numCol = c; } }
+  if (numCol >= 0 && nbest < Math.max(1, dataRows.length * 0.3)) numCol = -1;   // quá ít ô hợp lệ → coi như không có cột Số
+  let nameCol = -1, nb = 0;
+  for (let c = 0; c < w; c++) { if (c === cccdCol) continue; let sc = 0;
+    for (const r of dataRows) { const rec = S.byCccd.get(XCore.normCccd(r[cccdCol])); if (rec && typeof r[c] === 'string' && XCore.normName(r[c]) === XCore.normName(rec.ten)) sc++; }
+    if (sc > nb) { nb = sc; nameCol = c; } }
+  if (nameCol < 0) outer: for (let i = 0; i < Math.min(rows.length, 14); i++) for (let c = 0; c < w; c++) if (/họ\s*(và)?\s*tên/i.test(String(rows[i][c]))) { nameCol = c; break outer; }
+  S.auto = { cccd:cccdCol, num:numCol, label:labCol, name:nameCol, hdr };
+  $('#sCccd').innerHTML = opts(cccdCol); $('#sNum').innerHTML = opts(numCol);
+  $('#sLabel').innerHTML = opts(labCol); $('#sName').innerHTML = opts(nameCol);
+  build();
+}
+$('#sSheet').onchange = () => { S.uncheck.clear(); S.check.clear(); fillCols(); };
+['#sCccd','#sNum','#sLabel','#sName'].forEach(s => $(s).onchange = () => { S.uncheck.clear(); S.check.clear(); build(); });
+$$('input[name=mode]').forEach(r => r.onchange = () => { S.modeForced = false; S.uncheck.clear(); S.check.clear(); build(); });
+
+/* ---------- Đối chiếu ---------- */
+function invalidate(){ S.out = null; S.outOk = false; S.report = null; $('#checks').innerHTML = ''; $('#runInfo').textContent = ''; $('#cardStat').classList.add('hide'); $('#logInfo').innerHTML = ''; steps(); }
+function build(){
+  invalidate();
+  if (!S.xml || !S.wb) { $('#cardRes').classList.add('hide'); $('#cardOut').classList.add('hide'); return; }
+  const cC = +$('#sCccd').value, cN = +$('#sNum').value, cL = +$('#sLabel').value, cT = +$('#sName').value;
+  // #4: không có cột Số → tự dùng bảng mã
+  const exR = $('input[name=mode][value=excel]'), mpR = $('input[name=mode][value=map]');
+  exR.disabled = cN < 0; $('#lbModeEx').classList.toggle('dis', cN < 0);
+  if (cN < 0 && exR.checked) { mpR.checked = true; S.modeForced = true; }
+  else if (cN >= 0 && S.modeForced) { exR.checked = true; S.modeForced = false; }
+  const mode = mpR.checked ? 'map' : 'excel';
+  const bm = $('#bannerMode');
+  if (cN < 0 && cL < 0) { bm.className = 'banner bad'; bm.innerHTML = 'Không tìm thấy cột Số lẫn cột Nội dung — chọn lại cột ở mục 2.'; }
+  else if (cN < 0) { bm.className = 'banner info'; bm.innerHTML = '<b>File Excel không có cột Số</b> — tool tự chuyển sang <b>lấy mã theo bảng mã</b>, suy từ cột Nội dung (kể cả cách viết tắt như L, H, L+H, V-L…).'; }
+  else bm.className = 'banner';
+  const cntE = new Map(); S.rows.forEach(r => { const k = XCore.normCccd(r[cC]); if (k) cntE.set(k, (cntE.get(k) || 0) + 1); });
+  const items = []; let n = 0;
+  for (const r of S.rows) {
+    const cccd = XCore.normCccd(r[cC]); if (!cccd) continue;
+    const it = { n:++n, cccd, name: cT >= 0 ? String(r[cT] ?? '').trim() : '', label: cL >= 0 ? String(r[cL] ?? '').trim() : '', exNum: cN >= 0 ? asInt(r[cN]) : '', tags:[], st:'', apply:false };
+    it.mapNum = it.label ? resolveLabel(it.label) : '';
+    it.newVal = mode === 'excel' ? it.exNum : it.mapNum;
+    const rec = S.byCccd.get(cccd); it.rec = rec; it.old = rec ? rec.oldVal : '';
+    if (!rec) { it.st = 'bad'; it.tags.push(['c-bad','Không có trong XML']); }
+    else if (S.dupX.has(cccd)) { it.st = 'bad'; it.tags.push(['c-bad','Số định danh trùng trong XML']); }
+    else if (cntE.get(cccd) > 1) { it.st = 'bad'; it.tags.push(['c-bad','Số định danh lặp trong Excel']); }
+    else if (rec.err) { it.st = 'bad'; it.tags.push(['c-bad', rec.err]); }
+    else if (!it.newVal) { it.st = 'bad'; it.tags.push(['c-bad', mode === 'excel' ? 'Ô Số trống/không hợp lệ' : (it.label ? 'Nội dung không tra được trong bảng mã' : 'Ô Nội dung trống')]); }
+    else if (!S.num2label.has(it.newVal)) { it.st = 'bad'; it.tags.push(['c-bad', `Mã ${it.newVal} không có trong bảng mã — không ghi`]); }
+    else it.st = it.newVal === it.old ? 'same' : 'chg';
+    if (it.exNum && it.label && it.exNum !== it.mapNum) { it.lech = true; it.tags.push(['c-warn', it.mapNum ? `Số Excel ${it.exNum} ≠ bảng mã ${it.mapNum}` : 'Nội dung không tra được trong bảng mã']); }
+    if (rec && it.name && XCore.normName(it.name) !== XCore.normName(rec.ten)) { it.lechTen = true; it.tags.push(['c-name', 'Tên XML: ' + rec.ten]); }
+    if (rec && (rec.oldVal === '1' || rec.oldVal === '21') && it.st === 'chg') it.tags.push(['c-warn', 'XML đang là SH lần đầu']);
+    if (it.st === 'chg') it.apply = S.uncheck.has(cccd) ? false : S.check.has(cccd) ? true : !it.lechTen;
+    items.push(it);
+  }
+  S.items = items;
+  const lech = items.filter(i => i.lech);
+  if (lech.length) {
+    const g = {}; lech.forEach(i => { const k = `“${i.label}”: Excel ghi ${i.exNum}, bảng mã là ${i.mapNum || '?'}`; g[k] = (g[k] || 0) + 1; });
+    $('#banner').className = 'banner warn';
+    $('#banner').innerHTML = `<b>⚠ ${lech.length} dòng có số trong Excel không khớp bảng mã:</b><br>` + Object.entries(g).map(([k, v]) => `• ${esc(k)} (${v} người)`).join('<br>') +
+      `<br>Đang lấy theo <b>${mode === 'excel' ? 'cột Số trong Excel' : 'bảng mã'}</b>. Hãy xác nhận mã đúng trước khi tạo file.`;
+  } else $('#banner').className = 'banner';
+  const inEx = new Set(items.map(i => i.cccd)), other = S.recs.filter(r => !inEx.has(r.cccd)), g2 = {};
+  other.forEach(r => (g2[r.oldVal] = g2[r.oldVal] || []).push(r));
+  $('#other').innerHTML = `${other.length} hồ sơ. ` + Object.keys(g2).sort((a, b) => a - b).map(k => `Mã <b>${esc(k)}</b> (${esc(S.num2label.get(k) || '?')}): ${g2[k].length}`).join(' · ') +
+    Object.keys(g2).filter(k => k !== '1' && k !== '21').map(k => `<br><br><b>Mã ${esc(k)}:</b> ` + g2[k].map(r => `${esc(r.ten)} (${esc(r.cccd)}${r.gplx ? ', có GPLX' : ''})`).join('; ')).join('');
+  $('#cardRes').classList.remove('hide'); $('#cardOut').classList.remove('hide');
+  render(); steps();
+}
+function render(){
+  const it = S.items;
+  const C = { all:it.length, chg:it.filter(i => i.st === 'chg').length, same:it.filter(i => i.st === 'same').length, lech:it.filter(i => i.lech).length, ten:it.filter(i => i.lechTen).length, bad:it.filter(i => i.st === 'bad').length };
+  const sel = it.filter(i => i.apply).length;
+  const chip = (k, cls, txt) => `<span class="chip ${cls} ${S.filter === k ? 'on' : ''}" data-f="${k}">${txt}<b>${C[k]}</b></span>`;
+  $('#chips').innerHTML = chip('all','','Tất cả dòng Excel') + chip('chg','c-chg','Sẽ đổi') + chip('same','c-ok','Đã đúng, giữ nguyên') + chip('lech','c-warn','Lệch bảng mã') + chip('ten','c-name','Lệch tên') + chip('bad','c-bad','Lỗi / không tìm thấy') +
+    `<span class="small" style="align-self:center">Đang tích để đổi: <b>${sel}</b></span>`;
+  $$('#chips .chip').forEach(c => c.onclick = () => { S.filter = c.dataset.f; render(); });
+  const f = S.filter, show = it.filter(i => f === 'all' || (f === 'lech' ? i.lech : f === 'ten' ? i.lechTen : i.st === f));
+  $('#tbl tbody').innerHTML = show.map(i => `<tr class="st-${i.st}">
+    <td>${i.st === 'chg' ? `<input type="checkbox" data-k="${i.cccd}" ${i.apply ? 'checked' : ''}>` : ''}</td>
+    <td class="c">${i.n}</td><td>${esc(i.name)}</td><td>${esc(i.cccd)}</td><td>${esc(i.label)}</td>
+    <td class="c">${esc(i.exNum)}</td><td class="c">${esc(i.mapNum)}</td><td class="c">${esc(i.old)}</td>
+    <td class="c">${i.st === 'chg' ? `<span class="arrow">${esc(i.newVal)}</span>` : i.st === 'same' ? '<span style="color:var(--ok)">=</span>' : ''}</td>
+    <td>${i.tags.map(([c, t]) => `<span class="tag ${c}">${esc(t)}</span>`).join('')}</td></tr>`).join('') || '<tr><td colspan="10" class="small">Không có dòng nào.</td></tr>';
+  $$('#tbl tbody input[type=checkbox]').forEach(cb => cb.onchange = () => {
+    const i = S.items.find(x => x.cccd === cb.dataset.k); if (!i) return; i.apply = cb.checked;
+    (cb.checked ? S.check : S.uncheck).add(i.cccd); (cb.checked ? S.uncheck : S.check).delete(i.cccd); invalidate(); render();
+  });
+  $('#bRun').disabled = !sel; $('#bRun').textContent = `Tạo file & kiểm định (${sel} hồ sơ)`;
+}
+$('#chkAll').onchange = e => { S.items.filter(i => i.st === 'chg').forEach(i => { i.apply = e.target.checked; (e.target.checked ? S.check : S.uncheck).add(i.cccd); (e.target.checked ? S.uncheck : S.check).delete(i.cccd); }); invalidate(); render(); };
+function steps(){
+  const s = [!!S.xml, !!S.wb, !!(S.xml && S.wb), !!S.out, S.outOk], cur = s.indexOf(false);
+  s.forEach((v, i) => { $('#st' + (i+1)).className = v ? 'done' : (i === cur ? 'cur' : ''); });
+}
+
+/* ---------- Tạo file & kiểm định ---------- */
+const plain = h => String(h).replace(/<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+function addCheck(box, st, title, detail){
+  const li = document.createElement('li'); li.className = st; li._d = { st, title, detail: detail || '' };
+  li.innerHTML = `<span class="ic">${st==='ok'?'✔':st==='bad'?'✘':st==='warn'?'!':'…'}</span><div>${title}${detail ? `<small>${detail}</small>` : ''}</div>`;
+  $(box).appendChild(li); return li;
+}
+function setCheck(li, st, title, detail){ li.className = st; li._d = { st, title, detail: detail || '' }; li.innerHTML = `<span class="ic">${st==='ok'?'✔':st==='bad'?'✘':'!'}</span><div>${title}${detail ? `<small>${detail}</small>` : ''}</div>`; }
+const checkList = box => $$(box + ' li').map(li => li._d ? { st: li._d.st, title: plain(li._d.title), detail: plain(li._d.detail) } : null).filter(Boolean);
+function sigLine(box, sOld, sNew, changed){
+  if (!sOld.present) return null;
+  if (!sOld.supported) return addCheck(box, 'warn', 'Có chữ ký số nhưng dạng chữ ký không kiểm tra được trong tool', 'Sau khi sửa dữ liệu, chữ ký số gần như chắc chắn không còn khớp.');
+  if (sOld.valid && sNew.supported && !sNew.valid && changed) return addCheck(box, 'warn', 'Chữ ký số: file GỐC hợp lệ — file MỚI KHÔNG còn khớp chữ ký',
+    `Chữ ký của PC-08 bao trùm toàn bộ dữ liệu; mọi thay đổi (kể cả sửa tay) đều làm mã băm lệch (gốc ${esc(sOld.dv)} · mới ${esc(sNew.computed)}). Thẻ &lt;Signature&gt; được giữ nguyên, tool không xóa và không giả lập chữ ký. Hãy xác nhận với PC-08 / Trung tâm sát hạch phần mềm nhận file có kiểm tra chữ ký không.`);
+  if (sOld.valid && sNew.valid) return addCheck(box, 'ok', 'Chữ ký số vẫn khớp (không có thay đổi dữ liệu)');
+  return addCheck(box, 'warn', 'Chữ ký số của file GỐC đã không khớp từ trước', `Mã băm khai báo ${esc(sOld.dv)}, tính được ${esc(sOld.computed || '?')}.`);
+}
+let running = false;
+$('#bRun').onclick = async () => {
+  if (running) return; running = true;
+  invalidate(); $('#bRun').disabled = true; $('#runInfo').textContent = 'Đang xử lý…'; await tick();
+  const t0 = performance.now(); let fatal = false;
+  try {
+    const todo = S.items.filter(i => i.apply && i.st === 'chg');
+    if (!todo.length) throw new Error('Chưa chọn hồ sơ nào để đổi');
+    const patches = todo.map(i => ({ start:i.rec.nds.start, end:i.rec.nds.end, val:i.newVal }));
+    const expect = new Map(todo.map(i => [i.rec.idx, i.newVal]));
+    const out = XCore.applyPatches(S.xml, patches);
+    addCheck('#checks', 'ok', `Đã ghi ${todo.length} giá trị NOI_DUNG_SH trực tiếp trên nội dung file gốc`, 'Chỉ thay chữ số; định dạng, thụt lề, CRLF, BOM, thẻ tự đóng, ảnh base64, chữ ký giữ nguyên từng byte.');
+    await tick();
+    const v = XCore.verify(S.xml, out, expect);
+    if (v.ok && v.changed === todo.length) addCheck('#checks', 'ok', 'So sánh từng byte với file gốc: chỉ khác đúng ở các giá trị đã chọn', `${fmt(v.records)} hồ sơ · ${v.changed} giá trị thay đổi · mọi byte còn lại giống hệt.`);
+    else { fatal = true; addCheck('#checks', 'bad', 'So sánh byte THẤT BẠI', esc(v.problems.slice(0, 10).join(' | ') || `Số thay đổi ${v.changed} ≠ ${todo.length}`)); }
+    const expSize = S.xml.length + patches.reduce((s, p) => s + p.val.length - (p.end - p.start), 0);
+    if (out.length === expSize) addCheck('#checks', 'ok', 'Kích thước file khớp tính toán', `${fmt(S.xml.length)} → ${fmt(out.length)} byte (chênh ${out.length - S.xml.length >= 0 ? '+' : ''}${out.length - S.xml.length}).`);
+    else { fatal = true; addCheck('#checks', 'bad', 'Kích thước file không khớp tính toán'); }
+    const H = S.head, ndsNew = countBytes(out, '<NOI_DUNG_SH'), lxNew = countBytes(out, '<NGUOI_LX>');
+    if (ndsNew === H.ndsAll && lxNew === S.recs.length && (!H.tong || +H.tong === lxNew)) addCheck('#checks', 'ok', 'Số lượng thẻ không đổi', `NGUOI_LX: ${lxNew} · NOI_DUNG_SH: ${ndsNew}${H.tong ? ` · khớp TONG_SO_BAN_GHI = ${H.tong}` : ''}.`);
+    else { fatal = true; addCheck('#checks', 'bad', 'Số lượng thẻ thay đổi hoặc không khớp TONG_SO_BAN_GHI'); }
+    const li5 = addCheck('#checks', 'run', 'Đang kiểm tra file mới là XML hợp lệ…'); await tick();
+    const pNew = parseDoc(out);
+    if (pNew.err) { fatal = true; setCheck(li5, 'bad', 'File mới KHÔNG phải XML hợp lệ', esc(pNew.err)); }
+    else setCheck(li5, 'ok', 'File mới là XML hợp lệ (well-formed), đọc được bằng trình phân tích chuẩn', `Phần tử gốc: &lt;${esc(pNew.doc.documentElement.nodeName)}&gt;, mã hóa UTF-8${H.bom ? ' có BOM' : ''}${H.crlf ? ', xuống dòng CRLF' : ''}.`);
+    const recsNew = XCore.scan(out);
+    let sigInfo = { present:false };
+    if (H.sig && pNew.doc) {
+      const li7 = addCheck('#checks', 'run', 'Đang kiểm tra chữ ký số (XML Signature)…'); await tick();
+      const pOld = parseDoc(S.xml);
+      const sOld = pOld.doc ? await sigCheck(pOld.doc) : { present:true, supported:false };
+      const sNew = await sigCheck(pNew.doc);
+      sigInfo = { present:true, old:sOld, neu:sNew }; li7.remove(); sigLine('#checks', sOld, sNew, todo.length);
+    }
+    const [h0, h1] = [await sha('SHA-256', S.xml), await sha('SHA-256', out)];
+    addCheck('#checks', 'ok', 'Mã băm SHA-256 (lưu nhật ký đối chiếu)', `Gốc: ${hex(h0)}<br>Mới: ${hex(h1)}`);
+    S.out = out; S.outOk = !fatal;
+    const now = new Date();
+    S.report = { todo, v, recsNew, sigInfo, h0:hex(h0), h1:hex(h1), time:now, mode: $('input[name=mode][value=map]').checked ? 'map' : 'excel', checks: checkList('#checks'),
+      sheet: $('#sSheet').value, cols: { cccd: colName(+$('#sCccd').value), num: +$('#sNum').value >= 0 ? colName(+$('#sNum').value) : '', label: +$('#sLabel').value >= 0 ? colName(+$('#sLabel').value) : '' } };
+    $('#runInfo').innerHTML = fatal ? '<b style="color:var(--bad)">Kiểm định KHÔNG đạt — không cho tải file.</b>' : `<b style="color:var(--ok)">Kiểm định đạt</b> · ${((performance.now() - t0) / 1000).toFixed(1)} giây`;
+    if (!fatal) { $('#outName').value = defaultStem() + '.xml'; showStats(); }
+  } catch (e) { addCheck('#checks', 'bad', 'Lỗi: ' + esc(e.message)); S.outOk = false; $('#runInfo').textContent = ''; }
+  finally { running = false; $('#bRun').disabled = !S.items.some(i => i.apply); steps(); }
+};
+// #10: tên file theo quy ước — <tên file gốc>_DA_SUA_<khóa/sheet>_<ngàygiờ>
+function defaultStem(){
+  const base = safeName(S.xmlName.replace(/\.xml$/i, '')) || 'XML';
+  const kh = safeName(S.report ? S.report.sheet : '', 40);
+  return `${base}_DA_SUA${kh ? '_' + kh : ''}_${stamp(S.report ? S.report.time : new Date())}`;
+}
+const outStem = () => { const v = $('#outName').value.trim().replace(/\.xml$/i, ''); return safeName(v) || defaultStem(); };
+
+/* ---------- Thống kê ---------- */
+function calcStats(recsOld, recsNew){
+  const cntOld = {}, cntNew = {}, khoa = {};
+  recsOld.forEach(r => cntOld[r.oldVal] = (cntOld[r.oldVal] || 0) + 1);
+  recsNew.forEach(r => { const v = r.nds ? r.nds.text : '?'; cntNew[v] = (cntNew[v] || 0) + 1; const k = r.khoa || '(trống)'; (khoa[k] = khoa[k] || {})[v] = (khoa[k][v] || 0) + 1; });
+  const codes = Array.from(new Set([...Object.keys(cntOld), ...Object.keys(cntNew)])).sort((a, b) => (+a) - (+b));
+  return { codes, cntOld, cntNew, khoa, totalOld: recsOld.length, total: recsNew.length };
+}
+function statTable(st){
+  const max = Math.max(1, ...st.codes.map(c => st.cntNew[c] || 0));
+  return `<thead><tr><th class="c">Mã</th><th>Nội dung sát hạch</th><th class="r">File gốc</th><th class="r">File mới</th><th class="r">Chênh lệch</th><th class="r">Tỷ lệ</th><th style="width:30%"></th></tr></thead><tbody>` +
+    st.codes.map(c => { const o = st.cntOld[c] || 0, n = st.cntNew[c] || 0, d = n - o;
+      return `<tr><td class="c"><b>${esc(c)}</b></td><td>${esc(S.num2label.get(c) || '(không có trong bảng mã)')}</td><td class="r">${fmt(o)}</td><td class="r"><b>${fmt(n)}</b></td>
+      <td class="r">${d === 0 ? '<span class="small">0</span>' : `<span class="${d > 0 ? 'delta-p' : 'delta-m'}">${d > 0 ? '+' : ''}${d}</span>`}</td><td class="r">${st.total ? (n * 100 / st.total).toFixed(1) : '0.0'}%</td>
+      <td><span class="bar" style="width:${(n / max * 100).toFixed(1)}%;${n ? '' : 'background:var(--bar0);width:2px'}"></span></td></tr>`; }).join('') +
+    `</tbody><tfoot><tr><td></td><td>TỔNG CỘNG</td><td class="r">${fmt(st.totalOld)}</td><td class="r">${fmt(st.total)}</td><td class="r">${st.total - st.totalOld}</td><td class="r">100%</td><td></td></tr></tfoot>`;
+}
+function showStats(){
+  const R = S.report, H = S.head, st = calcStats(S.recs, R.recsNew); S.stats = st;
+  const sig = R.sigInfo, sigTxt = !sig.present ? 'Không có' : (sig.old.supported && sig.old.valid && sig.neu.supported && !sig.neu.valid) ? 'Không còn khớp' : (sig.neu && sig.neu.valid ? 'Khớp' : 'Cần xác nhận');
+  $('#kpis').innerHTML = [['Tổng hồ sơ file mới', fmt(st.total) + (H.tong ? ` / ${H.tong}` : '')], ['Hồ sơ đã hiệu chỉnh', fmt(R.todo.length)], ['Số nội dung sát hạch', st.codes.filter(c => st.cntNew[c]).length], ['Toàn vẹn cấu trúc', '✔ Đạt'], ['Chữ ký số PC-08', sigTxt]]
+    .map(([l, v]) => `<div class="kpi"><div class="l">${l}</div><div class="v" ${v === 'Không còn khớp' ? 'style="color:var(--warn);font-size:18px"' : ''}>${v}</div></div>`).join('');
+  $('#tStat').innerHTML = statTable(st);
+  const kk = Object.keys(st.khoa).sort(), cs = st.codes.filter(c => st.cntNew[c]);
+  $('#tKhoa').innerHTML = `<thead><tr><th>Mã khóa học</th>${cs.map(c => `<th class="r">Mã ${esc(c)}<br><span class="small">${esc(S.num2label.get(c) || '')}</span></th>`).join('')}<th class="r">Cộng</th></tr></thead><tbody>` +
+    kk.map(k => `<tr><td>${esc(k)}</td>${cs.map(c => `<td class="r">${st.khoa[k][c] ? fmt(st.khoa[k][c]) : '<span class="small">–</span>'}</td>`).join('')}<td class="r"><b>${fmt(Object.values(st.khoa[k]).reduce((a, b) => a + b, 0))}</b></td></tr>`).join('') +
+    `</tbody><tfoot><tr><td>TỔNG CỘNG</td>${cs.map(c => `<td class="r">${fmt(st.cntNew[c])}</td>`).join('')}<td class="r">${fmt(st.total)}</td></tr></tfoot>`;
+  const needAck = sig.present && !(sig.neu && sig.neu.valid);
+  $('#ackBox').classList.toggle('hide', !needAck); $('#ack').checked = false;
+  $('#ackTxt').textContent = 'Tôi đã biết: file mới giữ nguyên cấu trúc nhưng chữ ký số của PC-08 không còn khớp với dữ liệu đã sửa, và sẽ xác nhận với đơn vị nhận file trước khi sử dụng.';
+  $('#bDl').disabled = needAck;
+  $('#ack').onchange = () => { $('#bDl').disabled = !$('#ack').checked; };
+  renderLogDir();
+  $('#cardStat').classList.remove('hide');
+  $('#cardStat').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* ---------- Tải về + nhật ký ---------- */
+function download(data, name, type){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+const q = s => `"${String(s ?? '').replace(/"/g, '""')}"`;
+function buildCsv(){
+  const L = [], H = S.head, R = S.report;
+  L.push(q('BÁO CÁO HIỆU CHỈNH NỘI DUNG SÁT HẠCH'));
+  [['File XML gốc', S.xmlName], ['File XML mới', outStem() + '.xml'], ['Danh sách Excel', S.wbName + ' / ' + (R ? R.sheet : '')], ['Mã kỳ SH', H.ky], ['Ngày SH', H.ngayVN], ['Quyết định', H.qd]].forEach(r => L.push(r.map(q).join(',')));
+  if (R) { [['Thời điểm', R.time.toLocaleString('vi-VN')], ['Lấy mã theo', R.mode === 'map' ? 'Bảng mã' : 'Cột Số trong Excel'], ['SHA-256 gốc', R.h0], ['SHA-256 mới', R.h1]].forEach(r => L.push(r.map(q).join(',')));
+    if (R.sigInfo.present) L.push([q('Chữ ký số'), q(R.sigInfo.neu && R.sigInfo.neu.valid ? 'Khớp' : 'File mới không còn khớp chữ ký PC-08')].join(',')); }
+  if (S.stats) { L.push(''); L.push(['Mã','Nội dung sát hạch','File gốc','File mới','Chênh lệch'].map(q).join(','));
+    S.stats.codes.forEach(c => L.push([c, q(S.num2label.get(c) || ''), S.stats.cntOld[c] || 0, S.stats.cntNew[c] || 0, (S.stats.cntNew[c] || 0) - (S.stats.cntOld[c] || 0)].join(',')));
+    L.push(['', q('TỔNG'), S.recs.length, S.stats.total, 0].join(',')); }
+  L.push(''); L.push(['STT','Họ tên Excel','Họ tên XML','Số định danh','SBD','Mã khóa học','Nội dung Excel','Số Excel','Bảng mã','XML cũ','Mã mới','Kết quả','Ghi chú'].map(q).join(','));
+  const done = R ? new Set(R.todo.map(i => i.cccd)) : new Set();
+  S.items.forEach(i => L.push([i.n, q(i.name), q(i.rec && i.rec.ten), `="${i.cccd}"`, q(i.rec && i.rec.sbd), q(i.rec && i.rec.khoa), q(i.label), q(i.exNum), q(i.mapNum), q(i.old), q(done.has(i.cccd) ? i.newVal : i.old),
+    q(done.has(i.cccd) ? 'Đã đổi' : (i.st === 'same' ? 'Giữ (đã đúng)' : 'Không đổi')), q(i.tags.map(t => t[1]).join('; '))].join(',')));
+  return '﻿' + L.join('\r\n');
+}
+function buildLogJson(outName){
+  const R = S.report, H = S.head;
+  return JSON.stringify({ app:'SuaNDSH_XML', version:APP_VER, at:R.time.toISOString(),
+    xml:{ name:S.xmlName, size:S.xml.length, sha256:R.h0, maKySH:H.ky, ngaySH:H.ngay, soQD:H.qd, soHoSo:S.recs.length },
+    excel:{ name:S.wbName, sheet:R.sheet, cot:R.cols }, layMaTheo:R.mode,
+    out:{ name:outName, size:S.out.length, sha256:R.h1 },
+    chuKySo: R.sigInfo.present ? { goc: R.sigInfo.old.valid ? 'hop_le' : 'khong_kiem_duoc', moi: R.sigInfo.neu && R.sigInfo.neu.valid ? 'khop' : 'khong_con_khop' } : 'khong_co',
+    kiemDinh:R.checks, thongKe:S.stats ? S.stats.codes.map(c => ({ ma:c, noiDung:S.num2label.get(c) || '', goc:S.stats.cntOld[c] || 0, moi:S.stats.cntNew[c] || 0 })) : [],
+    thayDoi:R.todo.map(i => ({ cccd:i.cccd, hoTen:i.rec.ten, sbd:i.rec.sbd, khoa:i.rec.khoa, cu:i.old, moi:i.newVal })) }, null, 2);
+}
+function addHistory(e){ const h = LS.get('history', []); h.unshift(e); LS.set('history', h.slice(0, 100)); }
+
+$('#bDl').onclick = async () => {
+  if (!S.out || !S.outOk) return;
+  const stem = outStem(), name = stem + '.xml';
+  let dir = null;
+  try { dir = await logDirReady(true); } catch(e){ dir = null; }   // xin quyền ngay lúc bấm (cần thao tác người dùng)
+  download(S.out, name, 'application/xml');
+  let saved = '';
+  if (dir) {
+    try { saved = await writeLogs(dir, stem, name); $('#logInfo').innerHTML = `<span class="st-ok">✔ Đã lưu nhật ký vào thư mục “${esc(dir.name)}/SuaNDSH”</span>: ${esc(saved)}`; toast('Đã tải file và lưu nhật ký vào thư mục ' + dir.name); }
+    catch(e){ $('#logInfo').innerHTML = `<span class="st-bad">Không ghi được nhật ký vào thư mục: ${esc(e.message)}</span> — file XML vẫn đã tải về.`; }
+  } else $('#logInfo').innerHTML = LOG.h ? '<span class="st-warn">Chưa được phép ghi vào thư mục nhật ký — mở Cài đặt → Ghi thử để cấp quyền.</span>' : 'Chưa chọn thư mục lưu nhật ký (Cài đặt → Thư mục lưu nhật ký). Có thể bấm “Xuất báo cáo (CSV)” để lưu tay.';
+  addHistory({ at:S.report.time.toISOString(), ky:S.head.ky, ngay:S.head.ngayVN, xml:S.xmlName, excel:S.wbName, sheet:S.report.sheet, out:name, changed:S.report.todo.length, total:S.recs.length, sha:S.report.h1, mode:S.report.mode, log: saved ? (LOG.h && LOG.h.name) : '' });
+};
+$('#bCsv').onclick = () => download(buildCsv(), outStem() + '_BAO_CAO.csv', 'text/csv');
+
+/* ---------- Thư mục nhật ký (#12: Google Drive cho máy tính) ---------- */
+const LOG = { h:null, perm:'' };
+async function logBoot(){ const h = await IDB.get('logDir'); if (h && h.kind === 'directory') { LOG.h = h; try { LOG.perm = await h.queryPermission({ mode:'readwrite' }); } catch(e){ LOG.perm = ''; } } renderLogDir(); }
+async function logDirReady(ask){
+  if (!LOG.h) return null;
+  let p = 'denied'; try { p = await LOG.h.queryPermission({ mode:'readwrite' }); } catch(e){}
+  if (p !== 'granted' && ask) { try { p = await LOG.h.requestPermission({ mode:'readwrite' }); } catch(e){} }
+  LOG.perm = p; renderLogDir(); return p === 'granted' ? LOG.h : null;
+}
+async function writeFile(dir, name, data){
+  const fh = await dir.getFileHandle(name, { create:true }); const w = await fh.createWritable();
+  await w.write(data); await w.close();
+  const f = await fh.getFile(), want = typeof data === 'string' ? new TextEncoder().encode(data).length : (data.byteLength ?? data.size);
+  if (f.size !== want) throw new Error(`ghi ${name} không đủ (${f.size}/${want} byte)`);
+}
+async function writeLogs(dir, stem, outName){
+  const sub = await dir.getDirectoryHandle('SuaNDSH', { create:true }), names = [];
+  await writeFile(sub, stem + '_BAO_CAO.csv', buildCsv()); names.push(stem + '_BAO_CAO.csv');
+  await writeFile(sub, stem + '_NHAT_KY.json', buildLogJson(outName)); names.push(stem + '_NHAT_KY.json');
+  if (LS.get('logXml', false)) { await writeFile(sub, outName, S.out); names.push(outName); }
+  return names.join(', ');
+}
+function renderLogDir(){
+  const el = $('#logDirSt'); if (!el) return;
+  const sup = typeof window.showDirectoryPicker === 'function';
+  $('#bLogPick').disabled = !sup; $('#bLogTest').disabled = !LOG.h; $('#bLogOff').disabled = !LOG.h;
+  if (!sup) el.innerHTML = '<span class="st-warn">Trình duyệt này không hỗ trợ ghi vào thư mục.</span> Hãy mở tool bằng Google Chrome hoặc Microsoft Edge bản mới; hoặc dùng nút “Xuất báo cáo (CSV)” rồi tự lưu vào Google Drive.';
+  else if (!LOG.h) el.innerHTML = 'Chưa chọn thư mục. Nên chọn một thư mục nằm trong <b>Google Drive</b> trên máy (ổ G: của Google Drive cho máy tính) để nhật ký tự lên Drive.';
+  else el.innerHTML = `Thư mục: <b>${esc(LOG.h.name)}</b> · ` + (LOG.perm === 'granted' ? '<span class="st-ok">đã được phép ghi</span>' : '<span class="st-warn">cần cấp lại quyền (Chrome hỏi khi bấm Tải file hoặc Ghi thử)</span>') + '<br>Mỗi lần tải file XML, tool ghi vào thư mục con <code>SuaNDSH</code>: báo cáo CSV + nhật ký JSON (mã SHA-256, ai đổi gì).';
+}
+$('#bLogPick').onclick = async () => {
+  try { const h = await window.showDirectoryPicker({ id:'suaNDSHlog', mode:'readwrite' }); LOG.h = h; LOG.perm = 'granted'; await IDB.put('logDir', h); renderLogDir(); toast('Đã chọn thư mục nhật ký: ' + h.name); }
+  catch(e){ if (e && e.name !== 'AbortError') toast('Không chọn được thư mục: ' + e.message, 5000); }
+};
+$('#bLogTest').onclick = async () => {
+  const d = await logDirReady(true); if (!d) return toast('Chưa được phép ghi vào thư mục', 4000);
+  try { const sub = await d.getDirectoryHandle('SuaNDSH', { create:true }); await writeFile(sub, '_ghi_thu.txt', 'Ghi thử từ tool Sửa NDSH XML lúc ' + new Date().toLocaleString('vi-VN')); toast('Ghi thử thành công vào ' + d.name + '/SuaNDSH'); }
+  catch(e){ toast('Ghi thử lỗi: ' + e.message, 5000); }
+};
+$('#bLogOff').onclick = async () => { LOG.h = null; LOG.perm = ''; await IDB.put('logDir', null); renderLogDir(); toast('Đã bỏ liên kết thư mục nhật ký'); };
+
+/* ---------- Lịch sử ---------- */
+$('#hHist').onclick = () => {
+  const h = LS.get('history', []);
+  dialog(`<h2>Lịch sử hiệu chỉnh trên máy này</h2><p class="small">${h.length ? `${h.length} lần gần nhất (tối đa 100).` : 'Chưa có lần nào.'} Nhật ký đầy đủ nằm trong thư mục nhật ký (nếu đã chọn).</p>` +
+    (h.length ? `<div class="tblwrap" style="max-height:52vh"><table><thead><tr><th>Thời điểm</th><th>Kỳ SH</th><th class="r">Đã đổi</th><th>File tải về</th><th>Nhật ký</th></tr></thead><tbody>` +
+      h.map(x => `<tr><td>${esc(new Date(x.at).toLocaleString('vi-VN'))}</td><td>${esc(x.ky)}<br><span class="small">${esc(x.ngay || '')}</span></td><td class="r"><b>${fmt(x.changed)}</b>/${fmt(x.total)}</td><td class="w">${esc(x.out)}<br><span class="small">${esc(x.excel)} / ${esc(x.sheet)} · ${x.mode === 'map' ? 'bảng mã' : 'cột Số'}</span></td><td>${x.log ? '<span class="st-ok">✔ ' + esc(x.log) + '</span>' : '<span class="small">–</span>'}</td></tr>`).join('') + '</tbody></table></div>' : ''),
+    h.length ? () => { dialog('<h2>Xóa lịch sử?</h2><p>Chỉ xóa danh sách trong tool trên máy này. Nhật ký đã ghi vào thư mục vẫn giữ nguyên.</p>', () => { LS.set('history', []); toast('Đã xóa lịch sử'); }, 'Xóa'); return false; } : null, 'Xóa lịch sử…');
+};
+
+/* ---------- Biên bản A4 (#9) ---------- */
+function buildBienBan(){
+  const R = S.report, H = S.head, st = S.stats, now = new Date();
+  const unit = esc(LS.get('unit', DEFAULT_UNIT)).split('\n').map((l, i, a) => i === a.length - 1 ? `<u>${l}</u>` : l).join('<br>');
+  const place = LS.get('place', '') || '……………';
+  const sig = R.sigInfo;
+  const sigTxt = !sig.present ? 'File không có chữ ký số.' : (sig.old.supported && sig.old.valid && sig.neu.supported && !sig.neu.valid)
+    ? 'File gốc có chữ ký số hợp lệ của đơn vị gửi. Sau khi hiệu chỉnh, mã băm dữ liệu không còn khớp chữ ký (thẻ &lt;Signature&gt; được giữ nguyên, không xóa, không giả lập chữ ký).'
+    : (sig.neu && sig.neu.valid ? 'Chữ ký số vẫn khớp.' : 'Không kiểm tra được chữ ký số.');
+  const chg = R.todo.slice().sort((a, b) => (a.rec.idx - b.rec.idx));
+  return `<div class="hd"><div><b>${unit}</b></div><div><b>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</b><b><u>Độc lập - Tự do - Hạnh phúc</u></b></div></div>
+  <h1>BIÊN BẢN HIỆU CHỈNH NỘI DUNG SÁT HẠCH</h1><div class="sub">Trên file XML kỳ sát hạch mã ${esc(H.ky)} — ngày sát hạch ${esc(H.ngayVN)}</div>
+  <h2>I. THÔNG TIN</h2><div class="kv2">
+   <span>Quyết định:</span><b>${esc(H.qd)} ngày ${esc(H.ngayqd)}</b>
+   <span>Đơn vị gửi file:</span><span>${esc(H.dv)} · gửi lúc ${esc(H.gui)}</span>
+   <span>File XML gốc:</span><span>${esc(S.xmlName)} (${fmt(S.xml.length)} byte, ${fmt(S.recs.length)} hồ sơ)</span>
+   <span>SHA-256 file gốc:</span><span class="mono">${esc(R.h0)}</span>
+   <span>File XML sau hiệu chỉnh:</span><span>${esc(outStem())}.xml (${fmt(S.out.length)} byte)</span>
+   <span>SHA-256 file mới:</span><span class="mono">${esc(R.h1)}</span>
+   <span>Căn cứ:</span><span>${esc(S.wbName)} · sheet ${esc(R.sheet)} · lấy mã theo ${R.mode === 'map' ? 'bảng mã (cột Nội dung)' : 'cột Số'}</span>
+   <span>Thời điểm hiệu chỉnh:</span><span>${esc(R.time.toLocaleString('vi-VN'))}</span></div>
+  <h2>II. KẾT QUẢ KIỂM ĐỊNH</h2><table><tbody>${R.checks.map((c, i) => `<tr><td style="width:24px;text-align:center">${c.st === 'ok' ? '✔' : c.st === 'bad' ? '✘' : '!'}</td><td><b>${esc(c.title)}</b>${c.detail ? '<br>' + esc(c.detail) : ''}</td></tr>`).join('')}</tbody></table>
+  <p style="margin:4px 0 0"><i>Chữ ký số:</i> ${sigTxt}</p>
+  <h2>III. THỐNG KÊ NỘI DUNG SÁT HẠCH TOÀN BỘ FILE</h2>
+  <table><thead><tr><th>Mã</th><th>Nội dung sát hạch</th><th>File gốc</th><th>Sau hiệu chỉnh</th><th>Chênh lệch</th></tr></thead><tbody>
+  ${st.codes.map(c => `<tr><td style="text-align:center">${esc(c)}</td><td>${esc(S.num2label.get(c) || '')}</td><td style="text-align:right">${fmt(st.cntOld[c] || 0)}</td><td style="text-align:right"><b>${fmt(st.cntNew[c] || 0)}</b></td><td style="text-align:right">${(st.cntNew[c] || 0) - (st.cntOld[c] || 0)}</td></tr>`).join('')}
+  <tr><td></td><td><b>Tổng cộng</b></td><td style="text-align:right"><b>${fmt(st.totalOld)}</b></td><td style="text-align:right"><b>${fmt(st.total)}</b></td><td style="text-align:right">0</td></tr></tbody></table>
+  <h2>IV. DANH SÁCH HỒ SƠ ĐÃ HIỆU CHỈNH (${chg.length} hồ sơ)</h2>
+  <table><thead><tr><th>STT</th><th>Họ và tên</th><th>Số định danh</th><th>SBD</th><th>Mã khóa học</th><th>Mã cũ</th><th>Mã mới</th><th>Nội dung mới</th></tr></thead><tbody>
+  ${chg.map((i, k) => `<tr><td style="text-align:center">${k + 1}</td><td>${esc(i.rec.ten)}</td><td>${esc(i.cccd)}</td><td style="text-align:center">${esc(i.rec.sbd)}</td><td>${esc(i.rec.khoa)}</td><td style="text-align:center">${esc(i.old)}</td><td style="text-align:center"><b>${esc(i.newVal)}</b></td><td>${esc(S.num2label.get(i.newVal) || '')}</td></tr>`).join('')}</tbody></table>
+  <p style="text-align:right;margin-top:14px"><i>${esc(place)}, ngày ${pad2(now.getDate())} tháng ${pad2(now.getMonth() + 1)} năm ${now.getFullYear()}</i></p>
+  <div class="sign"><div><b>NGƯỜI KIỂM TRA</b><i>(Ký, ghi rõ họ tên)</i></div><div><b>NGƯỜI LẬP</b><i>(Ký, ghi rõ họ tên)</i></div></div>`;
+}
+$('#bPrint').onclick = () => {
+  if (!S.report || !S.stats) return toast('Hãy tạo file & kiểm định trước');
+  $('#bb').innerHTML = buildBienBan(); document.body.classList.add('pbb');
+  const off = () => { document.body.classList.remove('pbb'); window.removeEventListener('afterprint', off); };
+  window.addEventListener('afterprint', off); setTimeout(() => { window.print(); setTimeout(off, 500); }, 60);
+};
+
+/* ---------- Kiểm tra file đã sửa (#8) ---------- */
+const CMP = { a:null, an:'', b:null, bn:'', res:null };
+async function cmpLoad(which, f){
+  const box = which === 'a' ? '#mA' : '#mB'; $(box).textContent = 'Đang đọc…'; await tick();
+  try { const buf = await readFileBytes(f), n = XCore.scan(buf).length;
+    if (!n) throw new Error('Không có khối <NGUOI_LX> nào');
+    CMP[which] = buf; CMP[which + 'n'] = f.name; $(box).innerHTML = `<b>${esc(f.name)}</b> · ${(buf.length / 1048576).toFixed(1)} MB · ${fmt(n)} hồ sơ`; }
+  catch(e){ CMP[which] = null; $(box).innerHTML = `<span class="st-bad">Lỗi: ${esc(e.message)}</span>`; }
+  $('#bCmp').disabled = !(CMP.a && CMP.b); $('#cmpRes').classList.add('hide'); $('#cmpChecks').innerHTML = ''; $('#cmpVerdict').className = 'banner'; $('#cmpInfo').textContent = '';
+}
+hookDrop('#dropA', '#fA', f => cmpLoad('a', f));
+hookDrop('#dropB', '#fB', f => cmpLoad('b', f));
+$('#bCmp').onclick = async () => {
+  if (!CMP.a || !CMP.b) return; $('#bCmp').disabled = true; $('#cmpChecks').innerHTML = ''; $('#cmpInfo').textContent = 'Đang so sánh…'; $('#cmpVerdict').className = 'banner'; $('#cmpRes').classList.add('hide'); await tick();
+  try {
+    const t0 = performance.now(), r = XCore.compare(CMP.a, CMP.b, 60); CMP.res = r;
+    const hA = readHead(CMP.a), hB = readHead(CMP.b);
+    if (r.onlyNds) addCheck('#cmpChecks', 'ok', 'Ngoài NOI_DUNG_SH, mọi byte của file đã sửa giống hệt file gốc', `${fmt(r.A.length)} hồ sơ · ${r.nds.length} giá trị NOI_DUNG_SH thay đổi · kích thước ${fmt(r.sizeA)} → ${fmt(r.sizeB)} byte.`);
+    else {
+      r.structural.forEach(s => addCheck('#cmpChecks', 'bad', esc(s)));
+      if (r.otherCount) addCheck('#cmpChecks', 'bad', `Có ${fmt(r.otherCount)} chỗ khác NGOÀI NOI_DUNG_SH`, 'Xem bảng “Thay đổi ngoài NOI_DUNG_SH” bên dưới để biết hồ sơ và thẻ bị đổi.');
+    }
+    const badCodes = r.nds.filter(x => !/^\d+$/.test(x.neu) || !S.num2label.has(x.neu));
+    if (r.nds.length) addCheck('#cmpChecks', badCodes.length ? 'bad' : 'ok', badCodes.length ? `${badCodes.length} mã mới không có trong bảng mã` : 'Mọi mã mới đều có trong bảng mã', badCodes.slice(0, 8).map(x => esc(x.rec.ten) + ': ' + esc(x.neu)).join('; '));
+    else addCheck('#cmpChecks', 'warn', 'Không có hồ sơ nào bị đổi NOI_DUNG_SH');
+    const tB = countBytes(CMP.b, '<NGUOI_LX>');
+    addCheck('#cmpChecks', !hB.tong || +hB.tong === tB ? 'ok' : 'bad', `Số hồ sơ file đã sửa: ${fmt(tB)}` + (hB.tong ? ` · TONG_SO_BAN_GHI = ${esc(hB.tong)}` : ''));
+    const li = addCheck('#cmpChecks', 'run', 'Đang kiểm tra XML hợp lệ và chữ ký số…'); await tick();
+    const pA = parseDoc(CMP.a), pB = parseDoc(CMP.b);
+    if (pB.err) setCheck(li, 'bad', 'File đã sửa KHÔNG phải XML hợp lệ', esc(pB.err));
+    else { setCheck(li, 'ok', 'File đã sửa là XML hợp lệ (well-formed)');
+      if (hA.sig && pA.doc) sigLine('#cmpChecks', await sigCheck(pA.doc), await sigCheck(pB.doc), r.nds.length + r.otherCount); }
+    const [ha, hb] = [await sha('SHA-256', CMP.a), await sha('SHA-256', CMP.b)];
+    addCheck('#cmpChecks', 'ok', 'Mã băm SHA-256', `Gốc: ${hex(ha)}<br>Đã sửa: ${hex(hb)}`);
+    const good = r.onlyNds && !badCodes.length && !pB.err;
+    const vd = $('#cmpVerdict'); vd.className = 'banner ' + (good ? 'ok' : 'bad');
+    vd.innerHTML = good ? `<b>✔ ĐẠT:</b> file đã sửa chỉ khác file gốc ở NOI_DUNG_SH của <b>${r.nds.length}</b> hồ sơ, cấu trúc giữ nguyên.` : '<b>✘ KHÔNG ĐẠT:</b> file đã sửa có thay đổi ngoài NOI_DUNG_SH hoặc lỗi cấu trúc — không nên dùng file này.';
+    // bảng
+    const recsB = XCore.scan(CMP.b), st = calcStats(r.A, recsB); CMP.st = st;
+    $('#cmpKpis').innerHTML = [['Hồ sơ gốc / đã sửa', fmt(r.A.length) + ' / ' + fmt(recsB.length)], ['Bị đổi mã NDSH', fmt(r.nds.length)], ['Khác ngoài NDSH', fmt(r.otherCount + r.structural.length)], ['Kết luận', good ? '✔ Đạt' : '✘ Không đạt']]
+      .map(([l, v]) => `<div class="kpi"><div class="l">${l}</div><div class="v" style="${v.includes('✘') || (l === 'Khác ngoài NDSH' && v !== '0') ? 'color:var(--bad)' : ''}">${v}</div></div>`).join('');
+    $('#cmpTbl').innerHTML = `<thead><tr><th class="c">#</th><th>Họ và tên</th><th>Số định danh</th><th class="c">SBD</th><th>Mã khóa học</th><th class="c">Mã cũ</th><th class="c">Mã mới</th><th>Nội dung cũ → mới</th></tr></thead><tbody>` +
+      (r.nds.map((x, k) => `<tr><td class="c">${k + 1}</td><td>${esc(x.rec.ten)}</td><td>${esc(x.rec.cccd)}</td><td class="c">${esc(x.rec.sbd)}</td><td>${esc(x.rec.khoa)}</td><td class="c">${esc(x.old)}</td><td class="c"><b class="arrow">${esc(x.neu)}</b></td><td>${esc(S.num2label.get(x.old) || '?')} → <b>${esc(S.num2label.get(x.neu) || '?')}</b></td></tr>`).join('') || '<tr><td colspan="8" class="small">Không có.</td></tr>') + '</tbody>';
+    $('#cmpOtherBox').classList.toggle('hide', !r.other.length);
+    $('#cmpOther').innerHTML = `<thead><tr><th class="c">#</th><th>Hồ sơ</th><th>Vị trí</th><th>File gốc</th><th>File đã sửa</th></tr></thead><tbody>` +
+      r.other.map((o, k) => `<tr><td class="c">${k + 1}</td><td>${o.rec ? esc(o.rec.ten) + '<br><span class="small">' + esc(o.rec.cccd) + '</span>' : '<span class="small">Phần đầu / cuối file</span>'}</td><td>${o.tag ? (o.tag[0] === '/' ? 'sau thẻ &lt;' + esc(o.tag) + '&gt;' : 'trong thẻ &lt;' + esc(o.tag) + '&gt;') : ''}<br><span class="small">byte ${fmt(o.at)}</span></td><td class="w"><code>${esc(o.a)}</code></td><td class="w"><code>${esc(o.b)}</code></td></tr>`).join('') +
+      (r.otherCount > r.other.length ? `<tr><td colspan="5" class="small">… và ${fmt(r.otherCount - r.other.length)} chỗ khác nữa</td></tr>` : '') + '</tbody>';
+    $('#cmpStat').innerHTML = statTable(st);
+    $('#cmpRes').classList.remove('hide');
+    $('#cmpInfo').textContent = `Xong trong ${((performance.now() - t0) / 1000).toFixed(1)} giây`;
+  } catch(e){ addCheck('#cmpChecks', 'bad', 'Lỗi: ' + esc(e.message)); $('#cmpInfo').textContent = ''; }
+  finally { $('#bCmp').disabled = !(CMP.a && CMP.b); }
+};
+$('#bCmpCsv').onclick = () => {
+  const r = CMP.res; if (!r) return;
+  const L = [q('KẾT QUẢ KIỂM TRA FILE XML ĐÃ SỬA'), [q('File gốc'), q(CMP.an)].join(','), [q('File đã sửa'), q(CMP.bn)].join(','), [q('Kết luận'), q(r.onlyNds ? 'Chỉ khác NOI_DUNG_SH' : 'Có thay đổi ngoài NOI_DUNG_SH')].join(','), ''];
+  L.push(['STT','Họ tên','Số định danh','SBD','Mã khóa học','Mã cũ','Mã mới','Nội dung cũ','Nội dung mới'].map(q).join(','));
+  r.nds.forEach((x, k) => L.push([k + 1, q(x.rec.ten), `="${x.rec.cccd}"`, q(x.rec.sbd), q(x.rec.khoa), q(x.old), q(x.neu), q(S.num2label.get(x.old) || ''), q(S.num2label.get(x.neu) || '')].join(',')));
+  if (r.other.length || r.structural.length) { L.push(''); L.push(q('THAY ĐỔI NGOÀI NOI_DUNG_SH')); r.structural.forEach(s => L.push(q(s)));
+    r.other.forEach((o, k) => L.push([k + 1, q(o.rec ? o.rec.ten : 'đầu/cuối file'), q(o.tag), o.at, q(o.a), q(o.b)].join(','))); }
+  download('﻿' + L.join('\r\n'), safeName(CMP.bn.replace(/\.xml$/i, '')) + '_KIEM_TRA.csv', 'text/csv');
+};
+
+/* ---------- Ảnh nền (giống tool A1 quản lý thi lại CSHN) ----------
+   Lưu riêng từng máy (IndexedDB). Chống giật: ảnh thu nhỏ ≤ 1920px + nén JPEG; làm mờ + phủ màu tính sẵn 1 lần bằng canvas;
+   lớp nền cố định riêng (GPU layer) nên cuộn trang không phải vẽ lại; dùng blob URL thay vì base64 trong CSS. */
+const BG_DEF = { shade:78, blur:0, glass:false, fit:'cover' };
+let BG = { url:'', base:null, view:null, opt:Object.assign({}, BG_DEF), baked:'' };
+const bgColor = () => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#eef1f5';
+function bgLayer(){ let el = $('#bgLayer'); if (!el) { el = document.createElement('div'); el.id = 'bgLayer'; el.setAttribute('aria-hidden', 'true'); el.innerHTML = '<i></i>'; document.body.prepend(el); } return el; }
+function bgApply(live){
+  const on = !!BG.url, h = document.documentElement, el = bgLayer();
+  h.classList.toggle('hasbg', on); h.classList.toggle('bgglass', on && !!BG.opt.glass);
+  el.style.backgroundImage = on ? `url("${BG.url}")` : ''; el.style.backgroundSize = BG.opt.fit === 'contain' ? 'contain' : 'cover';
+  el.firstChild.style.opacity = live ? String(BG.opt.shade / 100) : '0';
+}
+async function bgRender(){
+  if (!BG.base) return null; const o = BG.opt, col = bgColor();
+  const bmp = await createImageBitmap(BG.base), cv = document.createElement('canvas'); cv.width = bmp.width; cv.height = bmp.height;
+  const g = cv.getContext('2d'), pd = o.blur * 2;
+  if (o.blur) { g.filter = `blur(${o.blur}px)`; g.drawImage(bmp, -pd, -pd, bmp.width + pd * 2, bmp.height + pd * 2); g.filter = 'none'; } else g.drawImage(bmp, 0, 0);
+  if (bmp.close) bmp.close();
+  if (o.shade) { g.globalAlpha = o.shade / 100; g.fillStyle = col; g.fillRect(0, 0, cv.width, cv.height); g.globalAlpha = 1; }
+  BG.baked = col + '|' + o.shade + '|' + o.blur;
+  return await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.85));
+}
+async function bgShrink(file){
+  const bmp = await createImageBitmap(file), max = 1920, sc = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(bmp.width * sc)); cv.height = Math.max(1, Math.round(bmp.height * sc));
+  const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(bmp, 0, 0, cv.width, cv.height); if (bmp.close) bmp.close();
+  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.85)); if (!blob) throw new Error('nén ảnh lỗi'); return { blob, w:cv.width, h:cv.height };
+}
+async function bgSetView(blob, live){
+  const old = BG.url; BG.view = blob; BG.url = blob ? URL.createObjectURL(blob) : '';
+  if (blob) { const im = new Image(); im.src = BG.url; try { await im.decode(); } catch(e){} }
+  bgApply(live); if (old) setTimeout(() => URL.revokeObjectURL(old), 1000);
+}
+let bgT = null;
+function bgRebake(delay){ clearTimeout(bgT); bgT = setTimeout(async () => { try { if (BG.base) await bgSetView(await bgRender()); } catch(e){ console.warn('bg', e); } }, delay || 0); }
+async function bgSave(){ return IDB.put('bg', BG.base ? { base:BG.base, view:BG.view, baked:BG.baked, opt:BG.opt } : null); }
+async function bgBoot(){ try { const d = await IDB.get('bg'); if (!d || !d.base) return; BG.base = d.base; BG.opt = Object.assign({}, BG_DEF, d.opt || {});
+    const key = bgColor() + '|' + BG.opt.shade + '|' + BG.opt.blur;
+    if (d.view && d.baked === key) { BG.baked = key; await bgSetView(d.view); } else await bgSetView(await bgRender()); } catch(e){ console.warn('bg', e); } }
+$('#hBg').onclick = () => {
+  const o = BG.opt; let committed = false;
+  const d = dialog(`<h2>Ảnh nền</h2><p class="small">Ảnh chỉ lưu trên máy này. Tool tự thu nhỏ và nén ảnh để chạy mượt.</p>
+    <div class="row"><label class="btn sm" style="cursor:pointer">Chọn ảnh…<input type="file" id="bgFile" accept="image/*" hidden></label><button type="button" class="btn sec sm" id="bgDel"${BG.base ? '' : ' disabled'}>Bỏ ảnh nền</button><span class="small" id="bgInfo">${BG.base ? `Ảnh hiện tại ${Math.round(BG.base.size / 1024)} KB` : 'Chưa có ảnh nền'}</span></div>
+    <div class="row" style="margin-top:12px"><label class="f" style="flex:1">Độ phủ màu nền (dễ đọc chữ): <b id="bgShV">${o.shade}%</b><input type="range" id="bgSh" min="0" max="95" step="1" value="${o.shade}"></label>
+      <label class="f" style="flex:1">Làm mờ ảnh: <b id="bgBlV">${o.blur}px</b><input type="range" id="bgBl" min="0" max="16" step="1" value="${o.blur}"></label></div>
+    <div class="row" style="margin-top:8px;align-items:center"><label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="bgGl"${o.glass ? ' checked' : ''}> Khung trong suốt nhẹ (thấy ảnh sau khung)</label>
+      <label class="f">Cách hiển thị<select id="bgFit"><option value="cover"${o.fit !== 'contain' ? ' selected' : ''}>Phủ kín màn hình</option><option value="contain"${o.fit === 'contain' ? ' selected' : ''}>Vừa khung (không cắt ảnh)</option></select></label></div>
+    <p class="small">Gợi ý: độ phủ 70–85% để chữ luôn rõ. Thay đổi xem trước ngay; bấm Lưu để giữ, Hủy để trở lại như cũ.</p>`,
+    async () => { committed = true; clearTimeout(bgT); if (BG.base) await bgSetView(await bgRender()); const ok = await bgSave(); toast(ok ? 'Đã lưu ảnh nền' : 'Trình duyệt không cho lưu — ảnh nền chỉ dùng tạm lần này', 4000); }, 'Lưu');
+  $('#bgFile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; if (!/^image\//.test(f.type)) return toast('Không phải file ảnh');
+    $('#bgInfo').textContent = 'Đang xử lý…'; const t0 = performance.now();
+    try { const s = await bgShrink(f); BG.base = s.blob; await bgSetView(await bgRender()); $('#bgInfo').textContent = `${s.w}×${s.h}px · ${Math.round(s.blob.size / 1024)} KB (gốc ${Math.round(f.size / 1024)} KB) · xử lý ${Math.round(performance.now() - t0)} ms`; $('#bgDel').disabled = false; }
+    catch(err){ $('#bgInfo').textContent = 'Không đọc được ảnh này'; } };
+  $('#bgDel').onclick = async () => { BG.base = null; await bgSetView(null); $('#bgInfo').textContent = 'Đã bỏ ảnh nền (bấm Lưu)'; $('#bgDel').disabled = true; };
+  $('#bgSh').oninput = e => { BG.opt.shade = +e.target.value; $('#bgShV').textContent = BG.opt.shade + '%'; if (BG.base) { bgApply(true); bgRebake(160); } };
+  $('#bgBl').oninput = e => { BG.opt.blur = +e.target.value; $('#bgBlV').textContent = BG.opt.blur + 'px'; bgRebake(220); };
+  $('#bgGl').onchange = e => { BG.opt.glass = e.target.checked; bgApply(); };
+  $('#bgFit').onchange = e => { BG.opt.fit = e.target.value; bgApply(); };
+  d.addEventListener('close', function once(){ d.removeEventListener('close', once); if (committed) return;
+    IDB.get('bg').then(async saved => { clearTimeout(bgT);
+      try { if (!saved || !saved.base) { BG.base = null; BG.opt = Object.assign({}, BG_DEF); await bgSetView(null); } else { BG.base = saved.base; BG.opt = Object.assign({}, BG_DEF, saved.opt); await bgSetView(await bgRender()); } } catch(e){ console.warn('bg', e); } }); });
+};
+/* Theo dõi độ mượt khi cuộn có ảnh nền: máy yếu thì tự tắt "khung trong suốt"; vẫn chậm thì nhắc bỏ ảnh nền */
+let bgWatch = { frames:[], on:false, last:0, done:false };
+addEventListener('scroll', () => {
+  if (!BG.url || bgWatch.done || bgWatch.on) return; bgWatch.on = true; bgWatch.last = performance.now();
+  const step = now => { bgWatch.frames.push(now - bgWatch.last); bgWatch.last = now;
+    if (bgWatch.frames.length < 90) return requestAnimationFrame(step);
+    bgWatch.on = false; const f = bgWatch.frames.slice(5).sort((a, b) => a - b), med = f[Math.floor(f.length / 2)]; bgWatch.frames = [];
+    if (med <= 34) { bgWatch.done = true; return; }
+    if (BG.opt.glass) { BG.opt.glass = false; bgApply(); bgSave(); toast('Máy hơi chậm khi cuộn: đã tắt “khung trong suốt” của ảnh nền cho mượt hơn'); return; }
+    bgWatch.done = true; toast('Máy này cuộn hơi chậm khi có ảnh nền. Nếu thấy giật, bấm “Ảnh nền” → Bỏ ảnh nền.', 6000);
+  };
+  requestAnimationFrame(step);
+}, { passive:true });
+
+/* ---------- Giải thích (dấu ! ở góc phải) ---------- */
+function tipStats(){
+  if (!S.wb || !S.rows) return null;
+  const cC = +$('#sCccd').value, cN = +$('#sNum').value, cL = +$('#sLabel').value, cT = +$('#sName').value;
+  const data = S.rows.filter(r => XCore.normCccd(r[cC])), keys = data.map(r => XCore.normCccd(r[cC]));
+  const st = { cC, cN, cL, cT, n:data.length, inX:0, notX:0, numOk:0, numInMap:0, lab:0, labAlias:0, nameOk:0, nameCmp:0 };
+  data.forEach((r, i) => { const rec = S.xml ? S.byCccd.get(keys[i]) : null; if (rec) st.inX++; else st.notX++;
+    if (cN >= 0) { const v = asInt(r[cN]); if (v && +v >= 1 && +v <= 99) { st.numOk++; if (S.num2label.has(v)) st.numInMap++; } }
+    if (cL >= 0 && String(r[cL] ?? '').trim()) { const k = XCore.normLabel(r[cL]); if (resolveLabel(r[cL])) { st.lab++; if (!S.label2num.has(k)) st.labAlias++; } }
+    if (cT >= 0 && rec) { st.nameCmp++; if (XCore.normName(r[cT]) === XCore.normName(rec.ten)) st.nameOk++; } });
+  st.xmlOut = S.xml ? S.recs.length - new Set(keys.filter(k => S.byCccd.has(k))).size : 0;
+  st.ex = data.find(r => S.byCccd.get(XCore.normCccd(r[cC]))) || data[0];
+  return st;
+}
+const colLbl = c => c < 0 ? '(không dùng)' : `cột ${colName(c)}`;
+const ColLbl = c => c < 0 ? '(Không dùng)' : `Cột ${colName(c)}`;
+const autoNote = (cur, auto) => auto === undefined ? '' : cur === auto ? '<span style="color:var(--ok)">Tool tự nhận diện.</span> ' : `<span style="color:var(--warn)">Anh đang chọn thủ công (tool đề xuất ${colLbl(auto)}).</span> `;
+const P = (t, body) => `<div class="ps"><b>${t}</b><p>${body}</p></div>`;
+function tipHtml(k){
+  const A = S.auto || {};
+  const need = ['sheet','cccd','num','label','name'];
+  if (need.includes(k) && !S.wb) return '<p>Nạp file Excel để xem giải thích chi tiết.</p>';
+  const st = need.includes(k) ? (tipStats() || {}) : {};
+  const ex = st.ex, exK = ex ? XCore.normCccd(ex[st.cC]) : '', exRec = exK ? S.byCccd.get(exK) : null;
+  switch (k) {
+  case 'xml': return `<h4>File XML kỳ sát hạch</h4>` +
+    P('Là gì', 'File XML do PC-08 gửi về sau khi duyệt Báo cáo 2: danh sách thí sinh được dự sát hạch trong kỳ, mỗi người là một khối <code>&lt;NGUOI_LX&gt;</code>.') +
+    P('Tool đọc gì', 'Trong mỗi khối: <code>SO_CMT</code> (để tìm người), <code>HO_VA_TEN</code> (kiểm tra chéo), <code>NOI_DUNG_SH</code> (giá trị cần sửa), <code>MA_KHOA_HOC</code>, <code>SO_BAO_DANH</code> (thống kê, biên bản). Phần đầu file: mã kỳ, ngày sát hạch, số quyết định, TONG_SO_BAN_GHI.') +
+    P('An toàn', 'Số được thay trực tiếp trên nội dung file gốc. Kết quả lưu thành file tải về, file gốc trên ổ đĩa giữ nguyên làm bản sao lưu.');
+  case 'excel': return `<h4>Danh sách thi lại (Excel)</h4>` +
+    P('Là gì', 'File Excel thi lại (_TL, _LOCTL…) — nguồn quyết định ai được đổi mã và đổi thành mã nào.') +
+    P('Dùng được với file Excel bất kỳ', 'Được. Tool tự quét <b>mọi sheet, mọi cột</b> và chọn chỗ có nhiều số định danh trùng với XML nhất. Hỗ trợ .xls, .xlsx, .xlsm.') +
+    P('Điều kiện', 'Mỗi người 1 dòng, có cột số định danh (CCCD 12 số / CMND 9 số) và cột Số hoặc cột Nội dung. Cột Nội dung hiểu cả cách viết tắt: L, V-L, LT, H, V-H, L+H… (xem Cài đặt → Tên gọi khác).') +
+    P('Không có cột Số', 'Tool tự chuyển sang lấy mã theo bảng mã từ cột Nội dung.');
+  case 'sheet': { const sc = S.sheetScores || [], cur = $('#sSheet').value, me = sc.find(x => x.sheet === cur), nxt = sc.find(x => x.sheet !== cur);
+    return `<h4>Sheet</h4>` + P('Là gì', 'Trang tính chứa danh sách thi lại của kỳ này.') +
+    P('Vì sao chọn sheet này', (cur === S.autoSheet ? '<span style="color:var(--ok)">Tool tự nhận diện.</span> ' : `<span style="color:var(--warn)">Anh đang chọn thủ công (tool đề xuất “${esc(S.autoSheet)}”).</span> `) +
+      `Tool quét cả ${S.wb.SheetNames.length} sheet. “<b>${esc(cur)}</b>” có <b>${me ? me.score : 0}</b> số định danh trùng với XML` + (nxt ? ` — sheet kế tiếp “${esc(nxt.sheet)}” có ${nxt.score}.` : '.') + (S.xml ? '' : ' (Chưa nạp XML nên đang đếm theo dạng số giống CCCD.)')) +
+    P('Linh động', 'Tên sheet bất kỳ. Đổi sheet thì tool dò lại toàn bộ các cột cho sheet mới.'); }
+  case 'cccd': return `<h4>Cột số định danh</h4>` + P('Là gì', 'Cột CCCD/CMND — <b>khóa duy nhất</b> để tìm đúng người trong XML.') +
+    P('Vì sao chọn cột này', autoNote(st.cC, A.cccd) + `${ColLbl(st.cC)} có <b>${st.n}</b> ô dạng số định danh, trong đó <b>${st.inX}</b> trùng <code>&lt;SO_CMT&gt;</code> trong XML${st.notX ? `, <span style="color:var(--bad)">${st.notX} không tìm thấy</span>` : ''}.${st.cC === A.cccd ? ' Đây là cột trùng nhiều nhất.' : ''}`) +
+    P('Dò và thay cho ai', `Với <b>mỗi dòng</b> có số ở cột này: tìm khối <code>&lt;NGUOI_LX&gt;</code> có <code>SO_CMT</code> bằng đúng số đó → chỉ sửa <code>&lt;NOI_DUNG_SH&gt;</code> <b>bên trong khối của người đó</b>. ${st.xmlOut ? `<b>${st.xmlOut}</b> người trong XML không có trong cột này → giữ nguyên.` : ''}` +
+      (exRec ? `<div class="ex">Ví dụ: <b>${esc(exK)}</b> → khối của <b>${esc(exRec.ten)}</b> (SBD ${esc(exRec.sbd)}), NOI_DUNG_SH hiện là <b>${esc(exRec.oldVal)}</b>.</div>` : '')) +
+    P('Tự xử lý', 'Ô định dạng số bị Excel làm mất số 0 đầu → tự bù. Bỏ khoảng trắng, dấu chấm, dấu nháy. Số lặp trong Excel hoặc trùng trong XML → không sửa, báo lỗi.');
+  case 'num': return `<h4>Cột Số (mã nội dung sát hạch)</h4>` + P('Là gì', 'Con số sẽ được ghi vào <code>&lt;NOI_DUNG_SH&gt;</code> theo bảng mã (2 = SH lại L, 3 = SH lại L+H…).') +
+    (st.cN < 0 ? P('Không có cột Số', 'Tool đang <b>lấy mã theo bảng mã</b>, suy từ cột Nội dung.') :
+    P('Vì sao chọn cột này', autoNote(st.cN, A.num) + `${ColLbl(st.cN)} có <b>${st.numOk}/${st.n}</b> dòng là số nguyên 1–99${st.cN === A.num ? ', nhiều nhất trong các cột' : ''}${st.cN >= 0 && A.hdr && /^\s*Số\s*$/i.test(A.hdr(st.cN)) ? ', tiêu đề cột là “Số”' : ''}. ${st.numInMap} giá trị có trong bảng mã.`)) +
+    P('Dò và thay cho ai', 'Số ở dòng nào thì ghi cho đúng người có số định danh ở dòng đó. Số mới bằng số đang có → giữ nguyên.') +
+    P('Lưu ý', 'Mã không có trong bảng mã sẽ bị chặn. Chọn “(không dùng)” nếu file không có cột Số → tool tự dùng bảng mã.');
+  case 'label': return `<h4>Cột Nội dung</h4>` + P('Là gì', 'Cột chữ mô tả nội dung sát hạch (“SH lại L”, “L+H”, “V-H”…). <b>Chữ này không bao giờ được ghi vào XML.</b>') +
+    P('Vì sao chọn cột này', autoNote(st.cL, A.label) + `${ColLbl(st.cL)} có <b>${st.lab}/${st.n}</b> ô tra được mã trong bảng mã${st.labAlias ? ` (trong đó ${st.labAlias} ô là cách viết tắt / tên gọi khác)` : ''}.`) +
+    P('Dùng để làm gì', '① Kiểm tra chéo với cột Số — lệch thì tô vàng. ② Là nguồn mã khi chọn “Bảng mã” hoặc khi file không có cột Số.') +
+    P('Cách viết tắt', 'Sửa trong Cài đặt → Tên gọi khác (VD: <code>L, V-L, LT = SH lại L</code>).');
+  case 'name': return `<h4>Cột Họ tên</h4>` + P('Là gì', 'Cột họ và tên — <b>chỉ để kiểm tra chéo</b>, không dùng để tìm người.') +
+    P('Vì sao chọn cột này', autoNote(st.cT, A.name) + `${ColLbl(st.cT)} có <b>${st.nameOk}/${st.nameCmp}</b> tên trùng <code>HO_VA_TEN</code> của đúng người đó trong XML${st.cT === A.name ? ' — nhiều nhất trong các cột.' : '.'}${st.cT >= 0 && st.nameCmp && st.nameOk < st.nameCmp ? ` <span style="color:var(--bad)">${st.nameCmp - st.nameOk} dòng lệch tên sẽ bị bỏ tích.</span>` : ''}`) +
+    P('Bảo vệ khỏi gõ nhầm', 'Số định danh gõ sai mà trúng người khác thì tên không khớp → dòng bị tô cam và <b>tự bỏ tích, không đổi</b>.');
+  case 'mode': { const L = (S.items || []).filter(i => i.lech), g = {}; L.forEach(i => { const kk = `“${esc(i.label)}”: Excel ghi <b>${esc(i.exNum)}</b>, bảng mã là <b>${esc(i.mapNum || '?')}</b>`; g[kk] = (g[kk] || 0) + 1; });
+    return `<h4>Lấy mã mới theo</h4>` + P('Cột “Số” trong Excel', 'Ghi đúng con số ở cột Số. Mặc định khi file có cột Số.') +
+    P('Bảng mã', 'Bỏ qua cột Số, suy mã từ cột Nội dung theo bảng mã và tên gọi khác. Tự bật khi file không có cột Số.') +
+    (S.items && S.items.length ? P('File hiện tại', L.length ? `<span style="color:var(--warn)">${L.length} dòng lệch:</span><br>` + Object.entries(g).map(([a, b]) => `• ${a} — ${b} người`).join('<br>') : '<span style="color:var(--ok)">Không có dòng lệch — hai cách cho kết quả như nhau.</span>') : ''); }
+  case 'outname': return `<h4>Tên file tải về</h4>` + P('Quy ước', '<code>&lt;tên file gốc&gt;_DA_SUA_&lt;sheet/khóa&gt;_&lt;năm tháng ngày-giờ phút&gt;.xml</code> — biết ngay file sửa từ file nào, theo danh sách nào, lúc nào; không bao giờ trùng tên nên trình duyệt không tự thêm (1), (2).') +
+    P('Sửa được', 'Anh có thể gõ tên khác. Báo cáo CSV, nhật ký và biên bản dùng cùng tên này.');
+  case 'bb': return `<h4>In biên bản (A4)</h4>` + P('Gồm', 'Thông tin kỳ sát hạch, file gốc / file mới kèm mã SHA-256, kết quả kiểm định, ghi chú chữ ký số, thống kê nội dung sát hạch, danh sách từng hồ sơ đã đổi mã (cũ → mới), chỗ ký Người lập / Người kiểm tra.') +
+    P('Cách in', 'Bấm nút → chọn máy in hoặc “Lưu dưới dạng PDF”. Tên đơn vị và địa danh sửa trong Cài đặt.');
+  case 'cmp': return `<h4>Kiểm tra file đã sửa</h4>` + P('Dùng khi nào', 'Trước khi nộp / nhập file: kiểm tra file đã sửa (bằng tool, sửa tay, hay ai đó gửi lại) chỉ khác file gốc ở NOI_DUNG_SH.') +
+    P('Phát hiện được', 'Từng người bị đổi mã; mọi chỗ khác ngoài NOI_DUNG_SH (tên, ngày sinh, ảnh…) kèm hồ sơ và thẻ; mất BOM, đổi kiểu xuống dòng do Notepad; thêm / mất hồ sơ; XML hỏng; trạng thái chữ ký số.') +
+    P('An toàn', 'Chỉ đọc, không sửa file nào.');
+  case 'map': return `<h4>Bảng mã</h4>` + P('Là gì', 'Danh sách mã NOI_DUNG_SH và nội dung tương ứng. Tool chỉ ghi vào XML các mã có trong bảng này.') +
+    P('Lưu', 'Bấm “Lưu bảng mã” — lưu trên máy này, mở lại tool vẫn còn. “Về mặc định” để trả lại bảng gốc.') +
+    P('Lưu ý', 'Khi đã xác nhận với PC-08 mã đúng của “SH lại H” (7 hay 8), sửa ở đây rồi Lưu.');
+  case 'alias': return `<h4>Tên gọi khác</h4>` + P('Là gì', 'Các cách viết tắt trong file thi lại được quy về nội dung trong bảng mã, VD <code>L, V-L, LT = SH lại L</code>; <code>H, V-H = SH lại H</code>; <code>L+H, V-L+H = SH lại L+H</code>.') +
+    P('Cách so', 'Không phân biệt hoa/thường, khoảng trắng; bỏ đuôi ngày như “H-28/10/2023”.') +
+    P('Mã cuối cùng', 'Do bảng mã quyết định: đổi mã “SH lại H” trong bảng mã thì “H”, “V-H” cũng đổi theo.');
+  case 'logdir': return `<h4>Thư mục lưu nhật ký</h4>` + P('Là gì', 'Mỗi lần tải file XML đã sửa, tool tự ghi vào thư mục con <code>SuaNDSH</code>: báo cáo CSV + nhật ký JSON (file gốc, file mới, SHA-256, từng người đổi mã). Có thể lưu kèm bản sao file XML.') +
+    P('Google Drive', 'Chọn một thư mục trong ổ Google Drive trên máy (Google Drive cho máy tính) → nhật ký tự đồng bộ lên Drive, đổi máy vẫn còn.') +
+    P('Quyền ghi', 'Chrome / Edge hỏi cho phép 1 lần mỗi phiên làm việc. Bấm “Ghi thử” để kiểm tra.');
+  case 'unit': return `<h4>Biên bản in</h4>` + P('Tên đơn vị', 'In ở góc trái đầu biên bản, dòng cuối được gạch chân.') + P('Địa danh', 'Dùng cho dòng “…, ngày … tháng … năm …”.');
+  }
+  return '';
+}
+(function(){
+  const pop = $('#pop'); let cur = null, pinned = false;
+  function show(el){
+    try { pop.innerHTML = tipHtml(el.dataset.tip); } catch(e){ pop.innerHTML = '<p>Không hiển thị được giải thích.</p>'; }
+    $$('.tip.on').forEach(t => t.classList.remove('on')); el.classList.add('on'); cur = el;
+    pop.style.display = 'block';
+    const r = el.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    let left = r.right - w; if (left < 12) left = 12; if (left + w > innerWidth - 12) left = innerWidth - 12 - w;
+    let top = r.bottom + 8; if (top + h > innerHeight - 12 && r.top - h - 8 > 12) top = r.top - h - 8;
+    pop.style.left = left + 'px'; pop.style.top = Math.max(8, top) + 'px';
+  }
+  function hide(){ pop.style.display = 'none'; if (cur) cur.classList.remove('on'); cur = null; pinned = false; }
+  document.addEventListener('mouseover', e => { const t = e.target.closest && e.target.closest('.tip'); if (t && !pinned) show(t); });
+  document.addEventListener('mouseout', e => { const t = e.target.closest && e.target.closest('.tip'); if (t && !pinned && !pop.contains(e.relatedTarget)) hide(); });
+  pop.addEventListener('mouseleave', e => { if (!pinned && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.tip'))) hide(); });
+  document.addEventListener('click', e => {
+    const t = e.target.closest && e.target.closest('.tip');
+    if (t) { e.preventDefault(); e.stopPropagation(); if (pinned && cur === t) hide(); else { show(t); pinned = true; } return; }
+    if (!pop.contains(e.target)) hide();
+  }, true);
+  document.addEventListener('focusin', e => { const t = e.target.closest && e.target.closest('.tip'); if (t) show(t); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hide();
+    if ((e.key === 'Enter' || e.key === ' ') && document.activeElement && document.activeElement.classList.contains('tip')) { e.preventDefault(); show(document.activeElement); pinned = true; } });
+  addEventListener('scroll', () => { if (!pinned) hide(); else if (cur) show(cur); }, { passive:true, capture:true });
+})();
+
+/* ---------- Khởi động ---------- */
+$('#ver').textContent = 'Phiên bản ' + APP_VER;
+applySettings(); initSettingsUI(); steps(); bgBoot(); logBoot();
+window.__ndshReady = true;
+</script>
+</body>
+</html>

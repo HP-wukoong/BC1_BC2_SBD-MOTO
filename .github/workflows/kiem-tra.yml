@@ -27,3 +27,5 @@ jobs:
         run: git diff --exit-code -- docs dist || (echo "::error::docs/ hoặc dist/ chưa được dựng lại sau khi sửa src/ — chạy python build.py rồi commit" && exit 1)
       - name: Tự kiểm tra tool (web app + bản file)
         run: python tests/kiemtra.py
+      - name: Kiểm tra tool Sửa NDSH XML (dữ liệu giả lập)
+        run: python tests/kiemtra_ndsh.py

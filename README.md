@@ -23,6 +23,19 @@ Không muốn dùng bản web: tải bản file chạy trực tiếp trên máy 
 
 Mọi file xuất ra đều được tool **đọc lại và đối chiếu từng ô** trước khi cho tải về.
 
+## Tool Sửa NDSH XML (đi kèm)
+
+**https://hp-wukoong.github.io/BC1_BC2_SBD-MOTO/sua-ndsh/** — bản file: [`dist/Sua_NDSH_XML.html`](dist/Sua_NDSH_XML.html)
+
+Sửa mã nội dung sát hạch `<NOI_DUNG_SH>` trong file XML PC-08 trả về sau Báo cáo 2, theo danh sách thi lại (Excel bất kỳ: tự dò sheet / cột, hiểu cách viết tắt L, H, L+H, V-L…; không có cột Số thì tự lấy theo bảng mã).
+
+- Chỉ thay đúng chữ số trên nội dung file gốc; tự so từng byte, kiểm XML hợp lệ, số thẻ, `TONG_SO_BAN_GHI`, chữ ký số, SHA-256 trước khi cho tải về.
+- Thống kê toàn bộ file mới, **biên bản A4**, báo cáo CSV, tên file theo quy ước `<file gốc>_DA_SUA_<sheet>_<ngày-giờ>.xml`.
+- Tab **Kiểm tra file đã sửa**: so file gốc với file đã sửa (bằng tool, sửa tay…), chỉ ra mọi thay đổi ngoài NOI_DUNG_SH.
+- Bảng mã, tên gọi khác lưu trên máy; **nhật ký** tự ghi vào thư mục chọn sẵn (nên là thư mục Google Drive); ảnh nền.
+- Lưu ý: file PC-08 có **chữ ký số**; sửa bất kỳ số nào (kể cả sửa tay) thì chữ ký không còn khớp — tool giữ nguyên thẻ chữ ký và báo rõ.
+- Mã nguồn: `src/sua_ndsh/` (`app.html`, `core.js`); kiểm tra: `python3 tests/kiemtra_ndsh.py` (dữ liệu giả lập).
+
 ## Dữ liệu nằm ở đâu?
 
 - Dữ liệu học viên **chỉ nằm trong trình duyệt trên máy của bạn** (và thư mục Google Drive nếu bạn liên kết). **Không có dữ liệu nào được gửi lên GitHub** — kho này chỉ chứa mã của tool.
@@ -43,3 +56,4 @@ python3 tests/kiemtra.py   # chạy web app + bản file, tự kiểm tra 11 m�
 - Mỗi lần thay đổi, thêm 1 dòng vào `VERSIONS` đầu `src/app.html`; dựng lại rồi commit cả `src/`, `docs/`, `dist/`.
 - GitHub Actions (*Kiểm tra bản dựng*) tự dựng lại và chạy bài kiểm tra sau mỗi lần đẩy lên.
 - **Không bao giờ** commit file dữ liệu thật (file hồ sơ, GLĐ, XML, SAOLUU_*.json).
+- Kiểm tra tool Sửa NDSH XML: `python3 tests/kiemtra_ndsh.py` (dữ liệu giả lập; thêm 3 đường dẫn file XML gốc, Excel, XML mong đợi để chạy thử với dữ liệu thật trên máy).

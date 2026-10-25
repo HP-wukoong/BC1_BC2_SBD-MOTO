@@ -44,4 +44,14 @@ shutil.copy(P('pwa', 'manifest.webmanifest'), P('docs', 'manifest.webmanifest'))
 for f in os.listdir(P('pwa', 'icons')): shutil.copy(P('pwa', 'icons', f), P('docs', 'icons', f))
 shutil.copy(P('dist', 'TOOLS BC1+BC2+SBD.html'), P('docs', 'TOOLS BC1+BC2+SBD.html'))   # tải bản file từ trang web
 open(P('docs', '.nojekyll'), 'w').close()
+# 3) Tool Sửa NDSH XML (hiệu chỉnh NOI_DUNG_SH file XML PC-08) — trang riêng, dùng chung thư viện SheetJS
+nd = rd('src/sua_ndsh/app.html'); core = rd('src/sua_ndsh/core.js')
+assert '</script' not in core.lower() and '/*XLSX*/' in nd and '/*CORE*/' in nd
+nd = nd.replace('/*XLSX*/', x, 1).replace('/*CORE*/', core, 1)
+assert '/*XLSX*/' not in nd and '/*CORE*/' not in nd
+open(P('dist', 'Sua_NDSH_XML.html'), 'w', encoding='utf-8').write(nd)
+os.makedirs(P('docs', 'sua-ndsh'))
+open(P('docs', 'sua-ndsh', 'index.html'), 'w', encoding='utf-8').write(nd)
+shutil.copy(P('dist', 'Sua_NDSH_XML.html'), P('docs', 'Sua_NDSH_XML.html'))
 print(f'v{ver}: dist {len(html)//1024} KB, docs/ xong')
+print(f'Sửa NDSH XML: {len(nd)//1024} KB')
