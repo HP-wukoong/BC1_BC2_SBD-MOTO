@@ -1,6 +1,6 @@
 /* TOOLS BC1+BC2+SBD — service worker: mở được khi mất mạng, tự lấy bản mới khi có mạng */
-const CACHE = 'tools-bc1-bc2-sbd-4.11';
-const CORE = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/favicon-64.png'];
+const CACHE = 'tools-bc1-bc2-sbd-4.12';
+const CORE = ['./', './index.html', './sua-ndsh/index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/favicon-64.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
 });
@@ -14,10 +14,12 @@ self.addEventListener('fetch', e => {
   if (u.origin !== self.location.origin) return;
   // Trang chính: ưu tiên mạng (luôn có bản mới nhất), mất mạng thì dùng bản đã lưu
   if (r.mode === 'navigate' || u.pathname.endsWith('/') || u.pathname.endsWith('/index.html')) {
+    // Mỗi trang lưu riêng: tool Sửa NDSH XML (thư mục sua-ndsh/) không được ghi đè trang chính
+    const key = /\/sua-ndsh(\/|\/index\.html)?$/.test(u.pathname) ? './sua-ndsh/index.html' : './index.html';
     e.respondWith(fetch(r).then(res => {
-      if (res.ok) { const cp = res.clone(); caches.open(CACHE).then(c => c.put('./index.html', cp)); }
+      if (res.ok) { const cp = res.clone(); caches.open(CACHE).then(c => c.put(key, cp)); }
       return res;
-    }).catch(() => caches.match('./index.html')));
+    }).catch(() => caches.match(key)));
     return;
   }
   // Biểu tượng, manifest: dùng bản đã lưu, không có thì lấy từ mạng

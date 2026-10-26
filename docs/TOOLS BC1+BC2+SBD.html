@@ -706,6 +706,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.12','25/10/2026',['Thêm tool riêng “Sửa NDSH XML” (mở tại địa chỉ …/sua-ndsh/): hiệu chỉnh NOI_DUNG_SH trong file XML PC-08 trả về theo danh sách thi lại, kiểm định từng byte, thống kê, biên bản A4, kiểm tra file đã sửa','Web app: mỗi trang được lưu riêng khi dùng không cần mạng (trang chính và tool Sửa NDSH XML không ghi đè nhau)']],
   ['4.11','25/10/2026',['Ảnh nền: hộp cài đặt riêng — độ phủ màu (nên 70–85%), làm mờ ảnh, khung trong suốt nhẹ, phủ kín / vừa khung; chỉnh tới đâu thấy ngay, bấm Lưu mới giữ, Đóng thì trở lại như cũ','Ảnh nền và cài đặt chỉ lưu trên máy đó (không vào file dữ liệu / sao lưu), không in ra giấy']],
   ['4.10','25/10/2026',['Mục Hướng dẫn → Ảnh nền: chọn ảnh làm nền tool, chỉnh độ mờ lớp phủ và độ nhòe; ảnh được thu nhỏ (≤1920 px), nén và làm nhòe sẵn trên 1 lớp cố định riêng để cuộn trang / đổi mục không bị giật']],
   ['4.9.3','24/10/2026',['Báo cáo 1: khi in không lặp lại dòng tiêu đề cột ở các trang sau (cả file Excel, form đã sửa và In / PDF)']],
