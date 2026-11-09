@@ -54,6 +54,7 @@
       const sbd = tagAll(buf, 'SO_BAO_DANH', s, e);
       const khoa = tagAll(buf, 'MA_KHOA_HOC', s, e);
       const gplx = tagAll(buf, 'SO_GPLX_DA_CO', s, e);
+      const ngs = tagAll(buf, 'NGAY_SINH', s, e), gts = tagAll(buf, 'GIOI_TINH', s, e);   // chỉ đọc — để kiểm tra số CCCD
       const r = {
         idx: recs.length, bs: s, be: e + T.close.length,
         cccd: cmt.length ? cmt[0].text.trim() : '',
@@ -62,6 +63,7 @@
         sbd: sbd.length ? sbd[0].text.trim() : '',
         khoa: khoa.length ? khoa[0].text.trim() : '',
         gplx: gplx.length ? gplx[0].text.trim() : '',
+        ns: ngs.length ? ngs[0].text.trim() : '', gt: gts.length ? ({ M:'M', F:'F' })[gts[0].text.trim().toUpperCase()] || '' : '',
         nds: nds.length === 1 ? nds[0] : null,
         err: '',
       };
@@ -136,6 +138,23 @@
     return (s.length === 12 || s.length === 9) ? s : '';
   }
 
+  /* Kiểm tra số CCCD có dấu hiệu sai — cùng quy tắc TOOLS BC1+BC2+SBD / Sổ Sát Hạch A1 */
+  const PROV = new Set('001 002 004 006 008 010 011 012 014 015 017 019 020 022 024 025 026 027 030 031 033 034 035 036 037 038 040 042 044 045 046 048 049 051 052 054 056 058 060 062 064 066 067 068 070 072 074 075 077 079 080 082 083 084 086 087 089 091 092 093 094 095 096'.split(' '));
+  function cccdIssues(id, ns, gt) {
+    id = String(id || ''); if (/^\d{9}$/.test(id)) return [];
+    if (!/^\d{12}$/.test(id)) return ['CCCD không đủ 12 số'];
+    const out = [];
+    if (!PROV.has(id.slice(0, 3))) out.push('mã tỉnh “' + id.slice(0, 3) + '” không tồn tại');
+    if (!'0123'.includes(id[3])) { out.push('số thứ 4 là “' + id[3] + '” (chỉ có 0–3)'); return out; }
+    const yr = (+id[3] < 2 ? 1900 : 2000) + +id.slice(4, 6), m = String(ns || '').match(/(19|20)\d{2}/), dy = m ? m[0] : '', now = new Date().getFullYear();
+    if (yr > now) out.push('số CCCD cho năm sinh ' + yr + ' (không hợp lý)' + (dy ? ', dữ liệu ghi năm ' + dy : ''));
+    else if (dy && +dy !== yr) out.push('năm sinh theo CCCD là ' + yr + ', dữ liệu ghi năm ' + dy);
+    const g = (+id[3]) % 2 === 0 ? 'M' : 'F';
+    if (gt && gt !== g) out.push('giới tính theo CCCD là ' + (g === 'M' ? 'Nam' : 'Nữ') + ' (số thứ 4 là “' + id[3] + '”), dữ liệu ghi ' + (gt === 'M' ? 'Nam' : 'Nữ'));
+    return out;
+  }
+  function ccNear(a, b) { if (!a || !b || a.length !== b.length || a === b) return 0; let d = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i] && ++d > 2) return 0; return d; }
+
   function normName(s) {
     return String(s || '').normalize('NFC').toUpperCase().replace(/\s+/g, ' ').trim();
   }
@@ -197,6 +216,6 @@
     return res;
   }
 
-  const api = { find, scan, applyPatches, verify, normCccd, normName, normLabel, compare };
+  const api = { find, scan, applyPatches, verify, normCccd, normName, normLabel, compare, cccdIssues, ccNear };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.XCore = api;
 })(typeof window !== 'undefined' ? window : globalThis);
