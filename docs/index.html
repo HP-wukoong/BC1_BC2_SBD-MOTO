@@ -217,6 +217,8 @@ textarea{width:100%;min-height:130px;font-family:Consolas,"Cascadia Mono",monosp
 .tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11.5px;font-weight:600;background:var(--sunken);color:var(--ink2)}
 .tag.moi{background:var(--brand-tint);color:var(--brand-ink)}.tag.tl{background:var(--amber-tint);color:var(--amber)}.tag.gplx{background:var(--ok-tint);color:var(--ok)}
 .kta{display:inline-flex;gap:4px;align-items:center}
+.ccw{color:#c62828;font-weight:800;margin-left:5px;cursor:help}.ccw.ok{color:#94a3b8}
+.ccbox{border:1.5px solid #e11d48;background:#fff1f2;color:#7f1d1d;border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:13.5px;line-height:1.5}
 .hlp{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#fff4dc;color:#b26b00;border:1px solid #f0c36a;font:800 11px/1 'Be Vietnam Pro',sans-serif;margin:0 -4px 0 -12px;position:relative;top:-15px;z-index:2;cursor:help;vertical-align:middle;flex:none;user-select:none;box-shadow:0 0 0 2px #fff}
 .hlp:hover,.hlp:focus{background:#ffcf33;color:#14213d;outline:none}
 #hlpTip{position:fixed;z-index:99999;max-width:320px;background:#14213d;color:#fff;padding:8px 11px;border-radius:8px;font-size:12.5px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.25);pointer-events:none;display:none}
@@ -711,6 +713,11 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.13','09/11/2026',['Kiểm tra số CCCD có dấu hiệu sai (cùng quy tắc Sổ Sát Hạch A1): mã tỉnh, số thứ 4 (giới tính + thế kỷ), năm sinh theo CCCD so với ngày sinh, năm sinh tương lai, giới tính (khi file / XML có), CCCD không đủ 12 số, cùng CCCD 2 người khác tên; CCCD 11 số do Excel mất số 0 đầu tự thêm 0 và ghi chú',
+    'Dấu ⚠ đỏ cạnh CCCD ở BC1, BC2, Số báo danh (rê chuột xem lỗi), bộ lọc “CCCD nghi sai (N)”; khung đỏ + ô tick “Đã đối chiếu CCCD gốc” khi sửa thông tin — ghi ai xác nhận, lúc nào vào nhật ký',
+    'Chặn khi xuất BC1, BC2 (lần đầu + -TL), file PC-08, DS sát hạch, danh sách SBD (Excel + PDF): còn CCCD nghi sai chưa đối chiếu thì hiện bảng tổng hợp, tick đủ mới xuất',
+    'Đối chiếu XML PC-08 trả về: người thiếu, người thừa, CCCD lệch 1–2 số (nghi gõ nhầm), CCCD sai quy tắc; file thi lại / _LOCTL được kiểm CCCD trước khi dùng',
+    'Nút “Xuất danh sách CCCD cần đối chiếu” (Excel) ở mục Kiểm tra dữ liệu']],
   ['4.12','25/10/2026',['Thêm tool riêng “Sửa NDSH XML” (mở tại địa chỉ …/sua-ndsh/): hiệu chỉnh NOI_DUNG_SH trong file XML PC-08 trả về theo danh sách thi lại, kiểm định từng byte, thống kê, biên bản A4, kiểm tra file đã sửa','Web app: mỗi trang được lưu riêng khi dùng không cần mạng (trang chính và tool Sửa NDSH XML không ghi đè nhau)']],
   ['4.11','25/10/2026',['Ảnh nền: hộp cài đặt riêng — độ phủ màu (nên 70–85%), làm mờ ảnh, khung trong suốt nhẹ, phủ kín / vừa khung; chỉnh tới đâu thấy ngay, bấm Lưu mới giữ, Đóng thì trở lại như cũ','Ảnh nền và cài đặt chỉ lưu trên máy đó (không vào file dữ liệu / sao lưu), không in ra giấy']],
   ['4.10','25/10/2026',['Mục Hướng dẫn → Ảnh nền: chọn ảnh làm nền tool, chỉnh độ mờ lớp phủ và độ nhòe; ảnh được thu nhỏ (≤1920 px), nén và làm nhòe sẵn trên 1 lớp cố định riêng để cuộn trang / đổi mục không bị giật']],
@@ -983,7 +990,7 @@ function ageAt(dob, at){ const d=parseVN(dob); if(!d||!at) return null; let a=at
 const KW={ten:['ho va ten','ho ten'], ns:['ngay sinh','nam sinh'], id:['so chung minh','cccd','so dinh danh','cmnd','so cmt'],
   dc:['noi cu tru','noi thuong tru','dia chi'], sk:['cnsk','chung nhan suc khoe'],
   hang:['hang gplx da co','da co giay phep lai xe hang','hang giay phep lai xe da co'],
-  sogplx:['so gplx','so giay phep lai xe'], madk:['ma dang ky'], sohs:['so ho so'], gc:['ghi chu'], ngaycap:['ngay cap'], ngayhh:['ngay het han','het han su dung','co gia tri den'], sbd:['so bao danh','sbd'], nd:['noi dung sat hach'], ndtl:['noi dung sh lai']};
+  sogplx:['so gplx','so giay phep lai xe'], madk:['ma dang ky'], sohs:['so ho so'], gc:['ghi chu'], ngaycap:['ngay cap'], ngayhh:['ngay het han','het han su dung','co gia tri den'], sbd:['so bao danh','sbd'], nd:['noi dung sat hach'], ndtl:['noi dung sh lai'], gt:['gioi tinh']};
 function mapHeader(rows){
   for(let r=0;r<Math.min(rows.length,25);r++){
     const map={};
@@ -1045,12 +1052,13 @@ async function analyzeFile(file){
       if(!ten&&!String(row[map.id]??'').trim()) continue;
       if(/^\(\d+\)$/.test(ten)) continue;   // dòng đánh số cột (1) (2) (3)…
       if(!ten||!/^\d{8,13}$/.test(id)){ skipped.push({row:rg.s.r+r+1, ten, id:String(row[map.id]??''), reason:!ten?'Thiếu họ tên':'Số định danh không hợp lệ'}); continue; }
-      if(seen[id]){ skipped.push({row:rg.s.r+r+1, ten, id, reason:`Trùng số định danh với dòng ${seen[id]} — chỉ lấy dòng đầu`}); continue; }
+      if(seen[id]){ const f=recs.find(x=>x.id===id); if(f&&norm(f.ten)!==norm(ten)) (f.dupNames=f.dupNames||[]).push(upper(ten));
+        skipped.push({row:rg.s.r+r+1, ten, id, reason:`Trùng số định danh với dòng ${seen[id]}${f&&norm(f.ten)!==norm(ten)?` (khác tên: “${f.ten}”)`:''} — chỉ lấy dòng đầu`}); continue; }
       seen[id]=rg.s.r+r+1;
       const g=k=>map[k]!=null? row[map[k]] : '';
       const rec={id, ten, ns:fmtDate(g('ns')), dc:String(g('dc')||'').trim(), sk:String(g('sk')||'').trim(),
         hang:String(g('hang')||'').trim(), sogplx:String(g('sogplx')||'').trim().replace(/\.0+$/,''), madk:String(g('madk')||'').trim(),
-        sohs:String(g('sohs')||'').trim(), gc:String(g('gc')||'').trim()};
+        sohs:String(g('sohs')||'').trim(), gc:String(g('gc')||'').trim(), gt:gtNorm(g('gt')), pad0:String(row[map.id]??'').trim().replace(/\.0+$/,'').replace(/\D/g,'').length===11};
       if(kind==='gplx'){ rec.hangG=String(g('hangG')||'').trim(); rec.cap=fmtDate(g('ngaycap')); rec.hh=fmtDate(g('ngayhh'));
         if(!/^\d{2}\/\d{2}\/\d{4}$/.test(rec.hh)) rec.hh=gplxHanTinh(rec.hangG||rec.hang,rec.cap)||(/^\d{2}\/\d{2}\/\d{4}$/.test(rec.hh)?rec.hh:''); }
       if(kind==='loctl'){ rec.ndRaw=String(g('ndtl')??'').trim(); rec.gcTL=parseGC(rec.ndRaw,true);
@@ -1259,7 +1267,9 @@ function applyImport(){
       const strong = src==='hoso';
       const set=(k,v)=>{ if(typeof v==='string') v=v.normalize('NFC').replace(/\s+/g,' ').trim(); if(v!==''&&v!=null && (strong||!s[k])) s[k]=v; };   // chữ Unicode dựng sẵn (NFC), bỏ khoảng trắng thừa
       set('ten',upper(r.ten)); set('ns',r.ns); set('dc',r.dc); set('sk',r.sk||(strong?'':'x')); set('hangHS',r.hang);
-      set('soGPLX',r.sogplx); set('maDK',r.madk); set('soHS',r.sohs);
+      set('soGPLX',r.sogplx); set('maDK',r.madk); set('soHS',r.sohs); if(r.gt) s.gt=r.gt; if(r.pad0) s.pad0=true;
+      { const dn=[...(r.dupNames||[])]; if(s.ten&&r.ten&&norm(upper(r.ten))!==norm(s.ten)&&src!=='gplx') dn.push(upper(r.ten));
+        for(const n of dn) if(norm(n)!==norm(s.ten)&&!(s.dupNames||[]).some(x=>norm(x)===norm(n))) (s.dupNames=s.dupNames||[]).push(n); }
       if(r.gc && s.loai==='tl' && strong){ const g=parseGC(r.gc); if(g) s.gcTL=g; }
       if(!s.srcs.includes(src)) s.srcs.push(src);
       if(src==='bc1' && r.loai && !s.biLoai){ s.biLoai=true; s.lyDo=r.lyDo; }
@@ -1772,7 +1782,7 @@ function examCheck(ex){
   ex.rows.forEach(r=>{
     if(!/^\d{9}$|^\d{12}$/.test(r.cmt)) W.push(`SBD ${r.sbd} ${r.ten}: số CMT “${r.cmt}” không phải 9 hoặc 12 chữ số.`);
     if(!parseVN(r.ns)) W.push(`SBD ${r.sbd} ${r.ten}: ngày sinh “${r.ns}” không đúng dạng dd/mm/yyyy hoặc không có thật.`);
-    { const m=cccdVsDob(r.cmt,r.ns); if(m) W.push(`SBD ${r.sbd} ${r.ten}: số CMT không khớp ngày sinh — ${m}.`); }
+    { const id=normId(r.cmt), is=cccdIssues(id,r.ns,''); if(is.length) W.push(`SBD ${r.sbd} ${r.ten}: số CCCD ${id} có dấu hiệu sai — ${is.join('; ')}${ccOk(id,is)?' (đã đối chiếu CCCD gốc)':''}.`); }
     const kk=ndClass(r.nd), gg=gplxHang(r);
     if(kk==='moi'&&gg) W.push(`SBD ${r.sbd} ${r.ten}: file ghi “${r.nd}” nhưng hồ sơ có GPLX hạng ${gg} — theo quy tắc tính vào cột Hình. Kiểm tra lại có phải “Sát hạch H” không.`);
     if(kk==='moiH'&&!gg&&findPerson(r.id)) W.push(`SBD ${r.sbd} ${r.ten}: file ghi “${r.nd}” (đã có GPLX) nhưng hồ sơ trong tool chưa có hạng GPLX.`);
@@ -1856,7 +1866,8 @@ function curExam(){ return (DB.exams||[]).find(e=>e.id===DB.curExam) || (DB.exam
 let lastLoc=null;
 function applyLocTL(p, conf){
   p.target='gcfill';   // file lọc CHỈ dùng để điền nội dung theo số CCCD — không thêm, không bớt danh sách
-  const c=C(), R={file:p.file, mode:p.target, fill:0, changed:[], added:[], missing:[], isMoi:[], out:0, nameDiff:[]};
+  const c=C(), R={file:p.file, mode:p.target, fill:0, changed:[], added:[], missing:[], isMoi:[], out:0, nameDiff:[], ccBad:[], near:[]};
+  for(const r of p.recs){ const s0=c.students.find(x=>x.cccd===r.id); const is=cccdIssues(r.id,r.ns||(s0&&s0.ns)||'',r.gt); if(is.length) R.ccBad.push(`${upper(r.ten||(s0&&s0.ten)||'')} (${r.id}): ${is.join('; ')}`); }
   const ids=new Set(p.recs.map(r=>r.id));
   for(const r of p.recs){
     let s=c.students.find(x=>x.cccd===r.id);
@@ -1877,6 +1888,9 @@ function applyLocTL(p, conf){
   // tự kiểm lại: mọi người trong file đã khớp phải mang đúng nội dung của file
   R.verifyFail=p.recs.filter(r=>{ const s=c.students.find(x=>x.cccd===r.id); return s&&s.loai==='tl'&&s.gcTL!==r.gcTL; }).length;
   R.nameDiff.forEach(x=>conf.push(`File lọc “${p.file}”: cùng số CCCD nhưng khác tên — ${x}. Đã điền theo số CCCD, kiểm tra lại.`));
+  for(const r of R.missing) for(const s of c.students){ if(s.loai!=='tl') continue; const d=ccNear(r.id,s.cccd); if(d) R.near.push(`${upper(r.ten)}: file ${r.id} ↔ danh sách thi lại ${s.cccd} (${s.ten}) — lệch ${d} số, nghi gõ nhầm, CHƯA điền`); }
+  R.ccBad.forEach(x=>conf.push(`File lọc “${p.file}”: số CCCD có dấu hiệu sai — ${x}.`));
+  R.near.forEach(x=>conf.push(`File lọc “${p.file}”: ${x}.`));
   R.missing.forEach(r=>conf.push(`File lọc “${p.file}”: ${upper(r.ten)} (${r.id}) chưa có trong danh sách thi lại — chưa điền. Nạp file ${C().ten}_TL (danh sách thi lại đầy đủ) trước rồi nạp lại file lọc.`));
   R.isMoi.forEach(r=>conf.push(`File lọc “${p.file}”: ${upper(r.ten)} (${r.id}) đang thuộc danh sách HỌC MỚI — không điền nội dung thi lại.`));
   R.added.forEach(r=>conf.push(`File lọc “${p.file}”: đã thêm ${upper(r.ten)} (${r.id}) vào danh sách thi lại${r.dc?'':' — file không có nơi cư trú, cần bổ sung'}.`));
@@ -1888,12 +1902,14 @@ function showLocReport(){
   const R=lastLoc; if(!R) return; lastLoc=null;
   const tl=C().students.filter(s=>s.loai==='tl'&&!s.biLoai), left=tl.filter(s=>!s.gcTL).length;
   if(!R.fill){ dialog('Không điền được nội dung nào',`<div class="note warn">${ic('alert')}<span>Không ai trong file <b>${esc(R.file)}</b> khớp với danh sách thi lại của khóa <b>${esc(C().ten)}</b> (so theo số định danh). Kiểm tra lại đã mở đúng khóa và đã nạp file <b>${esc(C().ten)}_TL</b> chưa.</span></div>
-    <ul style="margin:10px 0 0;padding-left:20px;line-height:1.8">${R.missing.length?`<li>${R.missing.length} người trong file chưa có trong danh sách thi lại: ${R.missing.slice(0,6).map(r=>esc(upper(r.ten))).join(', ')}${R.missing.length>6?'…':''}</li>`:''}${R.isMoi.length?`<li>${R.isMoi.length} người đang thuộc danh sách học mới</li>`:''}</ul>`,[['Đóng','pri']]); return; }
+    <ul style="margin:10px 0 0;padding-left:20px;line-height:1.8">${R.near.length?`<li style="color:var(--seal)">⚠ CCCD lệch 1–2 số với danh sách thi lại (nghi gõ nhầm): ${R.near.slice(0,8).map(esc).join('<br>')}</li>`:''}${R.ccBad.length?`<li style="color:var(--seal)">⚠ ${R.ccBad.length} số CCCD có dấu hiệu sai: ${R.ccBad.slice(0,6).map(esc).join('<br>')}</li>`:''}${R.missing.length?`<li>${R.missing.length} người trong file chưa có trong danh sách thi lại: ${R.missing.slice(0,6).map(r=>esc(upper(r.ten))).join(', ')}${R.missing.length>6?'…':''}</li>`:''}${R.isMoi.length?`<li>${R.isMoi.length} người đang thuộc danh sách học mới</li>`:''}</ul>`,[['Đóng','pri']]); return; }
   dialog('Đã quét file thi lại đã lọc',`<div class="note ${R.verifyFail?'warn':'ok'}">${ic(R.verifyFail?'alert':'check')}<span>Tự điền <b>Nội dung SH lại</b> cho <b>${R.fill}</b> người theo file <b>${esc(R.file)}</b>${R.verifyFail?` — <b>${R.verifyFail}</b> người chưa khớp, hãy báo lại`:' — đã đối chiếu lại, khớp 100%'}.</span></div>
    <ul style="margin:10px 0 0;padding-left:20px;line-height:1.8">
    ${R.nameDiff.length?`<li style="color:var(--amber)">Cùng số CCCD nhưng khác tên: ${R.nameDiff.length} người — đã điền theo CCCD, nên kiểm tra<div class="muted" style="font-size:12.5px">${R.nameDiff.slice(0,6).map(esc).join('<br>')}</div></li>`:''}
    ${R.changed.length?`<li>Đổi nội dung đã chọn trước đó: ${R.changed.length} người<div class="muted" style="font-size:12.5px">${R.changed.slice(0,8).map(esc).join('<br>')}${R.changed.length>8?'<br>…':''}</div></li>`:''}
    ${R.added.length?`<li>Thêm mới vào danh sách thi lại: ${R.added.length} người</li>`:''}
+   ${R.ccBad.length?`<li style="color:var(--seal)">⚠ Số CCCD có dấu hiệu sai: ${R.ccBad.length} người — kiểm tra trước khi dùng<div class="muted" style="font-size:12.5px">${R.ccBad.slice(0,8).map(esc).join('<br>')}${R.ccBad.length>8?'<br>…':''}</div></li>`:''}
+   ${R.near.length?`<li style="color:var(--seal)">⚠ CCCD lệch 1–2 số với danh sách thi lại (nghi gõ nhầm): ${R.near.length}<div class="muted" style="font-size:12.5px">${R.near.slice(0,8).map(esc).join('<br>')}</div></li>`:''}
    ${R.out?`<li style="color:var(--seal)">Chuyển sang Loại (không có trong file): ${R.out} người</li>`:''}
    ${R.missing.length?`<li style="color:var(--amber)">Có trong file nhưng chưa có trong danh sách thi lại: ${R.missing.length} người — chưa điền (nạp file ${esc(C().ten)}_TL trước)</li>`:''}
    ${R.isMoi.length?`<li style="color:var(--amber)">Đang thuộc danh sách học mới: ${R.isMoi.length} người — không điền</li>`:''}
@@ -1938,6 +1954,91 @@ function applyGPLX(){
   for(const s of c.students){ const g=c.gplx[s.cccd]; if(g){ if(!s.soGPLX) s.soGPLX=g.so; s.hangG=g.hang; } }
 }
 
+/* ===================== KIỂM TRA SỐ CCCD CÓ DẤU HIỆU SAI =====================
+   Cùng logic Sổ Sát Hạch A1 (src/kythi.js — cccdIssues / cccdWarnHtml).
+   CCCD 12 số: số 1–3 = mã tỉnh nơi khai sinh · số 4 = giới tính + thế kỷ (0 nam/1 nữ: 1900–1999, 2 nam/3 nữ: 2000–2099) · số 5–6 = 2 số cuối năm sinh.
+   Người đã “đối chiếu CCCD gốc” lưu ở DB.cccdOk[cccd] = {at, by, sig, ten}; sig = nội dung lỗi lúc xác nhận → dữ liệu đổi thì phải đối chiếu lại. */
+const PROV=new Set('001 002 004 006 008 010 011 012 014 015 017 019 020 022 024 025 026 027 030 031 033 034 035 036 037 038 040 042 044 045 046 048 049 051 052 054 056 058 060 062 064 066 067 068 070 072 074 075 077 079 080 082 083 084 086 087 089 091 092 093 094 095 096'.split(' '));
+function gtNorm(v){ const n=norm(v); if(!n) return ''; if(/^(nam|m|male)$/.test(n)) return 'M'; if(/^(nu|f|female)$/.test(n)) return 'F'; return ''; }
+const GT_LB={M:'Nam',F:'Nữ'};
+function cccdIssues(id,ns,gt){
+  id=String(id||''); if(/^\d{9}$/.test(id)) return [];          // CMND cũ 9 số: không áp quy tắc CCCD
+  if(!/^\d{12}$/.test(id)) return [`CCCD không đủ 12 số (có ${id.replace(/\D/g,'').length} số)`];
+  const out=[];
+  if(!PROV.has(id.slice(0,3))) out.push(`mã tỉnh “${id.slice(0,3)}” không tồn tại`);
+  if(!'0123'.includes(id[3])){ out.push(`số thứ 4 là “${id[3]}” (chỉ có 0–3)`); return out; }
+  const yr=(+id[3]<2?1900:2000)+ +id.slice(4,6), dy=(String(ns||'').match(/(19|20)\d{2}/)||[])[0], now=new Date().getFullYear();
+  if(yr>now) out.push(`số CCCD cho năm sinh ${yr} (không hợp lý)${dy?`, dữ liệu ghi năm ${dy}`:''}`);
+  else if(dy&&+dy!==yr) out.push(`năm sinh theo CCCD là ${yr}, dữ liệu ghi năm ${dy}`);
+  const g=(+id[3])%2===0?'M':'F';
+  if(gt&&gt!==g) out.push(`giới tính theo CCCD là ${GT_LB[g]} (số thứ 4 là “${id[3]}”), dữ liệu ghi ${GT_LB[gt]}`);
+  return out;
+}
+/* giới tính: cột giới tính trong file đã nạp, nếu không có thì lấy từ file XML PC-08 (GIOI_TINH M/F) */
+function ccGtMap(c){ const M=new Map(); for(const k of ['moi','tl']){ const X=c&&c.xml&&c.xml[k]; if(X) for(const r of X.recs) if(r.gt) M.set(r.id,r.gt); } return M; }
+function personCcIssues(s,G){ const out=cccdIssues(s.cccd,s.ns,s.gt||(G&&G.get(s.cccd))||'');
+  if(s.dupNames&&s.dupNames.length) out.push(`cùng số CCCD với học viên khác tên: ${s.dupNames.join(', ')}`);
+  return out; }
+const ccSig=is=>is.join('|');
+function ccOk(id,is){ const o=DB.cccdOk&&DB.cccdOk[id]; return o&&o.sig===ccSig(is)?o:null; }
+/* danh sách người có dấu hiệu sai của khóa: Map cccd → {s, is, ok} */
+function ccMap(c){ const G=ccGtMap(c), M=new Map(); for(const s of c.students){ const is=personCcIssues(s,G); if(is.length) M.set(s.cccd,{s,is,ok:ccOk(s.cccd,is)}); } return M; }
+function ccAudit(id,ten,before,after,note){ const c=C(); if(!c) return;
+  c.audit=(c.audit||[]).concat([{t:nowIso(),u:userName(),b:Date.now().toString(36),lb:'Đối chiếu CCCD gốc',r:note||'',id,ten,a:'sửa',f:[['cccdOk',before,after]]}]); }
+function ccMark(id,ten,is,on,quiet){ DB.cccdOk=DB.cccdOk||{};
+  if(on){ DB.cccdOk[id]={at:nowIso(),by:userName(),sig:ccSig(is),ten}; ccAudit(id,ten,'chưa đối chiếu','đã đối chiếu',is.join('; ')); }
+  else if(DB.cccdOk[id]){ delete DB.cccdOk[id]; ccAudit(id,ten,'đã đối chiếu','bỏ xác nhận',is.join('; ')); }
+  if(!quiet){ save(); render(); } }
+const ccTip=(is,ok)=>is.join('; ')+(ok?` — ĐÃ đối chiếu CCCD gốc ${new Date(ok.at).toLocaleString('vi-VN')}${ok.by?' · '+ok.by:''}`:' — CHƯA đối chiếu CCCD gốc');
+function ccIcon(w){ return w?`<span class="ccw ${w.ok?'ok':''}" title="${esc(ccTip(w.is,w.ok))}">⚠</span>`:''; }
+function ccWarnHtml(id,ten,is,withCheck){
+  if(!is.length) return ''; const ok=ccOk(id,is);
+  return `<div class="ccbox"><b>⚠ Số CCCD ${esc(id)} có dấu hiệu sai:</b> ${is.map(esc).join('; ')}.<br><span style="font-size:12.5px">Đối chiếu với <b>thẻ CCCD gốc</b> của học viên. Nếu số trong hồ sơ sai thì sửa lại (nút Lưu bên dưới) và báo nơi lập hồ sơ sửa, để khỏi lệch hồ sơ khi sát hạch / cấp GPLX.</span>
+    ${ok?`<div style="font-size:12.5px;margin-top:4px;color:var(--ok,#15803d)">✓ Đã đối chiếu ${new Date(ok.at).toLocaleString('vi-VN')}${ok.by?' · '+esc(ok.by):''}</div>`:''}
+    ${withCheck?`<label style="display:flex;gap:6px;margin-top:6px;font-weight:600;align-items:center"><input type="checkbox" id="ccOkChk" ${ok?'checked':''}> Đã đối chiếu CCCD gốc — số đúng, giữ nguyên</label>`:''}</div>`;
+}
+/* ---- CHẶN KHI XUẤT: còn người có dấu hiệu sai chưa đối chiếu → bảng tổng hợp, tick đủ mới xuất ---- */
+function ccPeople(list,G){ return list.map(s=>({id:s.cccd,ten:s.ten,ns:s.ns,gt:s.gt||(G&&G.get(s.cccd))||'',is:personCcIssues(s,G)})).filter(x=>x.is.length); }
+function ccRowsSBD(ex){ const cnt=new Map(); ex.rows.forEach(r=>{ const k=normId(r.cmt); (cnt.get(k)||cnt.set(k,[]).get(k)).push(r); });
+  return ex.rows.map(r=>{ const id=normId(r.cmt), is=cccdIssues(id,r.ns,''); const same=cnt.get(id).filter(x=>x!==r&&norm(x.ten)!==norm(r.ten));
+    if(same.length) is.push(`cùng số CCCD với thí sinh khác tên: ${same.map(x=>x.ten).join(', ')}`); return {id,ten:r.ten,ns:r.ns,gt:'',is,sbd:r.sbd}; }).filter(x=>x.is.length); }
+function cccdGate(label,P){
+  const need=P.filter(x=>!ccOk(x.id,x.is)); if(!need.length) return Promise.resolve(true);
+  return new Promise(res=>{ let done=false; const fin=v=>{ if(!done){ done=true; res(v); } };
+    const d=dialog(`${label}: còn ${need.length} số CCCD có dấu hiệu sai`,`<div class="note warn">${ic('alert')}<span>Các số CCCD dưới đây <b>sai quy tắc</b> (mã tỉnh, giới tính/thế kỷ, năm sinh…). Đối chiếu từng người với <b>thẻ CCCD gốc</b>. Số sai thì <b>Đóng</b> lại và sửa (mục Kiểm tra dữ liệu / nút Sửa); số đúng thì tick <b>Đã đối chiếu</b>. Tick đủ mới xuất được.</span></div>
+      <div class="imp" style="margin-top:10px;max-height:46vh;overflow:auto"><table><thead><tr><th class="c">STT</th><th>Họ và tên</th><th class="c">Số CCCD</th><th class="c">Ngày sinh</th><th>Dấu hiệu sai</th><th class="c"><label style="white-space:nowrap"><input type="checkbox" id="ccAll"> Đã đối chiếu</label></th></tr></thead><tbody>
+      ${need.map((x,i)=>`<tr><td class="c">${i+1}</td><td>${esc(x.ten)}</td><td class="c"><b>${esc(x.id)}</b></td><td class="c">${esc(x.ns||'')}</td><td style="white-space:normal;min-width:260px" class="lv-err">${x.is.map(esc).join('; ')}</td><td class="c"><input type="checkbox" data-cg="${i}"></td></tr>`).join('')}
+      </tbody></table></div><div class="muted" style="font-size:12.5px;margin-top:6px">Mỗi lần tick được ghi vào nhật ký (ai xác nhận, lúc nào). <a href="#" id="ccXls">Xuất danh sách cần đối chiếu (Excel)</a></div>`,
+      [['Đóng — để sửa','',()=>fin(false)],['Xác nhận & xuất','pri',()=>{ const all=[...document.querySelectorAll('[data-cg]')]; if(!all.every(x=>x.checked)){ toast('Tick “Đã đối chiếu” cho tất cả mới xuất được — hoặc Đóng để sửa.',5000); return false; }
+        need.forEach(x=>ccMark(x.id,x.ten,x.is,true,true)); save(); fin(true); }]]);
+    $('#dlg').classList.add('wide');
+    const upd=()=>{ const all=[...document.querySelectorAll('[data-cg]')], b=[...$('#dlgF').querySelectorAll('button')].find(x=>x.textContent==='Xác nhận & xuất'); if(b) b.disabled=!all.every(x=>x.checked); $('#ccAll').checked=all.every(x=>x.checked); };
+    document.querySelectorAll('[data-cg]').forEach(x=>x.onchange=upd); $('#ccAll').onchange=e=>{ document.querySelectorAll('[data-cg]').forEach(x=>x.checked=e.target.checked); upd(); };
+    $('#ccXls').onclick=e=>{ e.preventDefault(); exportCCCD(need.map(x=>({...x,ok:null}))); };
+    upd(); d.addEventListener('close',()=>setTimeout(()=>fin(false),0),{once:true});
+  });
+}
+/* ---- XUẤT DANH SÁCH CCCD CẦN ĐỐI CHIẾU ---- */
+async function exportCCCD(list){
+  const c=C(); if(!list){ const G=ccGtMap(c); list=[...ccMap(c).values()].map(w=>({id:w.s.cccd,ten:w.s.ten,ns:w.s.ns,gt:w.s.gt||G.get(w.s.cccd)||'',is:w.is,ok:w.ok,loai:w.s.loai})); }
+  if(!list.length){ toast('Không có số CCCD nào có dấu hiệu sai.'); return; }
+  const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('CCCD can doi chieu');
+  ws.addRow([`DANH SÁCH SỐ CCCD CẦN ĐỐI CHIẾU — KHÓA ${c.ten}`]); ws.addRow([`Xuất lúc ${new Date().toLocaleString('vi-VN')}${userName()?' · '+userName():''}`]); ws.addRow([]);
+  const H=['STT','Họ và tên','Số CCCD','Ngày sinh','Giới tính','Dấu hiệu sai','Đã đối chiếu','Người xác nhận','Lúc xác nhận'];
+  ws.addRow(H).font={bold:true};
+  list.forEach((x,i)=>ws.addRow([i+1,x.ten,x.id,x.ns||'',GT_LB[x.gt]||'',x.is.join('; '),x.ok?'Đã đối chiếu':'Chưa',x.ok?x.ok.by||'':'',x.ok?new Date(x.ok.at).toLocaleString('vi-VN'):'']));
+  [6,30,16,12,10,70,14,18,20].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  ws.getRow(1).font={bold:true,size:13}; ws.eachRow((r,i)=>{ if(i>=4) r.eachCell({includeEmpty:true},cl=>{ cl.border={top:{style:'thin'},left:{style:'thin'},bottom:{style:'thin'},right:{style:'thin'}}; cl.alignment={vertical:'middle',wrapText:true}; }); });
+  ws.getColumn(3).numFmt='@';
+  const exp=list.map(x=>[x.ten,x.id]);
+  await download(wb,`CCCD_CAN_DOI_CHIEU_${c.ten}.xlsx`,back=>{ const w=back.worksheets[0], P=[];
+    exp.forEach(([t,id],i)=>{ if(String(w.getCell(5+i,3).value)!==id||String(w.getCell(5+i,2).value)!==t) P.push(`Dòng ${i+1}: không khớp ${t} ${id}`); }); return P; });
+}
+function cccdTestConfirmAll(){ const c=C(); for(const w of ccMap(c).values()) ccMark(w.s.cccd,w.s.ten,w.is,true,true);
+  for(const ex of (DB.exams||[])) for(const x of ccRowsSBD(ex)) ccMark(x.id,x.ten,x.is,true,true); save(); }
+/* gần đúng: 2 số CCCD cùng độ dài lệch 1–2 chữ số → nghi gõ nhầm */
+function ccNear(a,b){ if(!a||!b||a.length!==b.length||a===b) return 0; let d=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i]&&++d>2) return 0; return d; }
+
 /* ================== KIỂM TRA ================== */
 /* Số CCCD 12 số: 3 số đầu = mã tỉnh nơi khai sinh (001–096), số thứ 4 = giới tính + thế kỷ sinh
    (0/1: 1900–1999, 2/3: 2000–2099, 4/5: 2100…, 8/9: 1800…), số 5–6 = 2 số cuối năm sinh.
@@ -1955,7 +2056,7 @@ function cccdVsDob(id,ns){
 function checks(){
   const c=C(), out=[], acked=[]; const add=(lv,s,msg,k)=>{ const x={lv,s,msg,k}; if(k&&s&&s.ack&&s.ack[k]){ x.ack=s.ack[k]; acked.push(x); } else out.push(x); };
   const at = c.ngaySH? new Date(c.ngaySH) : (c.beGiang? new Date(c.beGiang): null);
-  const ids=new Set(c.students.map(s=>s.cccd));
+  const ids=new Set(c.students.map(s=>s.cccd)), G=ccGtMap(c);
   for(const s of c.students){
     const nh=normHang(s.hangHS), ng=normHang(s.hangG);
     if(s.hangHS&&s.hangG&&nh!==ng) add('warn',s,`Hạng GPLX lệch: hồ sơ ghi “${s.hangHS}”, file GPLX ghi “${s.hangG}”. Báo cáo đang lấy theo hồ sơ.`,'hang:'+s.hangHS+'>'+s.hangG);
@@ -1963,8 +2064,9 @@ function checks(){
     if(s.loai==='moi'&&s.hangHS&&!s.soGPLX) add('warn',s,`Có hạng “${s.hangHS}” nhưng thiếu số GPLX (cột 6 BC1 sẽ trống).`,'soGPLX:'+s.hangHS);
     if(!s.srcs.includes('hoso')) add('info',s,`Không có trong file hồ sơ (nguồn: ${s.srcs.join(', ')||'nhập tay'}).${s.biLoai?' Đang bị loại.':''}`,'nohs');
     if(s.cccd.length===9) add('info',s,'Số định danh 9 số (CMND cũ).','cmnd9:'+s.cccd);
-    else if(s.cccd.length!==12) add('err',s,`Số định danh ${s.cccd.length} số — sai định dạng.`);
-    else { const m=cccdVsDob(s.cccd,s.ns); if(m) add('err',s,`Số CCCD không khớp ngày sinh: ${m}. Kiểm tra lại số CCCD hoặc ngày sinh.`); }
+    { const is=personCcIssues(s,G); if(is.length){ const ok=ccOk(s.cccd,is), x={lv:'err',s,msg:`Số CCCD có dấu hiệu sai: ${is.join('; ')}. Đối chiếu thẻ CCCD gốc.`,cc:is};
+        if(ok){ x.ack={t:ok.at,u:ok.by,how:'Đã đối chiếu CCCD gốc'}; acked.push(x); } else out.push(x); } }
+    if(s.pad0) add('info',s,'CCCD 11 số trong file (Excel mất số 0 đầu) → đã tự thêm 0.','pad0:'+s.cccd);
     const a=ageAt(s.ns,at); if(a!=null&&a<18&&!s.biLoai) add('err',s,`Chưa đủ 18 tuổi tại ngày ${c.ngaySH?'sát hạch':'bế giảng'} (${a} tuổi).`);
     if(!parseVN(s.ns)) add('err',s,/^\d{2}\/\d{2}\/\d{4}$/.test(s.ns)?`Ngày sinh “${s.ns}” không có thật — kiểm tra lại.`:`Ngày sinh không đúng dạng dd/mm/yyyy: “${s.ns}”.`);
     else if(parseVN(s.ns)>new Date()) add('err',s,`Ngày sinh “${s.ns}” sau ngày hôm nay.`);
@@ -1976,6 +2078,11 @@ function checks(){
   }
   for(const id in c.gplx){ if(!ids.has(id)) out.push({lv:'info',s:{ten:upper(c.gplx[id].ten),cccd:id,loai:''},msg:'Có trong file GPLX nhưng không có trong danh sách khóa này.'}); }
   for(const m of (c.conflicts||[])) out.push({lv:'warn',s:null,msg:m});
+  for(const [k,lb] of [['moi','thi mới'],['tl','thi lại']]){ const R=xmlCheck(c,k); if(!R) continue;
+    R.near.forEach(m=>out.push({lv:'err',s:null,msg:`XML ${lb}: CCCD lệch 1–2 số so với BC2 đã gửi (nghi gõ nhầm) — ${m}`}));
+    R.bad.forEach(m=>out.push({lv:'warn',s:null,msg:`XML ${lb}: số CCCD có dấu hiệu sai — ${m}`}));
+    R.missXml.forEach(m=>out.push({lv:'warn',s:null,msg:`XML ${lb}: có trong BC2 nhưng THIẾU trong XML trả về — ${m}`}));
+    R.extraXml.forEach(m=>out.push({lv:'warn',s:null,msg:`XML ${lb}: có trong XML nhưng không có trong BC2 — ${m}`})); }
   const order={err:0,warn:1,info:2}; out.sort((a,b)=>order[a.lv]-order[b.lv]);
   out.acked=acked;
   return out;
@@ -2278,8 +2385,10 @@ function renderPending(){
   const el=$('#pend'); if(!el) return;
   if(!pending.length){ el.innerHTML=''; return; }
   const lab={xml:'File XML Báo cáo 2 (mã + danh sách)',loctl:'Thi lại đã lọc (Nội dung SH lại)',hoso:'File hồ sơ',bc1:'BC1 đã làm',bc2:'BC2 đã làm',gplx:'File GPLX',sbd:'Danh sách phòng thi (SBD)',thithu:'Danh sách THI THỬ (mục riêng)'};
+  const pcc=p=>{ if(!p.recs||p.kind==='gplx'||p.kind==='thithu') return ''; if(!p._cc){ const B=[], P0=[]; for(const r of p.recs){ const id=r.id||normId(r.cmt); const is=cccdIssues(id,r.ns,r.gt); if(r.dupNames&&r.dupNames.length) is.push('cùng số CCCD với dòng khác tên: '+r.dupNames.join(', ')); if(is.length) B.push(`${upper(r.ten)} (${id}): ${is.join('; ')}`); if(r.pad0) P0.push(id); } p._cc={B,P0}; }
+    const {B,P0}=p._cc; return (B.length?`<div class="ccw" style="font-size:12px;font-weight:600;margin:3px 0 0;max-width:360px;white-space:normal" title="${esc(B.slice(0,30).join('\n'))}${B.length>30?'\n…':''}">⚠ ${B.length} số CCCD có dấu hiệu sai — rê chuột để xem; sau khi nạp xem ở Kiểm tra dữ liệu</div>`:'')+(P0.length?`<div class="muted" style="font-size:12px">${P0.length} số CCCD 11 số (Excel mất số 0 đầu) → tự thêm 0</div>`:''); };
   el.innerHTML=`<div class="imp"><table><thead><tr><th>File</th><th>Tên file</th><th>Nhận dạng</th><th class="c">Số dòng</th><th>Nạp vào</th></tr></thead><tbody>
-  ${pending.map((p,i)=>`<tr><td><b>${esc(p.file)}</b><div class="muted" style="font-size:12px">sheet ${esc(p.sheet)}</div>${p.note?`<div style="font-size:12px;max-width:340px;white-space:normal;color:${p.target==='skip'?'var(--amber)':'var(--muted)'}">${esc(p.note)}</div>`:''}</td><td style="white-space:normal;max-width:300px">${p.nameOk?`<span class="tag gplx">${ic('check')} ${esc(p.nameMsg)}</span>`:`<span style="color:${p.wrongKhoa?'var(--seal)':'var(--amber)'};font-size:12.5px;${p.wrongKhoa?'font-weight:600':''}">${esc(p.nameMsg||'')}</span>`}${p.goCourse?`<div><button class="btn sm" data-goc2="${esc(p.goCourse)}" style="margin-top:6px">Chuyển sang khóa ${esc(p.wrongKhoa)}</button></div>`:''}</td><td>${lab[p.kind]}</td><td class="c">${p.recs.length}${p.skipped&&p.skipped.length?`<div style="color:var(--seal);font-size:12px;font-weight:600;white-space:nowrap" title="${esc(p.skipped.map(x=>'Dòng '+x.row+': '+(x.ten||'')+' '+(x.id||'')+' — '+x.reason).join('\n'))}">+${p.skipped.length} dòng lỗi</div>`:''}</td><td>
+  ${pending.map((p,i)=>`<tr><td><b>${esc(p.file)}</b><div class="muted" style="font-size:12px">sheet ${esc(p.sheet)}</div>${p.note?`<div style="font-size:12px;max-width:340px;white-space:normal;color:${p.target==='skip'?'var(--amber)':'var(--muted)'}">${esc(p.note)}</div>`:''}${pcc(p)}</td><td style="white-space:normal;max-width:300px">${p.nameOk?`<span class="tag gplx">${ic('check')} ${esc(p.nameMsg)}</span>`:`<span style="color:${p.wrongKhoa?'var(--seal)':'var(--amber)'};font-size:12.5px;${p.wrongKhoa?'font-weight:600':''}">${esc(p.nameMsg||'')}</span>`}${p.goCourse?`<div><button class="btn sm" data-goc2="${esc(p.goCourse)}" style="margin-top:6px">Chuyển sang khóa ${esc(p.wrongKhoa)}</button></div>`:''}</td><td>${lab[p.kind]}</td><td class="c">${p.recs.length}${p.skipped&&p.skipped.length?`<div style="color:var(--seal);font-size:12px;font-weight:600;white-space:nowrap" title="${esc(p.skipped.map(x=>'Dòng '+x.row+': '+(x.ten||'')+' '+(x.id||'')+' — '+x.reason).join('\n'))}">+${p.skipped.length} dòng lỗi</div>`:''}</td><td>
    <select data-pi="${i}" ${p.userLock?'disabled':''}>${p.kind==='xml'?`${!p.part&&p.target!=='skip'?'<option value="" selected>— Chọn: thi mới hay thi lại? —</option>':''}<option value="xml_moi" ${p.target!=='skip'&&p.part==='moi'?'selected':''}>Mã cho THI MỚI (lần đầu)</option><option value="xml_tl" ${p.target!=='skip'&&p.part==='tl'?'selected':''}>Mã cho THI LẠI</option>`:p.kind==='gplx'?`<option value="gplx">GPLX tra cứu</option>`:p.kind==='sbd'?`<option value="sbd">Khóa thi ${esc(p.khoaThi||'')} — ${esc(p.ngayThi||'')}</option>`:p.kind==='thithu'?`<option value="thithu">Mục Thi thử — ${esc(p.label||'')}</option>`:p.kind==='loctl'?`<option value="gcfill" ${p.target!=='skip'?'selected':''}>Điền Nội dung SH lại theo số CCCD</option>`:`<option value="moi" ${p.target==='moi'?'selected':''}>Học mới (BC1)</option><option value="tl" ${p.target==='tl'?'selected':''}>Thi lại — gộp thêm</option>${p.kind==='hoso'&&C().students.some(x=>x.loai==='tl')?`<option value="tlr" ${p.target==='tlr'?'selected':''}>Thi lại — THAY DS cũ (file đã lọc)</option>`:''}`}<option value="skip" ${p.target==='skip'?'selected':''}>Bỏ qua</option></select></td></tr>`).join('')}
   </tbody></table></div><div class="row" style="margin-top:10px"><button class="btn pri" id="btnDoImp">${ic('check')}Nạp ${pending.filter(p=>p.target!=='skip').length} danh sách</button><button class="btn" id="btnCancelImp">Hủy</button></div>`;
   el.querySelectorAll('[data-goc2]').forEach(b=>b.onclick=()=>{ DB.cur=b.dataset.goc2; save(); pending.forEach(applyNameRule); render(); toast('Đã chuyển sang khóa '+C().ten+' — kiểm tra lại cột “Nạp vào” rồi bấm Nạp'); });
@@ -2411,7 +2520,7 @@ async function analyzeXML(file){
   const code=maKH.startsWith(csdt)?maKH.slice(csdt.length):maKH;
   const recs=[]; const re=/<NGUOI_LX>([\s\S]*?)<\/NGUOI_LX>/g; let m;
   while((m=re.exec(t))){ const r=m[1].replace(/<ANH_CHAN_DUNG>[\s\S]*?<\/ANH_CHAN_DUNG>/,'');
-    const ns=g(r,'NGAY_SINH'); recs.push({id:normId(g(r,'SO_CMT')), ten:g(r,'HO_VA_TEN'), ns:/^\d{8}$/.test(ns)?ns.slice(6)+'/'+ns.slice(4,6)+'/'+ns.slice(0,4):ns}); }
+    const ns=g(r,'NGAY_SINH'); recs.push({id:normId(g(r,'SO_CMT')), ten:g(r,'HO_VA_TEN'), ns:/^\d{8}$/.test(ns)?ns.slice(6)+'/'+ns.slice(4,6)+'/'+ns.slice(0,4):ns, gt:{M:'M',F:'F'}[g(r,'GIOI_TINH').toUpperCase()]||''}); }
   const tong=+g(t.slice(0,3000),'TONG_SO_BAN_GHI')||null;
   const guess=/-TL\b|-TL$/i.test(tenKH)?'tl':'moi';
   return {file:file.name, sheet:tenKH, kind:'xml', target:'xml', part:null, guess, code, maKH, tenKH, tong, recs, skipped:tong&&tong!==recs.length?[{row:'-',ten:'',id:'',reason:`File ghi tổng ${tong} người nhưng đọc được ${recs.length}`}]:[],
@@ -2432,7 +2541,11 @@ function xmlCheck(c,part){
     if(!r){ R.missXml.push(`${s.ten} (${s.cccd})`); continue; }
     if(norm(r.ten)!==norm(s.ten)) R.diff.push(`${s.cccd}: XML ghi “${r.ten}”, BC2 ghi “${s.ten}”`);
     else if(r.ns&&s.ns&&r.ns!==s.ns) R.diff.push(`${s.ten} (${s.cccd}): ngày sinh XML ${r.ns}, BC2 ${s.ns}`); }
-  for(const r of X.recs){ const s=L.find(x=>x.cccd===r.id); if(s&&s.biLoai){ R.loaiOk++; continue; } if(!s) R.extraXml.push(`${r.ten} (${r.id})`); }
+  const ex=[]; for(const r of X.recs){ const s=L.find(x=>x.cccd===r.id); if(s&&s.biLoai){ R.loaiOk++; continue; } if(!s){ R.extraXml.push(`${r.ten} (${r.id})`); ex.push(r); } }
+  /* CCCD lệch 1–2 số giữa BC2 đã gửi và XML trả về → nghi gõ nhầm */
+  R.near=[]; for(const s of L){ if(s.biLoai||xi.has(s.cccd)) continue; for(const r of ex){ const d=ccNear(s.cccd,r.id); if(d) R.near.push(`${s.ten}: BC2 ${s.cccd} ↔ XML ${r.id} (${r.ten}) — lệch ${d} số`); } }
+  /* số CCCD trong XML sai quy tắc (có giới tính để đối chiếu) */
+  R.bad=X.recs.map(r=>({r,is:cccdIssues(r.id,r.ns,r.gt)})).filter(x=>x.is.length).map(x=>`${x.r.ten} (${x.r.id}): ${x.is.join('; ')}`);
   return R;
 }
 function xmlCard(c){
@@ -2443,6 +2556,8 @@ function xmlCard(c){
       ${!R.missXml.length&&!R.extraXml.length&&!R.diff.length?` <span class="tag gplx">${ic('check')} khớp với BC2${R.loaiOk?` (${R.loaiOk} người bị loại có trong XML — đúng)`:''}</span>`:''}
       ${R.missXml.length?`<div class="lv-err">Có trong BC2 nhưng KHÔNG có trong XML (${R.missXml.length}): ${esc(R.missXml.slice(0,8).join(', '))}${R.missXml.length>8?'…':''}</div>`:''}
       ${R.extraXml.length?`<div class="lv-warn">Có trong XML nhưng không có trong BC2 và không bị loại (${R.extraXml.length}): ${esc(R.extraXml.slice(0,8).join(', '))}${R.extraXml.length>8?'…':''}</div>`:''}
+      ${R.near&&R.near.length?`<div class="lv-err">⚠ CCCD lệch 1–2 số giữa BC2 và XML — nghi gõ nhầm (${R.near.length}): ${esc(R.near.slice(0,8).join('; '))}${R.near.length>8?'…':''}</div>`:''}
+      ${R.bad&&R.bad.length?`<div class="lv-err">⚠ Số CCCD trong XML có dấu hiệu sai (${R.bad.length}): ${esc(R.bad.slice(0,8).join('; '))}${R.bad.length>8?'…':''}</div>`:''}
       ${R.diff.length?`<div class="lv-warn">Khác tên / ngày sinh (${R.diff.length}): ${esc(R.diff.slice(0,5).join('; '))}${R.diff.length>5?'…':''}</div>`:''}</div>`).join('')}</div>`;
 }
 function pc08Codes(c){
@@ -2453,6 +2568,7 @@ function pc08Codes(c){
 async function exportPC08(){
   const c=C(), moi=bc2MoiList(), tl=tlList(false), K=pc08Codes(c);
   if(!moi.length&&!tl.length){ toast('Chưa có dữ liệu.'); return; }
+  if(!await cccdGate('File PC-08 (BC2 lần đầu và -TL)',ccPeople([...moi,...tl],ccGtMap(C())))) return;
   if(!errGate('File PC-08',new Set([...moi,...tl].map(s=>s.cccd)))) return;
   const need=[moi.length&&!K.moi&&'lần đầu', tl.length&&!K.tl&&'thi lại'].filter(Boolean);
   if(need.length){ dialog('Chưa có mã file XML',`<div class="note warn">${ic('alert')}<span>Chưa biết mã file XML cho phần <b>${need.join(' và ')}</b> để đặt tên file PC-08.<br>Nạp file XML Báo cáo 2 (vd <b>BC2_A1A2_52003_52_52003K26A1115.xml</b>) ở mục Nạp dữ liệu, hoặc nhập “Mã khóa trong tên BC2” ở Thông tin khóa (2 mã cách nhau dấu cách: lần đầu trước, thi lại sau).</span></div>`,[['Đóng','pri']]); return; }
@@ -2553,26 +2669,29 @@ function doPaste(){
   save(); render(); toast(`Áp dụng ${ok} dòng.`+(miss.length?` Không khớp ${miss.length}: ${miss.slice(0,4).join(', ')}${miss.length>4?'…':''}`:''),5000);
 }
 
+let CCSET=new Set();
 function filterList(list,q,f){
   const n=norm(q);
   return list.filter(s=>{
     if(f==='loai'&&!s.biLoai) return false; if(f==='giu'&&s.biLoai) return false;
     if(f==='gplx'&&!(s.hangHS||s.soGPLX)) return false;
     if(f==='thieu'&&(s.gcTL||s.biLoai)) return false;
+    if(f==='cccd'&&!CCSET.has(s.cccd)) return false;
     if(!n) return true; return norm(s.ten).includes(n)||s.cccd.includes(n)||norm(s.dc).includes(n);
   });
 }
 function vBC1(v,c,ck){
   const all=bc1List();
   const warnIds=new Set(ck.filter(x=>x.s&&x.lv!=='info').map(x=>x.s.cccd));
+  const CM=ccMap(c); CCSET=new Set(all.filter(s=>CM.has(s.cccd)).map(s=>s.cccd)); const nCC=CCSET.size, nCCo=all.filter(s=>CM.has(s.cccd)&&!CM.get(s.cccd).ok).length;
   const L=filterList(all,Q.bc1,Q.f1);
   const nl=all.filter(s=>s.biLoai).length;
   v.innerHTML=`${ruleBanner(c)}
   <div class="stats">${statBox(all.length,'Tổng BC1')}${statBox(nl,'Bị loại (bôi vàng)','y')}${statBox(all.length-nl,'Sang BC2')}${statBox(all.filter(s=>s.hangHS||s.soGPLX).length,'Đã có GPLX')}</div>
   <div class="card"><div class="row">
     <span class="search">${ic('search')}<input type="text" id="q1" placeholder="Tìm theo tên, số định danh, địa chỉ" value="${esc(Q.bc1)}"></span>
-    <select id="f1"><option value="all">Tất cả</option><option value="loai">Chỉ người bị loại</option><option value="giu">Chỉ người giữ lại</option><option value="gplx">Đã có GPLX</option></select>
-    <span class="muted">Hiển thị ${L.length}/${all.length}</span><span style="flex:1"></span>
+    <select id="f1"><option value="all">Tất cả</option><option value="loai">Chỉ người bị loại</option><option value="giu">Chỉ người giữ lại</option><option value="gplx">Đã có GPLX</option><option value="cccd">CCCD nghi sai (${nCC})</option></select>
+    <span class="muted">Hiển thị ${L.length}/${all.length}</span>${nCCo?`<span class="ccw" style="font-size:13px" title="Bấm để lọc" id="ccHint">⚠ ${nCCo} CCCD chưa đối chiếu</span>`:''}<span style="flex:1"></span>
     <button class="btn acc" id="xBC1">${ic('download')}Xuất Báo cáo 1</button><button class="btn" id="pBC1" title="In hoặc lưu PDF (chọn “Lưu dưới dạng PDF” trong hộp in)">${ic('print')}In / PDF</button><button class="btn" id="xBCDT" title="Báo cáo đăng ký khóa đào tạo lái xe — file Word, điền theo khóa">${ic('download')}BC đăng ký khóa (Word)</button><button class="btn" id="xKHDT" title="Kế hoạch đào tạo — file Word: phân phối giờ học, lịch toàn khóa theo tuần, số giáo viên/xe">${ic('download')}Kế hoạch đào tạo (Word)</button></div>
     <div class="note" style="margin-top:12px">${ic('info')}<span>Bấm <b>Loại</b> ở mỗi dòng: người đó vẫn có trong BC1 nhưng <b>bôi vàng</b>, lý do lưu trong tool (không in ra file), và <b>tự bỏ khỏi BC2</b>.</span></div>
   </div>
@@ -2580,18 +2699,19 @@ function vBC1(v,c,ck){
   <div class="card tblwrap"><table><thead><tr>
     <th class="c"><input type="checkbox" id="selAll" title="Chọn tất cả các dòng đang hiển thị"></th><th class="c">STT</th><th>Họ và tên</th><th class="c">Ngày sinh</th><th class="c">Số CCCD</th><th>Nơi thường trú</th><th class="c">Số GPLX đã có</th><th class="c">Hạng</th><th style="width:240px">Loại ra</th><th class="c">Sửa</th>
   </tr></thead><tbody>${L.map(s=>{const i=all.indexOf(s)+1;return `<tr class="${s.biLoai?'loai':''} ${warnIds.has(s.cccd)?'warn':''}">
-    <td class="c"><input type="checkbox" data-sel="${s.cccd}" ${SEL.has(s.cccd)?'checked':''}></td><td class="c">${i}</td><td class="nm">${esc(s.ten)}</td><td class="c">${esc(s.ns)}</td><td class="c">${esc(s.cccd)}</td><td class="dc" title="${esc(s.dc)}">${esc(s.dc)}</td>
+    <td class="c"><input type="checkbox" data-sel="${s.cccd}" ${SEL.has(s.cccd)?'checked':''}></td><td class="c">${i}</td><td class="nm">${esc(s.ten)}</td><td class="c">${esc(s.ns)}</td><td class="c">${esc(s.cccd)}${ccIcon(CM.get(s.cccd))}</td><td class="dc" title="${esc(s.dc)}">${esc(s.dc)}</td>
     <td class="c">${esc(s.soGPLX)}</td><td class="c">${esc(s.hangHS||s.hangG||'')}</td>
     <td class="lo">${s.biLoai?`<button class="btn sm unloai" data-un="${s.cccd}" title="Bỏ loại">${ic('undo')}Bỏ loại</button><span class="why">${esc(s.lyDo)}</span>`:`<button class="btn sm loai" data-lo="${s.cccd}">${ic('x')}Loại</button>`}</td>
     <td class="c"><button class="btn sm ico-only" data-ed="${s.cccd}" title="Sửa thông tin">${ic('edit')}</button></td></tr>`;}).join('')}</tbody></table></div>`;
   $('#f1').value=Q.f1;
-  bindList('q1','f1','bc1','f1');
+  bindList('q1','f1','bc1','f1'); if($('#ccHint')) $('#ccHint').onclick=()=>{ Q.f1='cccd'; render(); };
   $('#xBC1').onclick=exportBC1; $('#pBC1').onclick=printBC1; $('#xBCDT').onclick=askBCDT; $('#xKHDT').onclick=askKHDT;
 }
 function vBC2(v,c){
   const moi=bc2MoiList();
   const tlAll=tlList(true);
   const tl=tlAll.filter(s=>!s.biLoai);
+  const CM=ccMap(c); CCSET=new Set(tlAll.filter(s=>CM.has(s.cccd)).map(s=>s.cccd)); const nCCm=moi.filter(s=>CM.has(s.cccd)&&!CM.get(s.cccd).ok).length;
   const L=filterList(tlAll,Q.bc2,Q.f2);
   const cnt=k=>tl.filter(s=>s.gcTL===k).length;
   v.innerHTML=`${ruleBanner(c)}
@@ -2607,13 +2727,13 @@ function vBC2(v,c){
     <button class="btn" id="pBC2" title="In hoặc lưu PDF Báo cáo 2">${ic('print')}In BC2</button><button class="btn" id="pDSSH" title="In hoặc lưu PDF DS thí sinh dự sát hạch">${ic('print')}In DS thí sinh</button></div>${xmlCard(c)}</div>
   <div class="card"><h2>Danh sách thi lại — chọn nội dung sát hạch lại</h2><div class="row">
     <span class="search">${ic('search')}<input type="text" id="q2" placeholder="Tìm thí sinh thi lại" value="${esc(Q.bc2)}"></span>
-    <select id="f2"><option value="all">Tất cả</option><option value="thieu">Chưa chọn L/H</option><option value="loai">Bị loại</option></select>
+    <select id="f2"><option value="all">Tất cả</option><option value="thieu">Chưa chọn L/H</option><option value="loai">Bị loại</option><option value="cccd">CCCD nghi sai (${CCSET.size})</option></select>${nCCm?`<span class="ccw" style="font-size:13px" title="Xem ở mục Báo cáo 1 (bộ lọc CCCD nghi sai)">⚠ ${nCCm} CCCD sheet lần đầu chưa đối chiếu</span>`:''}
     <span class="muted">Gõ nhanh: chọn ô rồi bấm <b>L</b> = SH lại LT, <b>H</b> = SH lại H, <b>B</b> = SH lại LT + H. Dán hàng loạt ở mục Nạp dữ liệu.</span></div></div>
   <div class="selbar ${SEL.size?'':'hide'}" id="selbar"><b id="selN">${SEL.size}</b>&nbsp;người đã chọn <span id="selHid" style="opacity:.75;margin-left:6px"></span><span style="flex:1"></span><button class="btn sm" id="selClear">Bỏ chọn</button><button class="btn sm danger" id="selDel">${ic('trash')}Xóa các dòng đã chọn</button></div>
   <div class="card tblwrap"><table><thead><tr>
     <th class="c"><input type="checkbox" id="selAll" title="Chọn tất cả các dòng đang hiển thị"></th><th class="c">STT</th><th>Họ và tên</th><th class="c">Ngày sinh</th><th class="c">Số định danh</th><th>Nơi cư trú</th><th class="c">Hạng đã có</th><th class="c">Nội dung</th><th>Phụ trách</th><th class="c">Loại</th><th class="c">Sửa</th>
   </tr></thead><tbody>${L.map(s=>`<tr class="${s.biLoai?'loai':''}">
-    <td class="c"><input type="checkbox" data-sel="${s.cccd}" ${SEL.has(s.cccd)?'checked':''}></td><td class="c">${s.biLoai?'–':tl.indexOf(s)+1}</td><td class="nm">${esc(s.ten)}</td><td class="c">${esc(s.ns)}</td><td class="c">${esc(s.cccd)}</td><td class="dc" title="${esc(s.dc)}">${esc(s.dc)}</td><td class="c">${esc(s.hangHS||s.hangG||'')}</td>
+    <td class="c"><input type="checkbox" data-sel="${s.cccd}" ${SEL.has(s.cccd)?'checked':''}></td><td class="c">${s.biLoai?'–':tl.indexOf(s)+1}</td><td class="nm">${esc(s.ten)}</td><td class="c">${esc(s.ns)}</td><td class="c">${esc(s.cccd)}${ccIcon(CM.get(s.cccd))}</td><td class="dc" title="${esc(s.dc)}">${esc(s.dc)}</td><td class="c">${esc(s.hangHS||s.hangG||'')}</td>
     <td class="c"><select class="gc ${s.gcTL?'':'empty'}" data-gc="${s.cccd}"><option value="">— Chọn —</option>${['L','H','L+H'].map(k=>`<option value="${k}" ${s.gcTL===k?'selected':''}>${GC_LABEL[k]}</option>`).join('')}</select>${s.gcTL&&s.gcSrc==='file'?`<div class="muted" style="font-size:11px" title="${esc(s.gcFile||'')}">theo file lọc</div>`:''}</td>
     <td><input type="text" data-pt="${s.cccd}" value="${esc(s.phuTrach)}" style="width:90px;padding:2px 5px"></td>
     <td class="c">${s.biLoai?`<button class="btn sm unloai ico-only" data-un="${s.cccd}" title="Bỏ loại">${ic('undo')}</button>`:`<button class="btn sm loai ico-only" data-lo="${s.cccd}" title="Loại">${ic('x')}</button>`}</td>
@@ -2683,8 +2803,9 @@ function editPerson(id,loai){
   const c=C(); const s=id?find(id):{cccd:'',loai,ten:'',ns:'',dc:'',sk:'x',hangHS:'',soGPLX:'',gcTL:'',phuTrach:''};
   const F=[['ten','Họ và tên'],['ns','Ngày sinh (dd/mm/yyyy)'],['cccd','Số định danh'],['dc','Nơi cư trú'],['sk','Giấy CNSK (x)'],['hangHS','Hạng GPLX đã có'],['soGPLX','Số GPLX đã có'],['phuTrach','Người phụ trách']];
   const lk=lockInfo(c,s), rsnV=()=>{ const e=$('#e_rsn'); return e?e.value.trim():''; };
+  const ccIs=id?personCcIssues(s,ccGtMap(c)):[];
   dialog(id?'Sửa thông tin':(loai==='moi'?'Thêm học viên mới':'Thêm thí sinh thi lại'),
-    `<div class="grid">${F.map(([k,l])=>`<label>${l}<input type="text" id="e_${k}" value="${esc(s[k])}"></label>`).join('')}
+    `${ccWarnHtml(s.cccd,s.ten,ccIs,true)}<div class="grid">${F.map(([k,l])=>`<label>${l}<input type="text" id="e_${k}" value="${esc(s[k])}"></label>`).join('')}
      <label>Danh sách<select id="e_loai"><option value="moi" ${s.loai==='moi'?'selected':''}>Học mới (BC1)</option><option value="tl" ${s.loai==='tl'?'selected':''}>Thi lại</option></select></label></div>
      ${lk?`<label style="display:block;margin-top:10px"><b>Lý do ${id?'sửa':'thêm'}</b> <span class="muted">(bắt buộc — ${esc(lk)})</span><input type="text" id="e_rsn" style="width:100%" placeholder="Ví dụ: sửa ngày sinh theo CCCD bản gốc"></label>`:''}${id?`<div class="row" style="margin-top:10px"><a href="#" id="e_hist" class="muted" style="font-size:13px">${ic('search')} Xem lịch sử người này qua mọi khóa</a></div>`:''}`,
     [...(id?[['Xóa người này','loai',()=>{ if(lk&&!rsnV()){ alert('Cần ghi lý do (ô cuối hộp thoại).'); return false; } if(!confirm('Xóa hẳn '+s.ten+'? (Nếu chỉ không cho thi thì dùng nút Loại)')) return false; audCtx('Xóa '+s.ten,rsnV()); snapshot('Xóa '+s.ten); c.students=c.students.filter(x=>x!==s); save(); render(); }]]:[]),
@@ -2698,6 +2819,7 @@ function editPerson(id,loai){
       if(!id){ Object.assign(s,{ord:c.seq++,srcs:['tay'],biLoai:false,lyDo:'',sbd:'',maDK:'',soHS:''}); c.students.push(s); }
       applyGPLX(); save(); render(); }]]);
   if($('#e_hist')) $('#e_hist').onclick=e=>{ e.preventDefault(); personHistory(s.cccd); };
+  if($('#ccOkChk')) $('#ccOkChk').onchange=e=>{ ccMark(s.cccd,s.ten,ccIs,e.target.checked,true); save(); toast(e.target.checked?`Đã ghi: ${s.ten} — đã đối chiếu CCCD gốc (ghi vào nhật ký).`:'Đã bỏ xác nhận đối chiếu CCCD.'); };
 }
 
 /* ---- SBD ---- */
@@ -2712,6 +2834,7 @@ function vSBD(v){
   const n=x=>x||'';
   const L=ex.rows.filter(r=>!QS||norm(r.ten).includes(norm(QS))||String(r.cmt).includes(QS)||String(r.sbd)===QS.trim());
   const chk=examCheck(ex);
+  const SCC=new Map(); { const bad=ccRowsSBD(ex), byId=new Map(bad.map(x=>[x.id+'|'+x.sbd,x])); for(const r of ex.rows){ const x=byId.get(normId(r.cmt)+'|'+r.sbd); if(x) SCC.set(r,{is:x.is,ok:ccOk(x.id,x.is)}); } }
   const chkHtml = `<div class="card"><div class="row"><h2 style="margin:0">Kiểm tra toàn vẹn dữ liệu</h2>
     ${chk.E.length?`<span class="tag" style="background:var(--seal-tint);color:var(--seal)">${chk.E.length} lỗi</span>`:`<span class="tag gplx">${ic('check')} Không có lỗi</span>`}
     ${chk.W.length?`<span class="tag tl">${chk.W.length} cảnh báo</span>`:''}</div>
@@ -2746,7 +2869,7 @@ function vSBD(v){
   <div class="card"><div class="row"><span class="search">${ic('search')}<input type="text" id="qs" placeholder="Tìm theo tên, số CMT hoặc SBD" value="${esc(QS)}"></span><span class="muted">Hiển thị ${L.length}/${ex.rows.length}</span></div></div>
   <div class="card tblwrap"><table><thead><tr><th class="c">SBD</th><th>Họ và tên</th><th class="c">Số CMT</th><th class="c">Ngày sinh</th><th class="c">Hạng</th><th>Nội dung sát hạch</th><th class="c">Hạng GPLX đã có</th><th>Khóa đào tạo</th></tr></thead>
   <tbody>${L.map(r=>{ const f=findPerson(r.id), g=gplxHang(r);
-    return `<tr><td class="c sbdv">${esc(r.sbd)}</td><td class="nm">${esc(r.ten)}</td><td class="c">${esc(r.cmt)}</td><td class="c">${esc(r.ns)}</td><td class="c">${esc(r.hang)}</td>
+    return `<tr><td class="c sbdv">${esc(r.sbd)}</td><td class="nm">${esc(r.ten)}</td><td class="c">${esc(r.cmt)}${ccIcon(SCC.get(r))}</td><td class="c">${esc(r.ns)}</td><td class="c">${esc(r.hang)}</td>
       <td><span class="tag ${/^moi/.test(ndClass(r.nd))?'moi':'tl'}">${esc(r.nd)}</span></td><td class="c">${g?`<b>${esc(g)}</b>`:''}</td>
       <td>${f?esc(f.c.ten):'<span class="muted">không có trong tool</span>'}</td></tr>`;}).join('')}</tbody></table></div>`;
   v.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{ DB.curExam=b.dataset.ex; QS=''; save(); render(); });
@@ -2763,26 +2886,29 @@ function vSBD(v){
 function vKT(v,c,ck){
   const lab={err:'Lỗi',warn:'Cảnh báo',info:'Ghi chú'}, AK=ck.acked||[];
   const act=x=>{ const ed=x.s&&find(x.s.cccd)?`<button class="btn sm ico-only" data-ed="${x.s.cccd}" title="Sửa thông tin người này">${ic('edit')}</button>`:'';
+    if(x.cc) return `<span class="kta"><button class="btn sm" data-cco="${esc(x.s.cccd)}" title="Đã cầm thẻ CCCD gốc so từng số: số đúng, giữ nguyên. Ghi vào nhật ký ai xác nhận, lúc nào.">${ic('check')}Đã đối chiếu CCCD gốc</button>${ed}</span>`;
     if(!x.k||x.lv==='err') return ed;
     const id=esc(x.s.cccd), k=esc(x.k);
     if(/^hang:/.test(x.k)) return `<span class="kta"><button class="btn sm" data-ack="${id}" data-k="${k}" data-how="Giữ theo hồ sơ" title="Báo cáo vẫn ghi hạng theo hồ sơ (${esc(x.s.hangHS)}); cảnh báo này không hiện lại">Giữ theo hồ sơ</button><button class="btn sm" data-useg="${id}" title="Đổi hạng của người này thành “${esc(x.s.hangG)}” theo file GPLX — báo cáo sẽ ghi hạng mới">Lấy theo file GPLX</button>${ed}</span>`;
     return `<span class="kta"><button class="btn sm" data-ack="${id}" data-k="${k}" data-how="Đã xác nhận" title="Đã kiểm tra, giữ nguyên — cảnh báo này không hiện lại (bỏ xác nhận được ở bảng bên dưới)">${ic('check')}Xác nhận</button>${ed}</span>`; };
   v.innerHTML=`<div class="stats">${statBox(ck.filter(x=>x.lv==='err').length,'Lỗi','r')}${statBox(ck.filter(x=>x.lv==='warn').length,'Cảnh báo','y')}${statBox(ck.filter(x=>x.lv==='info').length,'Ghi chú')}${statBox(AK.length,'Đã xác nhận')}</div>
-  <div class="card"><div class="row"><span class="muted">Chỉ kiểm tra dữ liệu của <b>khóa ${esc(c.ten)}</b>. Các mục ở đây <b>không in</b> vào báo cáo nộp Sở. Cảnh báo / ghi chú đã kiểm tra thì bấm <b>Xác nhận</b> (hoặc <b>Giữ theo hồ sơ</b>) để không hiện lại; muốn đổi dữ liệu thì bấm <b>Sửa</b>.</span><span style="flex:1"></span><button class="btn" id="xKT">${ic('download')}Xuất danh sách kiểm tra</button>${c.conflicts&&c.conflicts.length?'<button class="btn" id="clrConf">Xóa ghi nhận xung đột</button>':''}</div></div>
+  <div class="card"><div class="row"><span class="muted">Chỉ kiểm tra dữ liệu của <b>khóa ${esc(c.ten)}</b>. Các mục ở đây <b>không in</b> vào báo cáo nộp Sở. Cảnh báo / ghi chú đã kiểm tra thì bấm <b>Xác nhận</b> (hoặc <b>Giữ theo hồ sơ</b>) để không hiện lại; muốn đổi dữ liệu thì bấm <b>Sửa</b>.</span><span style="flex:1"></span><button class="btn" id="xKT">${ic('download')}Xuất danh sách kiểm tra</button><button class="btn" id="xCC">${ic('download')}Xuất danh sách CCCD cần đối chiếu</button>${c.conflicts&&c.conflicts.length?'<button class="btn" id="clrConf">Xóa ghi nhận xung đột</button>':''}</div></div>
   <div class="card tblwrap"><table><thead><tr><th>Mức</th><th>Họ và tên</th><th class="c">Số định danh</th><th class="c">DS</th><th>Nội dung</th><th class="c">Xử lý</th></tr></thead><tbody>
   ${ck.map(x=>`<tr><td class="lv-${x.lv}">${lab[x.lv]}</td><td>${esc(x.s?x.s.ten:'')}</td><td class="c">${esc(x.s?x.s.cccd:'')}</td><td class="c">${x.s&&x.s.loai?`<span class="tag ${x.s.loai}">${x.s.loai==='moi'?'Mới':'TL'}</span>`:''}</td><td style="white-space:normal;min-width:260px">${esc(x.msg)}</td><td class="c" style="white-space:nowrap">${act(x)}</td></tr>`).join('')||'<tr><td colspan="6" class="c muted">Không có vấn đề nào.</td></tr>'}
   </tbody></table></div>
   ${AK.length?`<details class="card"><summary><b>Đã xác nhận (${AK.length})</b> <span class="muted">— không tính vào số cảnh báo; tự hiện lại nếu dữ liệu thay đổi</span></summary>
     <div class="imp" style="margin-top:10px"><table><thead><tr><th>Mức</th><th>Họ và tên</th><th class="c">Số định danh</th><th>Nội dung</th><th>Xử lý</th><th>Lúc / người</th><th></th></tr></thead><tbody>
-    ${AK.map(x=>`<tr><td class="lv-${x.lv}">${lab[x.lv]}</td><td>${esc(x.s.ten)}</td><td class="c">${esc(x.s.cccd)}</td><td>${esc(x.msg)}</td><td><b>${esc(x.ack.how||'Đã xác nhận')}</b></td><td class="muted" style="white-space:nowrap">${new Date(x.ack.t).toLocaleString('vi-VN')}${x.ack.u?' · '+esc(x.ack.u):''}</td><td><button class="btn sm" data-unack="${esc(x.s.cccd)}" data-k="${esc(x.k)}">Bỏ xác nhận</button></td></tr>`).join('')}
+    ${AK.map(x=>`<tr><td class="lv-${x.lv}">${lab[x.lv]}</td><td>${esc(x.s.ten)}</td><td class="c">${esc(x.s.cccd)}</td><td>${esc(x.msg)}</td><td><b>${esc(x.ack.how||'Đã xác nhận')}</b></td><td class="muted" style="white-space:nowrap">${new Date(x.ack.t).toLocaleString('vi-VN')}${x.ack.u?' · '+esc(x.ack.u):''}</td><td>${x.cc?`<button class="btn sm" data-ccun="${esc(x.s.cccd)}">Bỏ xác nhận</button>`:`<button class="btn sm" data-unack="${esc(x.s.cccd)}" data-k="${esc(x.k)}">Bỏ xác nhận</button>`}</td></tr>`).join('')}
     </tbody></table></div></details>`:''}`;
   v.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>editPerson(b.dataset.ed));
+  v.querySelectorAll('[data-cco],[data-ccun]').forEach(b=>b.onclick=()=>{ const id=b.dataset.cco||b.dataset.ccun, x=[...ck,...AK].find(y=>y.cc&&y.s.cccd===id); if(!x) return;
+    if(b.dataset.cco&&!confirm(`${x.s.ten} — CCCD ${id}\nDấu hiệu sai: ${x.cc.join('; ')}\n\nXác nhận đã đối chiếu thẻ CCCD gốc và số này ĐÚNG?`)) return; ccMark(id,x.s.ten,x.cc,!!b.dataset.cco); });
   v.querySelectorAll('[data-ack]').forEach(b=>b.onclick=()=>{ const st=c.students.find(x=>x.cccd===b.dataset.ack); if(!st) return; st.ack=st.ack||{}; st.ack[b.dataset.k]={t:nowIso(),u:userName(),how:b.dataset.how}; save(); render(); toast(`${st.ten}: ${b.dataset.how.toLowerCase()} — cảnh báo này không hiện lại.`); });
   v.querySelectorAll('[data-unack]').forEach(b=>b.onclick=()=>{ const st=c.students.find(x=>x.cccd===b.dataset.unack); if(st&&st.ack){ delete st.ack[b.dataset.k]; if(!Object.keys(st.ack).length) delete st.ack; save(); render(); } });
   v.querySelectorAll('[data-useg]').forEach(b=>b.onclick=()=>{ const st=c.students.find(x=>x.cccd===b.dataset.useg); if(!st) return;
     if(!confirm(`${st.ten}: đổi hạng GPLX từ “${st.hangHS}” (hồ sơ) thành “${st.hangG}” (file GPLX)?\nBáo cáo xuất sau đó sẽ ghi hạng “${st.hangG}”.`)) return;
     audCtx('Kiểm tra dữ liệu','Lấy hạng GPLX theo file GPLX'); st.hangHS=st.hangG; save(); render(); toast(`${st.ten}: đã lấy hạng “${st.hangG}” theo file GPLX.`); });
-  $('#xKT').onclick=()=>exportKT(ck);
+  $('#xKT').onclick=()=>exportKT(ck); $('#xCC').onclick=()=>exportCCCD();
   if($('#clrConf')) $('#clrConf').onclick=()=>{c.conflicts=[];save();render();};
 }
 
@@ -3381,6 +3507,7 @@ async function sbdPdfVerify(buf,ex,cfg,st){
 }
 async function exportSBDPdf(ex){
   ex=ex||curExam(); if(!ex||examBad(ex)){ toast('Không có danh sách thi hợp lệ để xuất.'); return false; }
+  if(!await cccdGate('PDF danh sách SBD '+ex.khoaThi,ccRowsSBD(ex))) return false;
   const cfg=sbdCfgGet(), st=examStats(ex);
   let buf;
   try{ const {D}=sbdPdfBuild(ex,cfg,st); buf=await pdfBytes(D,'DS thí sinh dự thi sát hạch '+ex.khoaThi); }
@@ -3516,6 +3643,7 @@ function errGate(label,ids){ const E=checks().filter(x=>x.lv==='err'&&x.s&&(!ids
 async function exportBC1(){
   const c=C(); const L=bc1List();
   if(!L.length){ toast('Chưa có học viên.'); return; }
+  if(!await cccdGate('Báo cáo 1',ccPeople(L,ccGtMap(C())))) return;
   if(!errGate('Báo cáo 1',new Set(L.map(s=>s.cccd)))) return;
   const thieu=[!c.maKhoa&&'Mã khóa BC1',!c.khaiGiang&&'Ngày khai giảng',!c.beGiang&&'Ngày bế giảng'].filter(Boolean);
   if(thieu.length && !confirm(`Chưa nhập: ${thieu.join(', ')} (mục Thông tin khóa).\nDòng tiêu đề BC1 sẽ bị trống phần này. Vẫn xuất?`)) return;
@@ -4016,6 +4144,7 @@ function dsshSheet(wb,name,S,R,isTL){
 async function exportDSSH(){
   const c=C(), moi=bc2MoiList(), tl=tlList(false);
   if(!moi.length&&!tl.length){ toast('Chưa có dữ liệu.'); return; }
+  if(!await cccdGate('DS thí sinh dự sát hạch',ccPeople([...moi,...tl],ccGtMap(C())))) return;
   if(!errGate('DS thí sinh dự sát hạch',new Set([...moi,...tl].map(s=>s.cccd)))) return;
   const miss=tl.filter(s=>!s.gcTL);
   if(miss.length){ dialog('Chưa hoàn thiện danh sách thi lại',`<div class="note warn">${ic('alert')}<span>Còn <b>${miss.length}</b> người thi lại chưa có nội dung SH lại (LT / H / LT + H): ${miss.slice(0,8).map(x=>esc(x.ten)).join(', ')}${miss.length>8?'…':''}.<br>Hoàn thiện ở mục Báo cáo 2 (hoặc nạp file _LOCTL) rồi xuất lại.</span></div>`,[['Đóng','pri']]); return; }
@@ -4045,6 +4174,7 @@ async function exportDSSH(){
 async function exportBC2(){
   const c=C();
   const moi=bc2MoiList(), tl=tlList(false);
+  if((moi.length||tl.length)&&!await cccdGate('Báo cáo 2 (lần đầu và -TL)',ccPeople([...moi,...tl],ccGtMap(C())))) return;
   if((moi.length||tl.length)&&!errGate('Báo cáo 2',new Set([...moi,...tl].map(s=>s.cccd)))) return;
   const miss=tl.filter(s=>!s.gcTL).length;
   if(miss&&!confirm(`Còn ${miss} người thi lại chưa chọn L/H/L+H (sẽ ghi “SH lại”). Vẫn xuất?`)) return;
@@ -4130,6 +4260,7 @@ function sbdSheet(wb,name,S,R){
 async function exportSBD(ex){
   ex=ex||curExam(); if(!ex){ toast('Chưa có khóa thi.'); return; }
   if(examBad(ex)){ toast('Danh sách này không phải từ file GLĐ — không xuất.',5000); return; }
+  if(!await cccdGate('Danh sách SBD '+ex.khoaThi,ccRowsSBD(ex))) return;
   const cfg=sbdCfgGet(), st=examStats(ex), S=sbdScal(cfg,ex,st), R=ex.rows.map(sbdRow);
   const F=await formLoad('sbd'); if(F===false) return;
   let wb, FR=null;
@@ -4359,7 +4490,7 @@ function askUser(){
 
 /* ================== NHẬT KÝ THAY ĐỔI TỪNG NGƯỜI (tự so trước/sau mỗi lần lưu) ================== */
 const AUD_F=['ten','ns','cccd','dc','sk','hangHS','soGPLX','loai','biLoai','lyDo','gcTL','phuTrach'];
-const AUD_LB={ten:'Họ tên',ns:'Ngày sinh',cccd:'Số định danh',dc:'Nơi cư trú',sk:'CNSK',hangHS:'Hạng GPLX',soGPLX:'Số GPLX',loai:'Danh sách',biLoai:'Bị loại',lyDo:'Lý do loại',gcTL:'Nội dung SH lại',phuTrach:'Phụ trách'};
+const AUD_LB={cccdOk:'Đối chiếu CCCD gốc',ten:'Họ tên',ns:'Ngày sinh',cccd:'Số định danh',dc:'Nơi cư trú',sk:'CNSK',hangHS:'Hạng GPLX',soGPLX:'Số GPLX',loai:'Danh sách',biLoai:'Bị loại',lyDo:'Lý do loại',gcTL:'Nội dung SH lại',phuTrach:'Phụ trách'};
 let AUDP=new Map(), AUDCTX=null;
 const audKey=s=>s.ord!=null?'o'+s.ord:'c'+s.cccd;
 function audSnap(c){ const m=new Map(); for(const s of c.students){ const o={}; for(const k of AUD_F) o[k]=k==='biLoai'?!!s[k]:(s[k]??''); m.set(audKey(s),o); } return m; }
@@ -4843,6 +4974,14 @@ async function selfTest(){
   await t('Bảng tổng hợp danh sách SBD',()=>{ const nd=['SH lần đầu','SH lần đầu','SH lần đầu','Sát hạch H','SH lại LT','SH lại LT','SH lại H','SH lại LT + H'];
     const st=examStats({rows:nd.map((x,i)=>({id:'9999000000'+i,hang:'A1',nd:x,sbd:i+1,ten:'A',cmt:'',ns:''}))});
     const want={tong:8,a1:8,moi:4,moiLT:3,moiH:1,L:2,H:1,LH:1,cLT:5,cH:2,cLH:1}; for(const k in want) if(st[k]!==want[k]) throw new Error(`${k} = ${st[k]}, đúng là ${want[k]}`); return 'Thi mới 3 LT / 1 Hình · Thi lại 2 LT / 1 H / 1 LT+H · Tổng 5 / 2 / 1'; });
+  await t('Kiểm tra CCCD có dấu hiệu sai (mã tỉnh, số thứ 4, năm sinh, giới tính)',()=>{
+    const ok=(id,ns,gt,n)=>{ const r=cccdIssues(id,ns,gt); if(r.length!==n) throw new Error(id+' → '+(r.join('; ')||'không lỗi')); };
+    ok('052090001234','01/01/1990','M',0); ok('052190001234','01/01/1990','F',0); ok('052304001234','05/11/2004','F',0); ok('052077016704','',''+'',0);
+    ok('502090001234','01/01/1990','',1); ok('052790001234','01/01/1990','',1); ok('052296001234','01/01/1996','',1); ok('052090001234','01/01/1991','',1);
+    ok('052090001234','01/01/1990','F',1); ok('05209000123','01/01/1990','',1); ok('012345678','','',0);
+    if(!/2096 \(không hợp lý\), dữ liệu ghi năm 1996/.test(cccdIssues('052296001234','01/01/1996','')[0])) throw new Error('câu báo năm sinh sai');
+    if(ccNear('052090001234','052090001243')!==2||ccNear('052090001234','052090001234')!==0) throw new Error('so gần đúng sai');
+  });
   await t('Kiểm tra CCCD theo ngày sinh',()=>{ if(cccdVsDob('052090001234','01/01/1990')) throw new Error('báo sai với số đúng'); if(!cccdVsDob('052290001234','01/01/1990')) throw new Error('không phát hiện CCCD sai thế kỷ'); return 'phát hiện đúng / sai'; });
   await t('Xuất BC1 + đọc lại khớp từng ô, bôi vàng người bị loại',async()=>{ const P=stPeople().filter(x=>x.loai==='moi').sort(cmpWith('v3')), wb=new ExcelJS.Workbook();
     bc1Sheet(wb,'TEST',bc1Scal({ten:'TEST-1',soKhoa:'1',vanBan:'1/BC',maKhoa:'X',thoiGian:10,khaiGiang:'2026-01-01',beGiang:'2026-01-10'},P.length),P.map(bc1Row));
@@ -5049,6 +5188,7 @@ const HELP={
   usCh:'Đổi tên người đang thao tác (ghi vào nhật ký).', scSet:'Đặt mã PIN để mã hóa bản sao lưu.', scOff:'Gỡ mã PIN.',
   khAuto:'Tính lại ngày lý thuyết / thực hành theo khai giảng – bế giảng.', ppAdd:'Thêm 1 môn vào phân phối giờ học.', ppMd:'Đưa phân phối giờ học về như file mẫu.',
   bgPick:'Đặt ảnh nền: độ phủ màu, làm mờ, khung trong suốt, phủ kín / vừa khung. Xem thử ngay, bấm Lưu mới giữ. Ảnh chỉ lưu trên máy này.',
+  xCC:'Excel các số CCCD có dấu hiệu sai của khóa: họ tên, CCCD, ngày sinh, giới tính, lỗi, đã đối chiếu chưa, ai xác nhận.',
   tbpCopy:'Sao chép nội dung thông báo dạng chữ để dán vào Zalo.', tbpXls:'Xuất thông báo theo mẫu Excel cũ.', tbpReset:'Đưa mọi chữ và ảnh của poster về mặc định.'
 };
 const HELP_DLG={'Xuất file Word':'Tạo file Word, tool đọc lại và đối chiếu từng ô trước khi tải về.','Tải ảnh PNG (gửi Zalo)':'Ảnh poster nét cao để gửi nhóm Zalo.','Xuất PDF (in A4)':'PDF A4 300 dpi để in dán.','Thay bằng file mới':'Bỏ danh sách cũ, dùng nguyên danh sách file mới.','Giữ file cũ':'Không nạp file mới, giữ danh sách đã có.'};

@@ -623,7 +623,7 @@ function build(){
     it.mapNum = it.label ? resolveLabel(it.label) : '';
     it.newVal = mode === 'excel' ? it.exNum : it.mapNum;
     const rec = S.byCccd.get(cccd); it.rec = rec; it.old = rec ? rec.oldVal : '';
-    if (!rec) { it.st = 'bad'; it.tags.push(['c-bad','Không có trong XML']); }
+    if (!rec) { it.st = 'bad'; it.tags.push(['c-bad','Không có trong XML']); const nr = S.recs.map(x => [x, XCore.ccNear(cccd, x.cccd)]).filter(x => x[1]); if (nr.length) it.tags.push(['c-warn', 'Nghi gõ nhầm CCCD — gần với ' + nr.slice(0, 2).map(([x, d]) => x.cccd + ' (' + x.ten + ', lệch ' + d + ' số)').join('; ')]); }
     else if (S.dupX.has(cccd)) { it.st = 'bad'; it.tags.push(['c-bad','Số định danh trùng trong XML']); }
     else if (cntE.get(cccd) > 1) { it.st = 'bad'; it.tags.push(['c-bad','Số định danh lặp trong Excel']); }
     else if (rec.err) { it.st = 'bad'; it.tags.push(['c-bad', rec.err]); }
@@ -632,6 +632,7 @@ function build(){
     else it.st = it.newVal === it.old ? 'same' : 'chg';
     if (it.exNum && it.label && it.exNum !== it.mapNum) { it.lech = true; it.tags.push(['c-warn', it.mapNum ? `Số Excel ${it.exNum} ≠ bảng mã ${it.mapNum}` : 'Nội dung không tra được trong bảng mã']); }
     if (rec && it.name && XCore.normName(it.name) !== XCore.normName(rec.ten)) { it.lechTen = true; it.tags.push(['c-name', 'Tên XML: ' + rec.ten]); }
+    { const ci = XCore.cccdIssues(cccd, rec ? rec.ns : '', rec ? rec.gt : ''); if (ci.length) { it.ccBad = true; it.tags.push(['c-warn', '⚠ CCCD có dấu hiệu sai: ' + ci.join('; ') + ' — đối chiếu thẻ CCCD gốc']); } }
     if (rec && (rec.oldVal === '1' || rec.oldVal === '21') && it.st === 'chg') it.tags.push(['c-warn', 'XML đang là SH lần đầu']);
     if (it.st === 'chg') it.apply = S.uncheck.has(cccd) ? false : S.check.has(cccd) ? true : !it.lechTen;
     items.push(it);
