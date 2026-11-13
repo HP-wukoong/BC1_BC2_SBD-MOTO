@@ -713,6 +713,8 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.14.1','13/11/2026',['Báo cáo 2 (file BC2, các file PC-08, In BC2): người thi lần đầu (học mới, khóa ghép) đã có GPLX (cột “Đã có GPLX hạng” có hạng) → cột Ghi chú ghi “SH lần đầu(H)”; thi lại giữ nguyên “SH lại L / H / L+H”; DS thí sinh dự sát hạch và các file khác không đổi',
+    'Sheet khóa ghép: thời gian đào tạo, khai giảng, bế giảng, ngày ký lấy ĐỒNG BỘ với khóa chính (không lấy theo XML khóa ghép); XML khóa ghép chỉ dùng lấy mã']],
   ['4.14','13/11/2026',['KHÓA GHÉP: nạp file <khóa>_G (vd A1m-48_G.xls) giống file hồ sơ học mới / thi lại — vào danh sách khóa ghép của khóa đang mở, giữ đúng thứ tự file, không vào BC1; nạp file XML Báo cáo 2 của khóa ghép (tên khóa có đuôi -G) và chọn “Mã cho KHÓA GHÉP”',
     'Báo cáo 2 và DS thí sinh dự sát hạch (DSSATHACH_<khóa>) thêm sheet riêng cho khóa ghép (vd A1m-48-G): SH lần đầu, “Hạng A1 khóa 48-G”, thời gian đào tạo / khai giảng / bế giảng lấy theo XML khóa ghép; “Xuất file cho PC-08” thêm file riêng “Danh sách Báo cáo 2 A1m-48-G_K26A1150_.xlsx”',
     'BC đề nghị tổ chức sát hạch (Word): ô Hạng GPLX dòng 1 ghi thêm khóa ghép (tên + mã XML) ngay dưới khóa chính; số vào học / dự sát hạch dòng 1 và Tổng số gộp cả khóa ghép',
@@ -962,8 +964,8 @@ function gList(all,c){ c=c||C(); return c.students.filter(s=>s.loai==='g'&&(all|
 function gNameFromXml(t){ const x=String(t||'').normalize('NFC').trim().replace(/^HẠNG\s+/i,'').replace(/^HANG\s+/i,'').replace(/\s+/g,''); return x.replace(/^([A-Z]\d*)M(?=-)/,'$1m'); }
 function gName(c){ c=c||C(); const X=c.xml&&c.xml.g; return (X&&X.ten&&/-G$/i.test(gNameFromXml(X.ten))?gNameFromXml(X.ten):'')||c.gTen||(c.ten+'-G'); }
 function gSoKhoa(c){ const n=gName(c), m=n.match(/(\d+)-G$/i); return (m?m[1]:String(c.soKhoa||''))+'-G'; }
-function gScal(c,n){ const S=bc2Scal(c,n), X=c.xml&&c.xml.g; S.KHOA=gName(c); S.SO_KHOA=gSoKhoa(c);
-  if(X){ if(X.tg) S.THOI_GIAN=String(X.tg); if(X.kg) S.KHAI_GIANG_CHU=vnDate(X.kg); if(X.bg) S.BE_GIANG_CHU=vnDate(X.bg); } return S; }
+/* sheet khóa ghép: thời gian đào tạo, khai giảng, bế giảng, ngày ký ĐỒNG BỘ với khóa chính — chỉ đổi tên khóa / số khóa */
+function gScal(c,n){ const S=bc2Scal(c,n); S.KHOA=gName(c); S.SO_KHOA=gSoKhoa(c); return S; }
 
 /* chặn xuất khi thiếu XML khóa ghép */
 function gGate(c,label){ const E=gProblems(c); if(!E.length) return true;
@@ -973,7 +975,7 @@ function gCommon(L,moi,tl){ const P=[], ids=new Set([...moi,...tl].map(s=>s.cccd
   if(L.map(s=>s.cccd).join(',')!==gList(false).map(s=>s.cccd).join(',')) P.push('Danh sách khóa ghép không đúng thứ tự file _G');
   const d=L.filter(s=>ids.has(s.cccd)); if(d.length) P.push('Người khóa ghép trùng với lần đầu / thi lại: '+d.map(s=>s.ten).join(', '));
   if(L.some(s=>s.biLoai)) P.push('Có người bị loại vẫn nằm trong danh sách khóa ghép');
-  if(L.some(s=>gcText(s)!=='SH lần đầu')) P.push('Khóa ghép phải ghi “SH lần đầu”');
+  if(L.some(s=>gcText(s)!=='SH lần đầu')) P.push('Khóa ghép phải là “SH lần đầu”');
   return P; }
 /* đọc lại tiêu đề sheet khóa ghép (bản không dùng form): đúng tên khóa ghép + thời gian / khai giảng / bế giảng theo XML khóa ghép */
 function gHeadCheck(w,c){ const S=gScal(c,0), P=[];
@@ -982,8 +984,7 @@ function gHeadCheck(w,c){ const S=gScal(c,0), P=[];
   return P; }
 /* thiếu gì để xuất phần khóa ghép (chỉ khi khóa có học viên khóa ghép) */
 function gProblems(c){ c=c||C(); if(!gList(false,c).length) return []; const X=c.xml&&c.xml.g, E=[];
-  if(!X||!X.code) E.push(`Khóa có ${gList(false,c).length} học viên KHÓA GHÉP nhưng chưa nạp file XML của khóa ghép (tên khóa trong XML có đuôi -G) — cần XML để lấy mã, thời gian đào tạo, khai giảng, bế giảng.`);
-  else if(!X.kg||!X.bg||!X.tg) E.push(`File XML khóa ghép (${X.file}) thiếu ngày khai giảng / bế giảng / thời gian đào tạo — nạp lại file XML của khóa ghép.`);
+  if(!X||!X.code) E.push(`Khóa có ${gList(false,c).length} học viên KHÓA GHÉP nhưng chưa nạp file XML của khóa ghép (tên khóa trong XML có đuôi -G) — cần XML để lấy mã khóa ghép (tên file PC-08, BC đề nghị tổ chức SH).`);
   return E; }
 function toast(m,ms=2600){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),ms); }
 function setStatus(m){ $('#status').textContent=m; }
@@ -2639,7 +2640,7 @@ async function exportPC08(){
   if(miss&&!confirm(`Còn ${miss} người thi lại chưa chọn nội dung SH lại. Vẫn xuất?`)) return;
   const bad=['moi','tl'].concat(gg.length?['g']:[]).map(k=>[k,xmlCheck(c,k)]).filter(([k,R])=>R&&R.missXml.length);
   if(bad.length&&!confirm(`Có người trong BC2 nhưng KHÔNG có trong file XML (${bad.map(([k,R])=>(k==='tl'?'thi lại ':k==='g'?'khóa ghép ':'lần đầu ')+R.missXml.length).join(', ')}). PC-08 đối chiếu theo XML — nên kiểm tra trước. Vẫn xuất?`)) return;
-  const row2=(s,i)=>[i+1,s.ten,s.ns,s.cccd,s.dc,s.sk||'x',s.hangHS||s.hangG||'','','','',gcText(s)];
+  const row2=(s,i)=>[i+1,s.ten,s.ns,s.cccd,s.dc,s.sk||'x',s.hangHS||s.hangG||'','','','',bc2GC(s)];
   const bc1Order=bc1List().filter(x=>!x.biLoai).map(x=>x.cccd).join(',');
   const F=await formLoad('bc2'); if(F===false) return;
   const one=async(sheet,L,isTL,code,isG)=>{
@@ -2647,10 +2648,10 @@ async function exportPC08(){
     const common=P=>{ if(!isTL&&!isG&&L.map(x=>x.cccd).join(',')!==bc1Order) P.push('Không đúng thứ tự BC1');
       if(isG) P.push(...gCommon(L,moi,tl));
       if(L.some(x=>x.biLoai)) P.push('Có người bị loại vẫn nằm trong danh sách'); return P; };
-    if(F){ const r=await formRun(F,'bc2',[{src:isTL?1:0,name:sheet,S:Sc,rows:L.map(bc2Row)}]); if(!r) return false;
+    if(F){ const r=await formRun(F,'bc2',[{src:isTL?1:0,name:sheet,S:Sc,rows:L.map(bc2RowB)}]); if(!r) return false;
       return download(r.wb,fname,back=>common(verifyForm(back,r))); }
     const wb=new ExcelJS.Workbook(); wb.creator='TOOLS BC1+BC2+SBD';
-    const ws=bc2Sheet(wb,sheet,Sc,L.map(bc2Row),isTL); let lastBuf=null;
+    const ws=bc2Sheet(wb,sheet,Sc,L.map(bc2RowB),isTL); let lastBuf=null;
     return download(wb,fname, back=>{
       const w=back.getWorksheet(sheet.slice(0,31)); if(!w) return ['Thiếu sheet '+sheet];
       const P=verifyRows(w,12,L.map(row2),['A','B','C','D','E','F','G','H','I','J','K'],sheet);
@@ -2827,7 +2828,7 @@ function gCard(c,CM){
   const act=all.filter(s=>!s.biLoai), X=c.xml&&c.xml.g, E=gProblems(c);
   return `<div class="card"><h2>Khóa ghép ${esc(gName(c))} — sát hạch lần đầu (${act.length} người)</h2>
     <div class="muted" style="font-size:13px;margin-bottom:8px">Nạp từ file <b>&lt;khóa&gt;_G</b>. Giữ đúng thứ tự file _G. Không vào BC1. Xuất: sheet <b>${esc(gName(c))}</b> trong Báo cáo 2 và DS thí sinh dự sát hạch, file PC-08 riêng, thêm vào cuối DS tra cứu vi phạm, ghi dưới khóa chính trong BC đề nghị tổ chức SH (Word).
-    ${X?`<br>XML khóa ghép: mã <b>${esc(X.code)}</b> · thời gian đào tạo ${esc(X.tg||'?')} ngày · khai giảng ${esc(isoToVN(X.kg)||'?')} · bế giảng ${esc(isoToVN(X.bg)||'?')}`:''}</div>
+    ${X?`<br>XML khóa ghép: mã <b>${esc(X.code)}</b>`:''} · Thời gian đào tạo, khai giảng, bế giảng, ngày ký trên sheet khóa ghép: theo khóa chính ${esc(c.ten)}.</div>
     ${E.length?`<div class="note warn" style="margin-bottom:8px">${ic('alert')}<span>${E.map(esc).join('<br>')}</span></div>`:''}
     <div class="tblwrap"><table><thead><tr><th class="c">STT</th><th>Họ và tên</th><th class="c">Ngày sinh</th><th class="c">Số định danh</th><th>Nơi cư trú</th><th class="c">Hạng đã có</th><th class="c">Nội dung</th><th class="c">Loại</th><th class="c">Sửa</th></tr></thead><tbody>
     ${all.map(s=>`<tr class="${s.biLoai?'loai':''}"><td class="c">${s.biLoai?'–':act.indexOf(s)+1}</td><td class="nm">${esc(s.ten)}</td><td class="c">${esc(s.ns)}</td><td class="c">${esc(s.cccd)}${ccIcon(CM.get(s.cccd))}</td><td class="dc" title="${esc(s.dc)}">${esc(s.dc)}</td><td class="c">${esc(s.hangHS||s.hangG||'')}</td><td class="c">SH lần đầu</td>
@@ -3069,15 +3070,14 @@ ${esc(khoa)}</div><div>Thời gian đào tạo: ${esc(D.tg)} ngày
 Khai giảng ngày ${vnDate(D.kg)}
 Bế giảng ngày    ${vnDate(D.bg)}</div></div>
     ${ptab(['STT','Họ và tên','Ngày tháng năm sinh','Số định danh','Nơi cư trú','Giấy chứng nhận sức khỏe hợp lệ','Đã có giấy phép lái xe hạng','Số năm lái xe','Thời gian lái xe an toàn','Số chứng chỉ sơ cấp, chứng chỉ đào tạo, xác nhận hoàn thành khóa đào tạo','Ghi chú'],
-      L.map((s,i)=>({v:[i+1,s.ten,s.ns,s.cccd,s.dc,s.sk||'x',s.hangHS||s.hangG||'','','','',gcText(s)]})),['n','t','m','m','','m','m','m','m','m',''],[6.14,44.14,11.29,14.43,46.29,8.99,7.86,8.14,8.29,11.57,13.14])}
+      L.map((s,i)=>({v:[i+1,s.ten,s.ns,s.cccd,s.dc,s.sk||'x',s.hangHS||s.hangG||'','','','',bc2GC(s)]})),['n','t','m','m','','m','m','m','m','m',''],[6.14,44.14,11.29,14.43,46.29,8.99,7.86,8.14,8.29,11.57,13.14])}
     <div class="sign"><div>${esc(c.noiKy)}, ngày ${c.ngayKy?c.ngayKy.split('-')[2]:'…'} tháng ${c.ngayKy?c.ngayKy.split('-')[1]:'…'} năm ${c.ngayKy?c.ngayKy.split('-')[0]:'…'}<br><b>GIÁM ĐỐC</b><br><br><br><br><b>${esc(c.giamDoc)}</b></div></div></div>`;
 }
 function printBC2(){
   const c=C(), moi=bc2MoiList(), tl=tlList(false), gg=gList(false); if(!moi.length&&!tl.length&&!gg.length){ toast('Chưa có dữ liệu.'); return; }
   if(gg.length&&!gGate(c,'In BC2')) return;
-  const X=c.xml&&c.xml.g;
   printHTML('BC2 '+c.ten,(moi.length?bc2Block(c,moi,`Khóa : Hạng A1 khóa ${c.soKhoa}`,true):'')+(tl.length?bc2Block(c,tl,`Khóa : Hạng A1 khóa ${c.soKhoa}-TL`,!moi.length):'')
-    +(gg.length?bc2Block(c,gg,`Khóa : Hạng A1 khóa ${gSoKhoa(c)}`,!moi.length&&!tl.length,{tg:X.tg,kg:X.kg,bg:X.bg}):''));
+    +(gg.length?bc2Block(c,gg,`Khóa : Hạng A1 khóa ${gSoKhoa(c)}`,!moi.length&&!tl.length):''));
 }
 function printDSSH(){
   const c=C(), moi=bc2MoiList(), tl=tlList(false), gg=gList(false); if(!moi.length&&!tl.length&&!gg.length){ toast('Chưa có dữ liệu.'); return; }
@@ -3777,6 +3777,10 @@ function bc2Scal(c,n){
   return {DV1:c.dv1,DV2:c.dv2,KHOA:c.ten,SO_KHOA:`${c.soKhoa}`,THOI_GIAN:`${c.thoiGian}`,KHAI_GIANG_CHU:vn(c.khaiGiang),BE_GIANG_CHU:vn(c.beGiang),
     NOI_KY:`${c.noiKy}`,NGAY_KY_NGAY:d?d[2]:'…',NGAY_KY_THANG:d?d[1]:'…',NGAY_KY_NAM:d?d[0]:'…',GIAM_DOC:c.giamDoc,TONG:n};
 }
+/* Ghi chú trên BÁO CÁO 2 (file BC2, file PC-08, In BC2): thi lần đầu (học mới / khóa ghép) đã có GPLX (cột “Đã có GPLX hạng” có giá trị) → “SH lần đầu(H)”.
+   DS thí sinh dự sát hạch, Tra cứu vi phạm… vẫn dùng gcText như cũ. */
+function bc2GC(s){ const t=gcText(s); return t==='SH lần đầu'&&String(s.hangHS||s.hangG||'').trim()?'SH lần đầu(H)':t; }
+function bc2RowB(s,i){ return {...bc2Row(s,i),NOI_DUNG_SH:bc2GC(s)}; }
 function bc2Row(s,i){ const c=C(); return {STT:i+1,HO_TEN:s.ten,NGAY_SINH:s.ns,CCCD:s.cccd,NOI_CU_TRU:s.dc,CNSK:s.sk||'x',HANG_GPLX:s.hangHS||s.hangG||'',NOI_DUNG_SH:gcText(s),PHU_TRACH:(c.inPhuTrach&&s.phuTrach)||''}; }
 function bc2Sheet(wb,name,S,R,isTL){
   const Y=BC2_LAYOUT[isTL?'tl':'moi'], khoaTxt=`Khóa : Hạng A1 khóa ${S.SO_KHOA}${isTL?'-TL':''}`;
@@ -4285,17 +4289,17 @@ async function exportBC2(){
     return P; };
   const fname=`BC2_${asciiName(c.ten)}${c.maBC2?'_'+asciiName(c.maBC2):''}.xlsx`;
   const F=await formLoad('bc2'); if(F===false) return;
-  if(F){ const plans=[]; if(moi.length) plans.push({src:0,name:c.ten,S:bc2Scal(c,moi.length),rows:moi.map(bc2Row)}); if(tl.length) plans.push({src:1,name:c.ten+'-TL',S:bc2Scal(c,tl.length),rows:tl.map(bc2Row)});
-    if(gg.length) plans.push({src:0,name:gName(c),S:gScal(c,gg.length),rows:gg.map(bc2Row)});
+  if(F){ const plans=[]; if(moi.length) plans.push({src:0,name:c.ten,S:bc2Scal(c,moi.length),rows:moi.map(bc2RowB)}); if(tl.length) plans.push({src:1,name:c.ten+'-TL',S:bc2Scal(c,tl.length),rows:tl.map(bc2RowB)});
+    if(gg.length) plans.push({src:0,name:gName(c),S:gScal(c,gg.length),rows:gg.map(bc2RowB)});
     const r=await formRun(F,'bc2',plans); if(!r) return;
     c.lastBC2=new Date().toISOString(); save();
     await download(r.wb,fname,back=>common(verifyForm(back,r))); return; }
   const wb=new ExcelJS.Workbook(); wb.creator='So Sat Hach A1';
-  if(moi.length) bc2Sheet(wb,c.ten,bc2Scal(c,moi.length),moi.map(bc2Row),false);
-  if(tl.length) bc2Sheet(wb,c.ten+'-TL',bc2Scal(c,tl.length),tl.map(bc2Row),true);
-  if(gg.length) bc2Sheet(wb,gName(c),gScal(c,gg.length),gg.map(bc2Row),false);
+  if(moi.length) bc2Sheet(wb,c.ten,bc2Scal(c,moi.length),moi.map(bc2RowB),false);
+  if(tl.length) bc2Sheet(wb,c.ten+'-TL',bc2Scal(c,tl.length),tl.map(bc2RowB),true);
+  if(gg.length) bc2Sheet(wb,gName(c),gScal(c,gg.length),gg.map(bc2RowB),false);
   c.lastBC2=new Date().toISOString(); save();
-  const row2=(s,i)=>[i+1,s.ten,s.ns,s.cccd,s.dc,s.sk||'x',s.hangHS||s.hangG||'','','','',gcText(s)];
+  const row2=(s,i)=>[i+1,s.ten,s.ns,s.cccd,s.dc,s.sk||'x',s.hangHS||s.hangG||'','','','',bc2GC(s)];
   let lastBuf=null;
   await download(wb,fname, back=>{
     const P=[]; const cols=['A','B','C','D','E','F','G','H','I','J','K'];
@@ -5091,18 +5095,18 @@ async function selfTest(){
     const E=verifyRows(w,12,P.map((s,i)=>[i+1,s.ten,s.ns,s.cccd,s.dc,s.soGPLX||'',s.hangHS||'','']),['A','B','C','D','E','F','G','H'],'BC1');
     P.forEach((s,i)=>{ const f=w.getCell('B'+(12+i)).fill, y=!!(f&&f.fgColor&&/FFFF00$/i.test(f.fgColor.argb||'')); if(y!==!!s.biLoai) E.push('bôi vàng sai dòng '+(12+i)); });
     if(E.length) throw new Error(E[0]); return `${P.length} người, đúng từng ô`; });
-  await t('Khóa ghép: SH lần đầu, sheet -G theo XML khóa ghép, Word ghi dưới khóa chính',async()=>{
+  await t('Khóa ghép: SH lần đầu, sheet -G đồng bộ khóa chính, Word ghi dưới khóa chính',async()=>{
     const cg={ten:'TEST-1',soKhoa:'1',thoiGian:10,dv1:'A',dv2:'B',noiKy:'Gia Lai',giamDoc:'X',khaiGiang:'2026-01-01',beGiang:'2026-01-10',ngayKy:'2026-01-11',students:[],
       xml:{g:{code:'K26A9999',ten:'HẠNG A1M-7-G',kg:'2026-01-05',bg:'2026-01-11',tg:7}}};
     if(gName(cg)!=='A1m-7-G'||gSoKhoa(cg)!=='7-G') throw new Error(`tên khóa ghép “${gName(cg)}” / số “${gSoKhoa(cg)}”`);
     if(gcText({loai:'g',gcTL:'L'})!=='SH lần đầu'||gcText({loai:'moi'})!=='SH lần đầu'||gcText({loai:'tl',gcTL:'H'})!==GC_OUT['H']) throw new Error('nội dung sát hạch sai');
-    const S=gScal(cg,3); if(S.THOI_GIAN!=='7'||S.KHAI_GIANG_CHU!=='05 tháng 01 năm 2026'||S.BE_GIANG_CHU!=='11 tháng 01 năm 2026'||S.SO_KHOA!=='7-G') throw new Error('tiêu đề sheet khóa ghép không theo XML khóa ghép');
+    const S=gScal(cg,3); if(S.THOI_GIAN!=='10'||S.KHAI_GIANG_CHU!=='01 tháng 01 năm 2026'||S.BE_GIANG_CHU!=='10 tháng 01 năm 2026'||S.NGAY_KY_NGAY!=='11'||S.SO_KHOA!=='7-G') throw new Error('tiêu đề sheet khóa ghép không đồng bộ khóa chính');
     const P=stPeople().slice(0,3).map(x=>({...x,loai:'g',biLoai:false})), wb=new ExcelJS.Workbook(); bc2Sheet(wb,gName(cg),S,P.map(bc2Row),false);
     const back=new ExcelJS.Workbook(); await back.xlsx.load(await wb.xlsx.writeBuffer()); const w=back.getWorksheet('A1m-7-G'); if(!w) throw new Error('thiếu sheet A1m-7-G');
     const E=[...gHeadCheck(w,cg),...verifyRows(w,12,P.map((s,i)=>[i+1,s.ten,s.ns,s.cccd,s.dc,s.sk||'x',s.hangHS||'','','','','SH lần đầu']),['A','B','C','D','E','F','G','H','I','J','K'],'G')]; if(E.length) throw new Error(E[0]);
     const x=zGet(zOpen(tplBytes('bcdnTpl').buffer),'word/document.xml'); if(bcdnTplXml(x,{KHOA:'A'})!==x) throw new Error('không có khóa ghép mà mẫu Word bị đổi');
     const tx=wTexts(bcdnTplXml(x,{KHOA_G:'A1m-7-G',MA_G:'(K26A9999)'})), i=tx.indexOf('{{MA_MOI}}'); if(tx[i-1]!=='{{KHOA}}'||tx[i+1]!=='{{KHOA_G}}'||tx[i+2]!=='{{MA_G}}') throw new Error('Word: khóa ghép không nằm ngay dưới khóa chính');
-    return 'A1m-7-G (K26A9999): SH lần đầu, 7 ngày, KG 05/01, BG 11/01; Word: dưới “{{KHOA}} {{MA_MOI}}”'; });
+    return 'A1m-7-G (K26A9999): SH lần đầu, thời gian / KG / BG / ngày ký theo khóa chính; Word: dưới “{{KHOA}} {{MA_MOI}}”'; });
   await t('Form gốc BC2 điền dữ liệu = bản tool xuất trực tiếp',async()=>{ const P=stPeople().filter(x=>x.loai==='tl').map((s,i)=>({...bc2Row(s,i),PHU_TRACH:''})), S=bc2Scal({ten:'TEST-1',soKhoa:'1',thoiGian:10,dv1:'A',dv2:'B',noiKy:'Gia Lai',giamDoc:'X',khaiGiang:'2026-01-01',beGiang:'2026-01-10',ngayKy:'2026-01-11'},P.length);
     const wb=new ExcelJS.Workbook(); bc2Sheet(wb,'T',S,P,true); const A=new ExcelJS.Workbook(); await A.xlsx.load(await wb.xlsx.writeBuffer());
     const r=await fillForm(await formDefaultBuf('bc2'),'bc2',[{src:1,name:'T',S,rows:P}]); const B=new ExcelJS.Workbook(); await B.xlsx.load(stripDrawings(r.buf));
