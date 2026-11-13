@@ -1,4 +1,4 @@
-// ===== LÕI XỬ LÝ XML Ở MỨC BYTE — không parse/serialize, giữ nguyên 100% byte ngoài giá trị NOI_DUNG_SH =====
+// ===== LÕI XỬ LÝ XML Ở MỨC BYTE — không parse/serialize, giữ nguyên 100% byte ngoài giá trị NOI_DUNG_SH và ANH_CHAN_DUNG được chọn sửa =====
 (function (root) {
   const enc = (s) => new TextEncoder().encode(s);
   const T = {
@@ -38,6 +38,24 @@
     return out;
   }
 
+  // Chỉ lấy vị trí (không giải mã chữ) — dùng cho ảnh base64 dài
+  function tagRanges(buf, name, a, b) {
+    const o = tagO(name), c = tagC(name), out = [];
+    let p = a;
+    while (true) {
+      const s = find(buf, o, p, b);
+      if (s < 0) break;
+      const vs = s + o.length, e = find(buf, c, vs, b);
+      if (e < 0) throw new Error('Thẻ <' + name + '> không có thẻ đóng tại byte ' + s);
+      out.push({ start: vs, end: e });
+      p = e + c.length;
+    }
+    return out;
+  }
+  const ANH = 'ANH_CHAN_DUNG';
+  // Các vùng được phép sửa trong 1 hồ sơ, theo thứ tự trong file
+  const fields = r => [r.nds ? ['nds', r.nds] : null, r.anh ? ['anh', r.anh] : null].filter(Boolean).sort((x, y) => x[1].start - y[1].start);
+
   // Quét toàn bộ hồ sơ <NGUOI_LX>
   function scan(buf) {
     const recs = [];
@@ -55,6 +73,7 @@
       const khoa = tagAll(buf, 'MA_KHOA_HOC', s, e);
       const gplx = tagAll(buf, 'SO_GPLX_DA_CO', s, e);
       const ngs = tagAll(buf, 'NGAY_SINH', s, e), gts = tagAll(buf, 'GIOI_TINH', s, e);   // chỉ đọc — để kiểm tra số CCCD
+      const anh = tagRanges(buf, ANH, s, e);
       const r = {
         idx: recs.length, bs: s, be: e + T.close.length,
         cccd: cmt.length ? cmt[0].text.trim() : '',
@@ -65,6 +84,8 @@
         gplx: gplx.length ? gplx[0].text.trim() : '',
         ns: ngs.length ? ngs[0].text.trim() : '', gt: gts.length ? ({ M:'M', F:'F' })[gts[0].text.trim().toUpperCase()] || '' : '',
         nds: nds.length === 1 ? nds[0] : null,
+        anh: anh.length === 1 && anh[0].end > anh[0].start ? anh[0] : null,
+        anhErr: anh.length === 1 ? (anh[0].end > anh[0].start ? '' : 'Thẻ ảnh trống') : anh.length ? 'Có ' + anh.length + ' thẻ ' + ANH : 'Không có thẻ ảnh ' + ANH,
         err: '',
       };
       if (cmt.length !== 1) r.err = 'Có ' + cmt.length + ' thẻ SO_CMT trong hồ sơ';
@@ -77,12 +98,15 @@
     return recs;
   }
 
-  // patches: [{start,end,val}] — val là chuỗi chữ số
+  const B64 = /^[A-Za-z0-9+/]+={0,2}$/;
+  // patches: [{start,end,val,kind}] — kind 'nds' (mặc định): chuỗi chữ số; kind 'anh': base64 trên 1 dòng (đúng như file gốc)
   function applyPatches(buf, patches) {
     patches = patches.slice().sort((a, b) => a.start - b.start);
     const parts = []; let last = 0, total = 0;
     for (const pt of patches) {
-      if (!/^\d{1,3}$/.test(pt.val)) throw new Error('Giá trị mới không hợp lệ: ' + pt.val);
+      if ((pt.kind || 'nds') === 'nds') { if (!/^\d{1,3}$/.test(pt.val)) throw new Error('Giá trị mới không hợp lệ: ' + pt.val); }
+      else if (pt.kind === 'anh') { if (typeof pt.val !== 'string' || pt.val.length < 100 || pt.val.length % 4 || !B64.test(pt.val)) throw new Error('Dữ liệu ảnh mới không phải base64 hợp lệ'); }
+      else throw new Error('Loại sửa không hợp lệ');
       if (pt.start < last) throw new Error('Vùng sửa chồng lấn');
       parts.push(buf.subarray(last, pt.start));
       parts.push(enc(pt.val));
@@ -101,30 +125,43 @@
     return true;
   }
 
-  // Kiểm tra độc lập: quét lại file mới, so từng byte ngoài vùng giá trị NOI_DUNG_SH
-  function verify(orig, out, expect /* Map idx -> giá trị mong đợi */) {
+  // Kiểm tra độc lập: quét lại file mới, so từng byte ngoài các vùng được sửa (NOI_DUNG_SH, ANH_CHAN_DUNG)
+  // expect: Map idx -> mã NDSH mong đợi; expectAnh: Map idx -> chuỗi base64 ảnh mong đợi
+  function verify(orig, out, expect, expectAnh) {
+    expectAnh = expectAnh || new Map();
     const A = scan(orig), B = scan(out);
     const problems = [];
     if (A.length !== B.length) problems.push('Số hồ sơ khác nhau: gốc ' + A.length + ', mới ' + B.length);
     const n = Math.min(A.length, B.length);
-    let changed = 0;
-    // So byte giữa các vùng giá trị
+    let changed = 0, changedAnh = 0;
     let pa = 0, pb = 0;
     for (let i = 0; i < n; i++) {
       const a = A[i], b = B[i];
       if (a.cccd !== b.cccd) problems.push('Hồ sơ #' + (i + 1) + ' CCCD lệch: ' + a.cccd + ' / ' + b.cccd);
-      if (!a.nds || !b.nds) continue;
-      if (!eqBytes(orig, pa, a.nds.start, out, pb, b.nds.start)) { problems.push('Có byte khác ngoài NOI_DUNG_SH trước hồ sơ #' + (i + 1)); }
-      const want = expect.has(i) ? expect.get(i) : a.nds.text;
-      if (b.nds.text !== want) problems.push('Hồ sơ #' + (i + 1) + ' (' + a.cccd + ') giá trị ' + b.nds.text + ' ≠ mong đợi ' + want);
-      if (b.nds.text !== a.nds.text) changed++;
-      pa = a.nds.end; pb = b.nds.end;
+      const fa = fields(a), fb = fields(b);
+      if (fa.map(x => x[0]).join() !== fb.map(x => x[0]).join()) { problems.push('Hồ sơ #' + (i + 1) + ' thay đổi cấu trúc thẻ'); continue; }
+      for (let k = 0; k < fa.length; k++) {
+        const [kind, ra] = fa[k], rb = fb[k][1];
+        if (!eqBytes(orig, pa, ra.start, out, pb, rb.start)) problems.push('Có byte khác ngoài vùng được sửa ở hồ sơ #' + (i + 1));
+        if (kind === 'nds') {
+          const want = expect.has(i) ? expect.get(i) : a.nds.text;
+          if (b.nds.text !== want) problems.push('Hồ sơ #' + (i + 1) + ' (' + a.cccd + ') giá trị ' + b.nds.text + ' ≠ mong đợi ' + want);
+          if (b.nds.text !== a.nds.text) changed++;
+        } else {
+          if (expectAnh.has(i)) {
+            const w = enc(expectAnh.get(i));
+            if (!eqBytes(w, 0, w.length, out, rb.start, rb.end)) problems.push('Hồ sơ #' + (i + 1) + ' (' + a.cccd + ') ảnh mới không đúng dữ liệu đã chuẩn bị');
+            else changedAnh++;
+          } else if (!eqBytes(orig, ra.start, ra.end, out, rb.start, rb.end)) problems.push('Hồ sơ #' + (i + 1) + ' (' + a.cccd + ') ảnh bị thay đổi ngoài ý muốn');
+        }
+        pa = ra.end; pb = rb.end;
+      }
     }
     if (!eqBytes(orig, pa, orig.length, out, pb, out.length)) problems.push('Có byte khác ở phần cuối file');
     const bomA = orig[0] === 0xEF && orig[1] === 0xBB && orig[2] === 0xBF;
     const bomB = out[0] === 0xEF && out[1] === 0xBB && out[2] === 0xBF;
     if (bomA !== bomB) problems.push('BOM UTF-8 bị thay đổi');
-    return { ok: problems.length === 0, problems, changed, records: B.length };
+    return { ok: problems.length === 0, problems, changed, changedAnh, records: B.length };
   }
 
   // Chuẩn hóa CCCD từ ô Excel
@@ -181,11 +218,11 @@
     maxOther = maxOther || 50;
     const A = scan(a), B = scan(b);
     const bom = u => u[0] === 0xEF && u[1] === 0xBB && u[2] === 0xBF;
-    const res = { A, B, nds: [], other: [], otherCount: 0, structural: [], aligned: false,
+    const res = { A, B, nds: [], anh: [], other: [], otherCount: 0, structural: [], aligned: false,
       bomA: bom(a), bomB: bom(b), crlfA: countPair(a, 13, 10), crlfB: countPair(b, 13, 10), sizeA: a.length, sizeB: b.length };
     if (res.bomA !== res.bomB) res.structural.push(res.bomA ? 'File đã sửa bị MẤT ký tự BOM đầu file (thường do Notepad / trình soạn thảo lưu lại)' : 'File đã sửa bị THÊM ký tự BOM đầu file');
     if (res.crlfA !== res.crlfB) res.structural.push(`Kiểu xuống dòng bị đổi: gốc có ${res.crlfA} lần CRLF, file sửa có ${res.crlfB} (thường do trình soạn thảo lưu lại)`);
-    const aligned = A.length === B.length && A.every((r, i) => r.cccd === B[i].cccd && r.nds && B[i].nds);
+    const aligned = A.length === B.length && A.every((r, i) => r.cccd === B[i].cccd && r.nds && B[i].nds && fields(r).map(x => x[0]).join() === fields(B[i]).map(x => x[0]).join());
     res.aligned = aligned;
     if (aligned) {
       let pa = 0, pb = 0;
@@ -198,9 +235,14 @@
         res.other.push({ rec: c.rec, tag: c.tag, at: pa + k, a: snip(a, pa + k), b: snip(b, pb + k) });
       };
       for (let i = 0; i < A.length; i++) {
-        seg(A[i].nds.start, B[i].nds.start);
-        if (A[i].nds.text !== B[i].nds.text) res.nds.push({ rec: A[i], old: A[i].nds.text, neu: B[i].nds.text });
-        pa = A[i].nds.end; pb = B[i].nds.end;
+        const fa = fields(A[i]), fb = fields(B[i]);
+        for (let k = 0; k < fa.length; k++) {
+          const [kind, ra] = fa[k], rb = fb[k][1];
+          seg(ra.start, rb.start);
+          if (kind === 'nds') { if (A[i].nds.text !== B[i].nds.text) res.nds.push({ rec: A[i], old: A[i].nds.text, neu: B[i].nds.text }); }
+          else if (!eqBytes(a, ra.start, ra.end, b, rb.start, rb.end)) res.anh.push({ rec: A[i], recB: B[i], a: ra, b: rb });
+          pa = ra.end; pb = rb.end;
+        }
       }
       seg(a.length, b.length);
     } else {
@@ -210,12 +252,18 @@
       if (miss.length) res.structural.push(`${miss.length} hồ sơ có trong file gốc nhưng MẤT trong file sửa: ` + miss.slice(0, 10).map(r => r.ten + ' (' + r.cccd + ')').join('; '));
       if (add.length) res.structural.push(`${add.length} hồ sơ mới xuất hiện trong file sửa: ` + add.slice(0, 10).map(r => r.ten + ' (' + r.cccd + ')').join('; '));
       if (!miss.length && !add.length && A.length === B.length) res.structural.push('Thứ tự hồ sơ hoặc thẻ NOI_DUNG_SH bị thay đổi');
-      for (const r of A) { const q = mB.get(r.cccd); if (q && r.nds && q.nds && r.nds.text !== q.nds.text) res.nds.push({ rec: r, old: r.nds.text, neu: q.nds.text }); }
+      for (const r of A) { const q = mB.get(r.cccd); if (q && r.nds && q.nds && r.nds.text !== q.nds.text) res.nds.push({ rec: r, old: r.nds.text, neu: q.nds.text });
+        if (q && r.anh && q.anh && !eqBytes(a, r.anh.start, r.anh.end, b, q.anh.start, q.anh.end)) res.anh.push({ rec: r, recB: q, a: r.anh, b: q.anh }); }
     }
-    res.onlyNds = aligned && res.otherCount === 0 && res.structural.length === 0;
+    res.onlyAllowed = aligned && res.otherCount === 0 && res.structural.length === 0;   // chỉ khác ở NOI_DUNG_SH và/hoặc ảnh
+    res.onlyNds = res.onlyAllowed && res.anh.length === 0;
     return res;
   }
 
-  const api = { find, scan, applyPatches, verify, normCccd, normName, normLabel, compare, cccdIssues, ccNear };
+  // base64 nhanh cho dữ liệu lớn (ảnh)
+  function toB64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return (typeof btoa === 'function' ? btoa(s) : Buffer.from(u8).toString('base64')); }
+  function fromB64(buf, r) { const s = dec.decode(buf.subarray(r.start, r.end)).trim(); if (typeof atob === 'function') { const t = atob(s), o = new Uint8Array(t.length); for (let i = 0; i < t.length; i++) o[i] = t.charCodeAt(i); return o; } return new Uint8Array(Buffer.from(s, 'base64')); }
+
+  const api = { find, scan, applyPatches, verify, normCccd, normName, normLabel, compare, cccdIssues, ccNear, toB64, fromB64 };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.XCore = api;
 })(typeof window !== 'undefined' ? window : globalThis);

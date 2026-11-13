@@ -19,7 +19,7 @@ jobs:
       - name: Cài thư viện
         run: |
           npm ci --no-audit --no-fund
-          pip install playwright==1.49.1
+          pip install playwright==1.49.1 pillow
           python -m playwright install --with-deps chromium
       - name: Dựng lại từ mã nguồn
         run: python build.py
