@@ -296,6 +296,7 @@ details summary{cursor:pointer}
     <button data-t="bc1"><span class="num">2</span><span class="lbl">Báo cáo 1</span><span class="badge" id="bdBC1">0</span></button>
     <button data-t="bc2"><span class="num">3</span><span class="lbl">Báo cáo 2</span><span class="badge" id="bdBC2">0</span></button>
     <button data-t="sbd"><span class="num">4</span><span class="lbl">Số báo danh</span></button>
+    <button data-t="ndsh" title="Sửa mã nội dung sát hạch & ảnh chân dung trong file XML PC-08 trả về"><span class="num">5</span><span class="lbl">Sửa XML PC-08</span></button>
     <button data-t="tt"><svg class="ico" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 18.5A1.6 1.6 0 0 0 5.9 21h12.2a1.6 1.6 0 0 0 1.4-2.5L14 9V3"/><path d="M7 15h10"/></svg><span class="lbl">Thi thử</span></button>
     <div class="ngrp">Theo dõi</div>
     <button data-t="tq"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span class="lbl">Tổng quan các khóa</span></button>
@@ -340,6 +341,7 @@ details summary{cursor:pointer}
 <script type="text/plain" id="tbpHdr">/*TBP_HDR*/</script>
 <script type="text/plain" id="tbpRider">/*TBP_RIDER*/</script>
 <script type="text/plain" id="psInstaller">/*PS_INSTALLER*/</script>
+<script type="text/plain" id="ndshSrc">/*NDSH_EMBED*/</script>
 <script>/*XLSX_LIB*/</script>
 <script>/*EXCELJS_LIB*/</script>
 <script>
@@ -429,6 +431,9 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.15','13/11/2026',['Mục mới “5 · Sửa XML PC-08”: tool Sửa NDSH XML chạy ngay trong TOOLS, nhận thẳng danh sách thi lại / học mới / khóa ghép của khóa đang mở (không cần xuất Excel); khung giữ nguyên khi chuyển mục',
+    'Tool Sửa NDSH XML 4.0: xem ảnh chân dung trong file XML, soát ảnh (hỏng, trùng, rất giống nhau, nhỏ, sai tỷ lệ, quá tối/sáng), thay ảnh từng người (kéo thả, Ctrl+V, chọn file, tên file trong thư mục ảnh) hoặc hàng loạt (ghép theo CCCD trong tên file + khay ảnh kéo vào đúng người), xuất ảnh CCCD_SBD_HoTen.jpg cho Ảnh Thẻ Pro',
+    'Ảnh mới ghi JPEG 2000 theo số đông ảnh trong file (OpenJPEG 2.5.2 chạy trong trình duyệt: wavelet 5/3, tỷ lệ 10:1, 5 mức, khối 64×64) — phần đầu ảnh giống hệt ảnh gốc từng byte; chỉ thay dữ liệu trong thẻ ảnh của đúng người, kiểm định từng byte, biên bản có ảnh cũ / ảnh mới']],
   ['4.14.2','13/11/2026',['Mục Số báo danh: mỗi khóa đào tạo CHỈ hiện danh sách thi (file GLĐ) của chính khóa đó — khóa thi thuộc khóa có nhiều thí sinh trùng nhất (theo số CMT, từ một nửa danh sách thi trở lên; nếu không thì thuộc khóa đang mở lúc nạp); khóa thi của khóa khác bị ẩn, tránh xuất nhầm SBD khóa cũ']],
   ['4.14.1','13/11/2026',['Báo cáo 2 (file BC2, các file PC-08, In BC2): người thi lần đầu (học mới, khóa ghép) đã có GPLX (cột “Đã có GPLX hạng” có hạng) → cột Ghi chú ghi “SH lần đầu(H)”; thi lại giữ nguyên “SH lại L / H / L+H”; DS thí sinh dự sát hạch và các file khác không đổi',
     'Sheet khóa ghép: thời gian đào tạo, khai giảng, bế giảng, ngày ký lấy ĐỒNG BỘ với khóa chính (không lấy theo XML khóa ghép); XML khóa ghép chỉ dùng lấy mã']],
@@ -2083,6 +2088,7 @@ const PAGES={
  bc1:['Báo cáo 1','Danh sách học viên học mới, sắp theo bảng chữ cái tiếng Việt. Người bị loại vẫn in nhưng bôi vàng.'],
  bc2:['Báo cáo 2','Sheet lần đầu chuyển nguyên thứ tự từ Báo cáo 1, bỏ người bị loại. Sheet thi lại sắp riêng.'],
  sbd:['Số báo danh','Danh sách thí sinh theo khóa thi, lấy từ file máy chủ phòng thi lý thuyết. Xuất đúng mẫu của Hội đồng sát hạch.'],
+ ndsh:['Sửa XML PC-08','Sửa mã nội dung sát hạch (NOI_DUNG_SH) và ảnh chân dung trong file XML PC-08 trả về — dùng thẳng danh sách của khóa đang mở, không cần xuất Excel. Chỉ thay đúng giá trị được chọn, kiểm định từng byte trước khi tải về.'],
  tt:['Thi thử','Mục riêng, độc lập: nạp file tên đuôi _Thithu, xuất danh sách SBD thi thử cùng mẫu với mục Số báo danh. Không ảnh hưởng BC1, BC2, SBD.'],
  moc:['Lịch nộp','Các mốc tính từ ngày khai giảng, bế giảng, ngày ký BC2 và ngày sát hạch. Tích từng việc khi xong.'],
  kt:['Kiểm tra dữ liệu','Những chỗ cần xem lại trước khi nộp. Phần này không in vào báo cáo.'],
@@ -2121,9 +2127,34 @@ function render(){
   renderAlerts();
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===TAB));
   const v=$('#view');
-  ({nap:vNap,bc1:vBC1,bc2:vBC2,sbd:vSBD,tt:vTT,kt:vKT,moc:vMOC,cfg:vCfg,tq:vTQ,hs:vHS,dl:vDL,hd:vHD})[TAB](v,c,ck);
+  ndshShow(TAB==='ndsh');
+  ({nap:vNap,bc1:vBC1,bc2:vBC2,sbd:vSBD,ndsh:vNDSH,tt:vTT,kt:vKT,moc:vMOC,cfg:vCfg,tq:vTQ,hs:vHS,dl:vDL,hd:vHD})[TAB](v,c,ck);
   bindEmpty(); renderSide();
 }
+/* ===== MỤC “SỬA XML PC-08”: tool Sửa NDSH XML chạy trong khung riêng — khung GIỮ NGUYÊN khi chuyển mục (không mất file XML đã nạp) ===== */
+let NDSH_FR=null, NDSH_READY=false;
+function ndshSrcDoc(){ const el=document.getElementById('ndshSrc'); const t=el?el.textContent.trim():''; if(!t||t.startsWith('/*')) return ''; const b=atob(t), u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return new TextDecoder().decode(u); }
+function ndshShow(on){
+  if(!on){ if(NDSH_FR) NDSH_FR.parentNode.classList.add('hide'); $('#view').classList.remove('hide'); return; }
+  $('#view').classList.add('hide');
+  if(!NDSH_FR){
+    const host=document.createElement('div'); host.id='ndshHost'; host.style.cssText='height:calc(100vh - 150px);min-height:520px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff';
+    const fr=document.createElement('iframe'); fr.title='Sửa XML PC-08'; fr.style.cssText='width:100%;height:100%;border:0;display:block'; fr.setAttribute('allow','clipboard-read; clipboard-write');
+    const doc=ndshSrcDoc(); if(doc) fr.srcdoc=doc; else fr.src='./sua-ndsh/?embed=1';
+    host.appendChild(fr); $('#view').after(host); NDSH_FR=fr;
+  }
+  NDSH_FR.parentNode.classList.remove('hide'); ndshSend();
+}
+function ndshLists(c){
+  const row=(s,nd)=>({cccd:s.cccd, ten:s.ten, ns:s.ns||'', nd});
+  const tl=tlList(false).map(s=>row(s, s.gcTL?GC_OUT[s.gcTL]:'SH lại'));
+  const moi=c.students.filter(s=>s.loai==='moi'&&!s.biLoai).map(s=>row(s, bc2GC(s)==='SH lần đầu(H)'?'SH lần đầu(H)':'SH lần đầu L+H'));
+  const g=gList(false,c).map(s=>row(s, bc2GC(s)==='SH lần đầu(H)'?'SH lần đầu(H)':'SH lần đầu L+H'));
+  return {tl:{ten:'Thi lại',short:'TL',rows:tl}, moi:{ten:'Học mới (lần đầu)',short:'Moi',rows:moi}, g:{ten:'Khóa ghép '+(gName(c)||''),short:'G',rows:g}};
+}
+function ndshSend(){ if(!NDSH_FR||!NDSH_READY||!NDSH_FR.contentWindow) return; const c=C(); try{ NDSH_FR.contentWindow.postMessage({type:'ndsh-ds', course:c.ten, parts:ndshLists(c)},'*'); }catch(e){} }
+window.addEventListener('message',e=>{ if(NDSH_FR&&e.source===NDSH_FR.contentWindow&&e.data&&e.data.type==='ndsh-ready'){ NDSH_READY=true; ndshSend(); } });
+function vNDSH(v){ v.innerHTML=''; }
 function statBox(n,l,cls=''){ return `<div class="stat ${cls}"><b>${n}</b><span>${l}</span></div>`; }
 
 function vNap(v,c){
