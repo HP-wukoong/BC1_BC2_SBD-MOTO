@@ -35,17 +35,17 @@ assert '</script' not in core.lower() and '</script' not in photo.lower() and '/
 photo = photo.replace("'/*JP2WASM*/'", "'" + b64('src/sua_ndsh/jp2/jp2.wasm') + "'", 1)
 nd = nd.replace('/*XLSX*/', x, 1).replace('/*CORE*/', core, 1).replace('/*PHOTO*/', photo, 1)
 assert '/*XLSX*/' not in nd and '/*CORE*/' not in nd and '/*PHOTO*/' not in nd and '/*JP2WASM*/' not in nd
-assert 'ndsh' not in src.split('const VERSIONS=[', 1)[0].lower(), 'TOOLS BC1+BC2+SBD phải độc lập với tool Sửa NDSH XML'
-# 1) bản file
+assert '/*NDSH_EMBED*/' in html
+# 1) bản file — nhúng sẵn tool Sửa NDSH XML (mục “Sửa XML PC-08” chạy được cả khi mở file trên máy)
 os.makedirs(P('dist'), exist_ok=True)
-open(P('dist', 'TOOLS BC1+BC2+SBD.html'), 'w', encoding='utf-8').write(html.replace('/*PWA_HEAD*/', '', 1))
+open(P('dist', 'TOOLS BC1+BC2+SBD.html'), 'w', encoding='utf-8').write(html.replace('/*PWA_HEAD*/', '', 1).replace('/*NDSH_EMBED*/', base64.b64encode(nd.encode('utf-8')).decode(), 1))
 # 2) bản web app
 head = ('<link rel="manifest" href="manifest.webmanifest">\n<meta name="theme-color" content="#14213d">\n'
         '<link rel="icon" type="image/png" href="icons/favicon-64.png">\n<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">\n'
         '<meta name="mobile-web-app-capable" content="yes">\n<meta name="application-name" content="BC1 BC2 SBD">')
 if os.path.isdir(P('docs')): shutil.rmtree(P('docs'))
 os.makedirs(P('docs', 'icons'))
-open(P('docs', 'index.html'), 'w', encoding='utf-8').write(html.replace('/*PWA_HEAD*/', head, 1))
+open(P('docs', 'index.html'), 'w', encoding='utf-8').write(html.replace('/*PWA_HEAD*/', head, 1).replace('/*NDSH_EMBED*/', '', 1))   # web: mở ./sua-ndsh/
 open(P('docs', 'sw.js'), 'w', encoding='utf-8').write(rd('pwa/sw.js').replace('__VER__', ver))
 shutil.copy(P('pwa', 'manifest.webmanifest'), P('docs', 'manifest.webmanifest'))
 for f in os.listdir(P('pwa', 'icons')): shutil.copy(P('pwa', 'icons', f), P('docs', 'icons', f))

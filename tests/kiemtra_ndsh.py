@@ -327,12 +327,208 @@ async def photo_suite(ctx, url, lab, full):
     ok(f'{lab} ảnh: không có lỗi JavaScript', not errs, errs[:3])
     await pg.close()
 
-# ---------- TOOLS BC1+BC2+SBD phải ĐỘC LẬP với tool Sửa NDSH XML ----------
-def independent_check():
-    for f in ('src/app.html', 'dist/TOOLS BC1+BC2+SBD.html', 'docs/index.html'):
-        t = open(os.path.join(ROOT, f), encoding='utf-8').read(); i = t.index('const VERSIONS=['); j = t.index('\n];', i)
-        code = (t[:i] + t[j:]).lower()   # bỏ phần lịch sử phiên bản (chỉ là ghi chú)
-        ok(f'TOOLS BC1+BC2+SBD độc lập ({f}): không có mục / mã của tool Sửa NDSH XML', not any(k in code for k in ('data-t="ndsh"', 'ndshsrc', 'ndshshow', 'ndshsend', 'vndsh', 'sua-ndsh', 'sửa xml pc-08', 'ndsh-ds')))
+# ---------- XML THƯỜNG (giống file BC2 gửi đi): gốc <BAO_CAO1>, KHÔNG có NOI_DUNG_SH, không BOM, CRLF, có chữ ký ----------
+NB = 12
+def make_bc2():
+    recs = []
+    for i in range(NB):
+        p = P_[i]; photo = base64.b64encode(photo_of(i if i not in (5, 6, 8, 9) else 20 + i)).decode()
+        recs.append(f"""      <NGUOI_LX>
+        <SO_TT>{i+1}</SO_TT>
+        <MA_DK>99999-20260101-{i:06d}</MA_DK>
+        <HO_TEN_DEM>{p['ho']}</HO_TEN_DEM>
+        <TEN>{p['ten']}</TEN>
+        <HO_VA_TEN>{p['ho']} {p['ten']}</HO_VA_TEN>
+        <NGAY_SINH>1990010{i % 9 + 1}</NGAY_SINH>
+        <TEN_QUOC_TICH />
+        <NOI_TT></NOI_TT>
+        <SO_CMT>{p['cccd']}</SO_CMT>
+        <GIOI_TINH>{'M' if i % 2 == 0 else 'F'}</GIOI_TINH>
+        <HO_SO>
+          <SO_HO_SO>{100 + i}</SO_HO_SO>
+          <TEN_DV_NHAN_HOSO />
+          <ANH_CHAN_DUNG>{photo}</ANH_CHAN_DUNG>
+          <CHAT_LUONG_ANH>1</CHAT_LUONG_ANH>
+          <NGAY_THU_NHAN_ANH>2026-09-26</NGAY_THU_NHAN_ANH>
+          <MA_KHOA_HOC>99999K26A0001</MA_KHOA_HOC>
+        </HO_SO>
+        <GIAY_TOS>
+          <GIAY_TO>
+            <MA_GIAY_TO>1</MA_GIAY_TO>
+            <TEN_GIAY_TO>Đơn đề nghị (thử nghiệm) &amp; giấy tờ</TEN_GIAY_TO>
+          </GIAY_TO>
+        </GIAY_TOS>
+      </NGUOI_LX>""")
+    body = f"""<?xml version="1.0" encoding="utf-8"?>
+<BAO_CAO1>
+  <HEADER>
+    <MA_GIAO_DICH>00000000-thu-nghiem-bc2</MA_GIAO_DICH>
+    <MA_DV_GUI>99999</MA_DV_GUI>
+    <TEN_DV_GUI>Đơn vị thử nghiệm</TEN_DV_GUI>
+    <NGAY_GUI>2026-11-13 08:00:00</NGAY_GUI>
+    <TONG_SO_BAN_GHI>{NB}</TONG_SO_BAN_GHI>
+  </HEADER>
+  <DATA>
+    <KHOA_HOC>
+      <MA_KHOA_HOC>99999K26A0001</MA_KHOA_HOC>
+      <TEN_KHOA_HOC>HẠNG A1M-THỬ NGHIỆM</TEN_KHOA_HOC>
+      <SO_QD_KG></SO_QD_KG>
+    </KHOA_HOC>
+    <NGUOI_LXS>
+{chr(10).join(recs)}
+    </NGUOI_LXS>
+  </DATA>
+</BAO_CAO1>"""
+    dig = base64.b64encode(hashlib.sha1(ET.canonicalize(body.split('?>', 1)[1], strip_text=True).encode()).digest()).decode()
+    sig = f"""  <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+    <SignedInfo>
+      <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />
+      <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" />
+      <Reference URI="">
+        <Transforms>
+          <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" />
+        </Transforms>
+        <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
+        <DigestValue>{dig}</DigestValue>
+      </Reference>
+    </SignedInfo>
+    <SignatureValue>VGh1TmdoaWVt</SignatureValue>
+  </Signature>
+</BAO_CAO1>"""
+    body = body[:body.rindex('</BAO_CAO1>')] + sig
+    return body.replace('\n', '\r\n').encode('utf-8')
+def only_photos_changed(X, out, want):
+    """file mới chỉ khác file gốc ở ảnh của đúng các hồ sơ `want`; trả ảnh cũ vào thì giống hệt từng byte"""
+    A0, A1 = anh_ranges(X), anh_ranges(out)
+    if len(A0) != len(A1): return False, 'số thẻ ảnh khác'
+    ch = [i for i in range(len(A0)) if X[A0[i][0]:A0[i][1]] != out[A1[i][0]:A1[i][1]]]
+    back = out
+    for i in sorted(ch, reverse=True): back = back[:A1[i][0]] + X[A0[i][0]:A0[i][1]] + back[A1[i][1]:]
+    return (ch == sorted(want) and back == X), ch
+async def thuong_flow(pg, lab, X, who, page=None):
+    """Trong tab ②: chọn XML thường, nạp file, thay ảnh `who` (người đầu qua hộp thoại, còn lại nạp hàng loạt), Xuất XML, tải về"""
+    await pg.click('nav.tabs button[data-tab=photo]'); await pg.click('#phSeg button[data-src=thuong]')
+    await pg.wait_for_function("PD===T && !document.querySelector('#phThuong').classList.contains('hide')")
+    await pg.set_input_files('#fT', files=[{'name': 'BC2_THU_NGHIEM.xml', 'mimeType': 'text/xml', 'buffer': X}])
+    await pg.wait_for_function("PD===T && !!T.xml && PH.built===true", timeout=60000)
+    await pg.wait_for_function("document.querySelector('#phAudit').textContent.includes('Soát xong')", timeout=120000)
+    await pg.click(f'#phGrid .pcard[data-i="{who[0]}"]'); await pg.wait_for_selector('#phdFile', state='attached')
+    await b64file(pg, '#phdFile', 'anh_moi.jpg', jpg(pic(900, 354, 472), 95), 'image/jpeg'); await wait_info(pg)
+    await pg.click('#dlgOk'); await pg.wait_for_function('PH.pending.size===1', timeout=30000)
+    if len(who) > 1:
+        await pg.set_input_files('#phFiles', files=[{'name': P_[i]['cccd'] + '.jpg', 'mimeType': 'image/jpeg', 'buffer': jpg(pic(910 + i, 360, 480), 93)} for i in who[1:]])
+        await pg.wait_for_selector('.pbChk'); await pg.click('#dlgOk'); await pg.wait_for_function(f'PH.pending.size==={len(who)}', timeout=60000)
+    ok(f'{lab}: mục ① không nhận ảnh của file XML thường (không trộn với file PC-08)', await pg.evaluate("pcPhotos().length===0 && !/ảnh/.test(document.querySelector('#bRun').textContent)"))
+    await pg.click('#phGo'); await pg.wait_for_function("!xtRunning && (T.outOk || /KHÔNG/.test(document.querySelector('#phRunInfo').textContent) || /Lỗi/.test(document.querySelector('#phChecks').textContent))", timeout=120000)
+    checks = await pg.inner_text('#phChecks')
+    if await pg.is_visible('#phAck'): await pg.check('#phAck')
+    async with (page or pg).expect_download() as d: await pg.click('#phDl')
+    dl = await d.value; out = open(await dl.path(), 'rb').read()
+    return out, dl.suggested_filename, checks
+async def thuong_suite(ctx, url, lab, full):
+    pg = await ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+    pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
+    await pg.goto(url); await pg.wait_for_function('window.__ndshReady===true')
+    # mục ① đang làm dở file PC-08 + Excel → phải giữ nguyên sau khi làm file XML thường
+    XP = make_xml(); await load(pg, '#fX', '52_THU_NGHIEM.xml', XP, 'text/xml'); await pg.wait_for_timeout(300)
+    await load(pg, '#fE', 'A1m-99-TL.xlsx', await xlsx(pg, rows_a()), 'application/octet-stream'); await pg.wait_for_selector('#cardRes:not(.hide)')
+    st0 = await pg.evaluate("JSON.stringify([S.xmlName,S.xml.length,S.recs.length,S.items.map(i=>[i.cccd,i.st,i.apply,i.newVal]),S.wbName])")
+    X = make_bc2(); who = [0, 2, 3]
+    out, fname, checks = await thuong_flow(pg, f'{lab} XML thường', X, who)
+    info = await pg.inner_text('#mT')
+    ok(f'{lab} XML thường: nhận đúng file <BAO_CAO1>, khóa học, {NB} hồ sơ, có chữ ký', 'BAO_CAO1' in info and '99999K26A0001' in info and f'{NB} / khai báo {NB}' in info and 'Có (XML Signature)' in info, info.replace('\n', ' ')[:200])
+    good, ch = only_photos_changed(X, out, who)
+    ok(f'{lab} XML thường: file xuất chỉ khác ảnh của đúng 3 người; trả ảnh cũ vào thì giống hệt file gốc từng byte', good, ch)
+    try: ET.fromstring(out); wf = True
+    except Exception as e: wf = str(e)
+    ok(f'{lab} XML thường: file xuất là XML hợp lệ (trình phân tích Python)', wf is True, wf)
+    ok(f'{lab} XML thường: giữ CRLF, không thêm BOM, tên file …_DA_THAY_ANH_….xml', out.count(b'\r\n') == X.count(b'\r\n') and not out.startswith(b'\xef\xbb\xbf') and re.match(r'^BC2_THU_NGHIEM_DA_THAY_ANH_\d{8}-\d{4}\.xml$', fname), fname)
+    A1 = anh_ranges(out); bad = []
+    for i in who:
+        nb = base64.b64decode(out[A1[i][0]:A1[i][1]]); im = Image.open(io.BytesIO(nb)); im.load()
+        if not (im.format == 'JPEG2000' and im.size == (353, 471) and jp2_ok(nb, 353, 471)): bad.append(i)
+    ok(f'{lab} XML thường: Pillow đọc được ảnh mới, đúng cấu trúc JPEG 2000 như ảnh cũ', not bad, bad)
+    need = ['So sánh từng byte với file gốc: chỉ khác đúng ở các vùng đã chọn', 'Đối chiếu lần 2', 'Giải mã thử 3 ảnh mới', 'Số lượng thẻ không đổi', 'TONG_SO_BAN_GHI = 12 giữ nguyên', 'XML hợp lệ', 'file GỐC hợp lệ — file MỚI KHÔNG còn khớp chữ ký', 'SHA-256']
+    ok(f'{lab} XML thường: đủ các bước kiểm định, không bước nào ✘', all(k in checks for k in need) and '✘' not in checks, [k for k in need if k not in checks])
+    st1 = await pg.evaluate("JSON.stringify([S.xmlName,S.xml.length,S.recs.length,S.items.map(i=>[i.cccd,i.st,i.apply,i.newVal]),S.wbName])")
+    ok(f'{lab} XML thường: file PC-08 và danh sách đối chiếu ở mục ① giữ nguyên', st0 == st1)
+    # cài lỗi giả: bộ ghi lỡ đổi thêm 1 byte ngoài ảnh → phải chặn, không cho tải
+    await pg.evaluate("()=>{ window.__ap=XCore.applyPatches; XCore.applyPatches=(b,p)=>{ const o=window.__ap(b,p); o[60]^=1; return o; }; }")
+    await pg.click('#phRun'); await pg.wait_for_function("!xtRunning", timeout=120000)
+    blk = await pg.evaluate("!T.outOk && document.querySelector('#phDlBox').classList.contains('hide') && /KHÔNG đạt/.test(document.querySelector('#phRunInfo').textContent)")
+    ok(f'{lab} XML thường: cài lỗi giả (đổi thêm 1 byte ngoài ảnh) → kiểm định chặn, không cho tải', blk, (await pg.inner_text('#phChecks'))[:160].replace('\n', ' '))
+    await pg.evaluate("()=>{ XCore.applyPatches=window.__ap; }")
+    # file không có <NGUOI_LX> / không có ảnh → báo lỗi rõ
+    await pg.set_input_files('#fT', files=[{'name': 'rong.xml', 'mimeType': 'text/xml', 'buffer': b'<?xml version="1.0"?><A><B>1</B></A>'}])
+    await pg.wait_for_timeout(100)
+    if await pg.is_visible('#dlgOk'): await pg.click('#dlgOk')
+    await pg.wait_for_function("/Lỗi/.test(document.querySelector('#mT').textContent)", timeout=20000)
+    ok(f'{lab} XML thường: file không có hồ sơ → báo lỗi, không hiện lưới ảnh, nút Xuất XML tắt', await pg.evaluate("!T.xml && document.querySelector('#phMain').classList.contains('hide') && document.querySelector('#phRun').disabled"))
+    if full:
+        # tab ③ kiểm tra: so file XML thường gốc với file đã thay ảnh → ĐẠT, 3 ảnh
+        await pg.click('nav.tabs button[data-tab=cmp]')
+        await load(pg, '#fA', 'goc.xml', X, 'text/xml'); await load(pg, '#fB', 'sua.xml', out, 'text/xml')
+        await pg.click('#bCmp'); await pg.wait_for_selector('#cmpRes:not(.hide)', timeout=60000)
+        v = await pg.inner_text('#cmpVerdict')
+        ok(f'{lab} XML thường: tab kiểm tra → ĐẠT, 3 hồ sơ thay ảnh', 'ĐẠT' in v and 'KHÔNG' not in v and 'ảnh chân dung của 3 hồ sơ' in v, v)
+        # quay lại XML PC-08: lưới ảnh là của file PC-08, tạo file ở mục ① vẫn đúng như trước
+        await pg.click('nav.tabs button[data-tab=photo]'); await pg.click('#phSeg button[data-src=pc08]')
+        await pg.wait_for_function(f"PD===S && PH.built===true && document.querySelectorAll('#phGrid .pcard').length==={N}", timeout=60000)
+        await pg.click('nav.tabs button[data-tab=fix]'); o2, _ = await run_and_get(pg)
+        ok(f'{lab} XML thường: quay lại file PC-08 → mục ① tạo file giống hệt file mong đợi', o2 == expected(XP, CH_A))
+        h = await pg.evaluate("JSON.parse(localStorage.getItem('suaNDSH.history')||'[]').map(x=>x.mode)")
+        ok(f'{lab} XML thường: lịch sử ghi lần xuất “chỉ thay ảnh”', 'anh' in h, h[:3])
+    ok(f'{lab} XML thường: không có lỗi JavaScript', not errs, errs[:3])
+    await pg.close()
+
+# ---------- Mục “Sửa XML PC-08” trong TOOLS BC1+BC2+SBD ----------
+async def main_app_suite(ctx, url, lab):
+    pg = await ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+    await pg.goto(url); await pg.wait_for_function("typeof render==='function' && typeof DB!=='undefined' && !!DB && !!DB.courses", timeout=30000)
+    async def close_dlg():
+        for _ in range(10):
+            await pg.wait_for_timeout(300); await pg.evaluate("()=>{ document.querySelectorAll('dialog[open]').forEach(d=>d.close()); document.querySelectorAll('.popcard').forEach(e=>e.style.display='none'); }")
+    await close_dlg()
+    await pg.evaluate("""(R)=>{ const c=C(); R.forEach(([ten,cc,gc],i)=>c.students.push({cccd:cc,ten,ns:'01/01/1990',dc:'Gia Lai',sk:'x',hangHS:'',hangG:'',soGPLX:'',maDK:'',soHS:'',srcs:['tay'],biLoai:false,lyDo:'',phuTrach:'',sbd:'',loai:gc?'tl':'moi',gcTL:gc,ord:c.seq++})); TAB='ndsh'; render(); }""",
+        [[p['ho'] + ' ' + p['ten'], p['cccd'], ['L', 'L+H', 'H'][i % 3] if i < 9 else ''] for i, p in enumerate(P_[:12])])
+    # ẢNH CHỤP dữ liệu TOOLS trước khi dùng mục 5: bộ nhớ, localStorage (trừ khóa riêng của tool Sửa NDSH), IndexedDB, giao diện mục 1–4
+    SNAP = """async()=>{ const ls={}; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!k.startsWith('suaNDSH.')) ls[k]=localStorage.getItem(k); }
+      const db=await new Promise((res)=>{ const r=indexedDB.open(IDBN); r.onsuccess=()=>{ const d=r.result; if(!d.objectStoreNames.contains(IDBS)){ res('[]'); return; } const t=d.transaction(IDBS,'readonly'), st=t.objectStore(IDBS), ks=st.getAllKeys(), vs=st.getAll(); t.oncomplete=()=>{ res(JSON.stringify([ks.result, vs.result.map(v=>{ try{ return JSON.stringify(v); }catch(e){ return String(v); } })])); d.close(); }; }; r.onerror=()=>res('ERR'); });
+      const ui={}; for(const t of ['nap','bc1','bc2','sbd']){ TAB=t; render(); ui[t]=document.querySelector('#view').innerHTML; }
+      return JSON.stringify({ls, db, mem:JSON.stringify(DB), ui}); }"""
+    await pg.wait_for_timeout(1200); snap0 = await pg.evaluate(SNAP); await pg.wait_for_timeout(800); snap0 = await pg.evaluate(SNAP)
+    await pg.evaluate("()=>{TAB='ndsh';render();}")
+    fr = None
+    for _ in range(150):
+        await pg.wait_for_timeout(200); fr = next((f for f in pg.frames if f != pg.main_frame), None)
+        if fr:
+            try:
+                if await fr.evaluate("window.__ndshReady===true && !document.querySelector('#embBox').classList.contains('hide')"): break
+            except Exception: pass
+    ok(f'{lab}: mục “Sửa XML PC-08” mở tool trong khung, nhận danh sách khóa đang mở', bool(fr) and 'Thi lại · 9 người' in await fr.inner_text('#embBox'))
+    X = make_xml(); await pg.evaluate("()=>{ document.querySelectorAll('dialog[open]').forEach(d=>d.close()); document.querySelectorAll('.popcard').forEach(e=>e.style.display='none'); }")
+    await fr.set_input_files('#fX', files=[{'name': 'x.xml', 'mimeType': 'text/xml', 'buffer': X}]); await pg.wait_for_timeout(500)
+    await pg.evaluate("()=>{ document.querySelectorAll('dialog[open]').forEach(d=>d.close()); document.querySelectorAll('.popcard').forEach(e=>e.style.display='none'); }")
+    await pg.evaluate("()=>{ document.querySelectorAll('dialog[open]').forEach(d=>d.close()); document.querySelectorAll('.popcard').forEach(e=>e.style.display='none'); }")
+    await fr.click('#embBox button[data-part=tl]'); await pg.wait_for_timeout(400)
+    sel = await fr.evaluate("S.items.filter(i=>i.apply).map(i=>[i.cccd,i.newVal])")
+    want = [[P_[i]['cccd'], str({'L': 2, 'L+H': 3, 'H': 7}[['L', 'L+H', 'H'][i % 3]])] for i in range(9) if str({'L': 2, 'L+H': 3, 'H': 7}[['L', 'L+H', 'H'][i % 3]]) != P_[i]['code']]
+    ok(f'{lab}: dùng danh sách thi lại của tool → đúng người, đúng mã (SH lại L / L+H / H)', sorted(sel) == sorted(want), sel)
+    await pg.evaluate("()=>{TAB='bc1';render();}"); await pg.wait_for_timeout(300); await pg.evaluate("()=>{TAB='ndsh';render();}"); await pg.wait_for_timeout(300)
+    ok(f'{lab}: chuyển mục rồi quay lại — file XML đã nạp vẫn còn', await fr.evaluate("!!S.xml && S.recs.length") == N)
+    # dùng mục 5 đầy đủ: tạo file PC-08 + làm file XML thường (thay ảnh, Xuất XML, tải về)
+    await fr.click('#bRun'); await fr.wait_for_selector('#cardStat:not(.hide)', timeout=120000)
+    if await fr.is_visible('#ack'): await fr.check('#ack')
+    async with pg.expect_download() as d: await fr.click('#bDl')
+    o1 = open(await (await d.value).path(), 'rb').read()
+    ok(f'{lab}: tạo file PC-08 trong mục 5 đúng như mong đợi', o1 == expected(X, {P_[i]['cccd']: v for i in range(9) for v in [str({'L': 2, 'L+H': 3, 'H': 7}[['L', 'L+H', 'H'][i % 3]])] if v != P_[i]['code']}))
+    XB = make_bc2(); outb, _, ck = await thuong_flow(fr, f'{lab} mục 5', XB, [1, 4], pg)
+    ok(f'{lab}: mục 5 — XML thường xuất ra chỉ khác ảnh 2 người', only_photos_changed(XB, outb, [1, 4])[0] and '✘' not in ck)
+    await pg.evaluate("()=>{TAB='bc1';render();}"); await pg.wait_for_timeout(1500)
+    snap1 = await pg.evaluate(SNAP)
+    ok(f'{lab}: dùng mục 5 xong — dữ liệu TOOLS (bộ nhớ, localStorage, IndexedDB) và giao diện mục 1, 2, 3, 4 KHÔNG thay đổi', snap0 == snap1 and len(json.loads(snap0)['db']) > 100 and len(json.loads(snap0)['ls']) > 0 and all(len(v) > 50 for v in json.loads(snap0)['ui'].values()),
+       [k for k in json.loads(snap0) if json.loads(snap0)[k] != json.loads(snap1)[k]])
+    ok(f'{lab}: không có lỗi JavaScript', not errs, errs[:3]); await pg.close()
 
 async def real(ctx, url, xml_p, xls_p, exp_p):
     pg = await ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
@@ -364,7 +560,10 @@ async def main():
         print('Bản file'); await suite(ctx, 'file://' + os.path.join(ROOT, 'dist', 'Sua_NDSH_XML.html'), 'Bản file', False)
         print('Ảnh chân dung (web)'); await photo_suite(ctx, web, 'Web', True)
         print('Ảnh chân dung (bản file)'); await photo_suite(ctx, 'file://' + os.path.join(ROOT, 'dist', 'Sua_NDSH_XML.html'), 'Bản file', False)
-        print('TOOLS BC1+BC2+SBD độc lập'); independent_check()
+        print('XML thường — chỉ thay ảnh (web)'); await thuong_suite(ctx, web, 'Web', True)
+        print('XML thường — chỉ thay ảnh (bản file)'); await thuong_suite(ctx, 'file://' + os.path.join(ROOT, 'dist', 'Sua_NDSH_XML.html'), 'Bản file', False)
+        print('TOOLS BC1+BC2+SBD — mục Sửa XML PC-08'); await main_app_suite(ctx, f'http://127.0.0.1:{port}/', 'App chính (web)')
+        await main_app_suite(ctx, 'file://' + os.path.join(ROOT, 'dist', 'TOOLS BC1+BC2+SBD.html'), 'App chính (bản file)')
         # service worker: mở tool rồi mất mạng → trang chính vẫn là trang chính
         pg = await ctx.new_page(); await pg.goto(f'http://127.0.0.1:{port}/')
         await pg.wait_for_function("()=>navigator.serviceWorker&&navigator.serviceWorker.ready.then(()=>true)", timeout=20000)
