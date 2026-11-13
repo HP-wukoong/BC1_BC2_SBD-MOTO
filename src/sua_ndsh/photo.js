@@ -153,11 +153,11 @@ function phReset(){
   PH.info.clear(); PH.thumb.clear(); PH.pending.clear(); PH.issues.clear(); PH.tray = []; PH.prof = null; PH.built = false; PH.audit = { running:false, done:0, total:0, gen:PH.audit.gen + 1 };
   ENG.q.splice(0).forEach(j => j.rej(new Error('huỷ')));
 }
-function phBytes(idx){ const r = S.recs[idx]; return r && r.anh ? XCore.fromB64(S.xml, r.anh) : null; }
+function phBytes(idx){ const r = PD.recs[idx]; return r && r.anh ? XCore.fromB64(PD.xml, r.anh) : null; }
 function phOnXml(){
   phReset();
-  for (const r of S.recs) { if (!r.anh) { PH.info.set(r.idx, { fmt:'—', err: r.anhErr }); continue; }
-    try { const h = photoHead(b64Head(S.xml, r.anh, 4096)); h.size = Math.floor((r.anh.end - r.anh.start) * 3 / 4) - (S.xml[r.anh.end - 1] === 61 ? 1 : 0) - (S.xml[r.anh.end - 2] === 61 ? 1 : 0); PH.info.set(r.idx, h); }
+  for (const r of PD.recs) { if (!r.anh) { PH.info.set(r.idx, { fmt:'—', err: r.anhErr }); continue; }
+    try { const h = photoHead(b64Head(PD.xml, r.anh, 4096)); h.size = Math.floor((r.anh.end - r.anh.start) * 3 / 4) - (PD.xml[r.anh.end - 1] === 61 ? 1 : 0) - (PD.xml[r.anh.end - 2] === 61 ? 1 : 0); PH.info.set(r.idx, h); }
     catch(e){ PH.info.set(r.idx, { fmt:'?', err:'Dữ liệu ảnh không phải base64 hợp lệ' }); } }
   PH.prof = phProfile();
   phRenderAll();
@@ -193,8 +193,8 @@ function phThumb(idx, prio){
   PH.thumb.set(idx, rec); return rec.p;
 }
 async function phAudit(){
-  if (PH.audit.running || !S.xml) return; const gen = PH.audit.gen;
-  const ids = S.recs.filter(r => r.anh).map(r => r.idx); PH.audit = { running:true, done:0, total:ids.length, gen };
+  if (PH.audit.running || !PD.xml) return; const gen = PH.audit.gen;
+  const ids = PD.recs.filter(r => r.anh).map(r => r.idx); PH.audit = { running:true, done:0, total:ids.length, gen };
   phAuditInfo(); const t0 = performance.now();
   await Promise.all(ids.map(i => phThumb(i, 6).then(() => { if (PH.audit.gen === gen) { PH.audit.done++; if (PH.audit.done % 20 === 0) phAuditInfo(); } })));
   if (PH.audit.gen !== gen) return;
@@ -203,7 +203,7 @@ async function phAudit(){
 function phComputeIssues(){
   PH.issues.clear(); const add = (i, s) => { if (!PH.issues.has(i)) PH.issues.set(i, []); PH.issues.get(i).push(s); };
   const byHash = new Map(), list = [];
-  for (const r of S.recs) {
+  for (const r of PD.recs) {
     const inf = PH.info.get(r.idx) || {}, t = PH.thumb.get(r.idx);
     if (inf.err) { add(r.idx, inf.err); continue; }
     if (!t || t.err) { add(r.idx, 'Ảnh hỏng, không đọc được' + (t && t.err ? ' (' + t.err + ')' : '')); continue; }
@@ -212,7 +212,7 @@ function phComputeIssues(){
     if (t.std < 8) add(r.idx, 'Ảnh trống / gần như một màu');
     else if (t.mean < 50) add(r.idx, 'Ảnh quá tối');
     else if (t.mean > 238) add(r.idx, 'Ảnh quá sáng / bạc màu');
-    const k = S.xml.subarray(r.anh.start, Math.min(r.anh.end, r.anh.start + 200)).join(',') + ':' + (r.anh.end - r.anh.start);
+    const k = PD.xml.subarray(r.anh.start, Math.min(r.anh.end, r.anh.start + 200)).join(',') + ':' + (r.anh.end - r.anh.start);
     if (byHash.has(k)) { const o = byHash.get(k); if (phSameB64(o.anh, r.anh)) { add(r.idx, 'Trùng hệt ảnh của ' + o.ten + ' (' + o.cccd + ')'); add(o.idx, 'Trùng hệt ảnh của ' + r.ten + ' (' + r.cccd + ')'); continue; } }
     byHash.set(k, r); if (t.feat) list.push([r, t.feat]);
   }
@@ -223,16 +223,16 @@ function phComputeIssues(){
     if (d <= lim) { add(list[i][0].idx, 'Có thể cùng ảnh với ' + list[j][0].ten + ' (' + list[j][0].cccd + ')'); add(list[j][0].idx, 'Có thể cùng ảnh với ' + list[i][0].ten + ' (' + list[i][0].cccd + ')'); }
   }
 }
-function phSameB64(a, b){ if (a.end - a.start !== b.end - b.start) return false; for (let i = 0; i < a.end - a.start; i++) if (S.xml[a.start + i] !== S.xml[b.start + i]) return false; return true; }
+function phSameB64(a, b){ if (a.end - a.start !== b.end - b.start) return false; for (let i = 0; i < a.end - a.start; i++) if (PD.xml[a.start + i] !== PD.xml[b.start + i]) return false; return true; }
 
 /* ---------- Giao diện tab ảnh ---------- */
 const deaccent = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
 function phRenderAll(){
   const box = $('#phGrid'); if (!box) return;
-  $('#phEmpty').classList.toggle('hide', !!S.xml); $('#phMain').classList.toggle('hide', !S.xml);
-  if (!S.xml) { box.innerHTML = ''; return; }
+  $('#phEmpty').classList.toggle('hide', !!PD.xml); $('#phMain').classList.toggle('hide', !PD.xml);
+  if (!PD.xml) { box.innerHTML = ''; return; }
   $('#phProf').textContent = profTxt(PH.prof);
-  box.innerHTML = S.recs.map(r => { const inf = PH.info.get(r.idx) || {};
+  box.innerHTML = PD.recs.map(r => { const inf = PH.info.get(r.idx) || {};
     return `<div class="pcard" data-i="${r.idx}" tabindex="0" title="Bấm để thay ảnh · hoặc kéo thả ảnh vào đây">
       <div class="pimg"><img alt="" draggable="false"><span class="pnew hide">MỚI</span><span class="pload">…</span></div>
       <div class="pnm">${esc(r.ten)}</div><div class="psub">SBD ${esc(r.sbd || '—')} · ${esc(r.cccd)}</div>
@@ -256,9 +256,9 @@ function phCardImg(idx){
 }
 function phApplyFilter(){
   if (!PH.built) return; const q = deaccent(PH.q).toUpperCase().trim(); let n = 0;
-  const cnt = { all:S.recs.length, bad:0, chg:PH.pending.size };
+  const cnt = { all:PD.recs.length, bad:0, chg:PH.pending.size };
   PH.issues.forEach(v => { if (v.length) cnt.bad++; });
-  $$('#phGrid .pcard').forEach(c => { const i = +c.dataset.i, r = S.recs[i];
+  $$('#phGrid .pcard').forEach(c => { const i = +c.dataset.i, r = PD.recs[i];
     let ok = PH.filter === 'all' || (PH.filter === 'bad' ? (PH.issues.get(i) || []).length > 0 : PH.pending.has(i));
     if (ok && q) ok = deaccent(r.ten).toUpperCase().includes(q) || r.cccd.includes(q) || String(r.sbd).includes(q);
     c.style.display = ok ? '' : 'none'; if (ok) n++; phCardImg(i); });
@@ -274,9 +274,19 @@ function phAuditInfo(){
 function phPendingBar(){
   const n = PH.pending.size, b = $('#phBar'); if (!b) return;
   b.classList.toggle('hide', !n);
-  b.innerHTML = n ? `<b>Đã chọn thay ảnh cho ${n} người.</b> Ảnh chưa ghi vào file — sang mục <b>① → Tạo file &amp; kiểm định</b> để tạo file XML mới (đổi mã NDSH, nếu có, được ghi cùng lúc). <button class="btn sm" id="phGo">Sang mục Tạo file</button> <button class="btn sec sm" id="phClear">Bỏ tất cả ảnh mới</button>` : '';
-  if (n) { $('#phGo').onclick = () => { $$('nav.tabs button').find(x => x.dataset.tab === 'fix').click(); build(); setTimeout(() => $('#cardOut').scrollIntoView({ behavior:'smooth' }), 50); };
-    $('#phClear').onclick = () => dialog(`<h2>Bỏ tất cả ${n} ảnh mới?</h2><p>File XML không bị ảnh hưởng (chưa ghi gì).</p>`, () => { PH.pending.forEach(p => URL.revokeObjectURL(p.url)); PH.pending.clear(); phApplyFilter(); phPendingBar(); build(); }, 'Bỏ hết'); }
+  if (typeof xtBtn === 'function') xtBtn();
+  if (!n) { b.innerHTML = ''; return; }
+  const th = PD.kind === 'thuong';
+  b.innerHTML = `<b>Đã chọn thay ảnh cho ${n} người.</b> ` + (th
+    ? 'Ảnh chưa ghi vào file — bấm <b>Xuất XML</b> để tạo file mới (chỉ thay ảnh), kiểm định từng byte rồi tải về.'
+    : 'Ảnh chưa ghi vào file — bấm <b>Xuất XML</b> để tạo file mới ở mục ① (đổi mã NDSH, nếu có, được ghi cùng lúc).') +
+    ` <button class="btn sm" id="phGo">Xuất XML</button> <button class="btn sec sm" id="phClear">Bỏ tất cả ảnh mới</button>`;
+  $('#phGo').onclick = () => {
+    if (th) { $('#phOut').scrollIntoView({ behavior:'smooth', block:'start' }); xtRun(); return; }
+    $$('nav.tabs button').find(x => x.dataset.tab === 'fix').click(); build();
+    setTimeout(() => { $('#cardOut').scrollIntoView({ behavior:'smooth' }); if (!$('#bRun').disabled) $('#bRun').click(); }, 50);
+  };
+  $('#phClear').onclick = () => dialog(`<h2>Bỏ tất cả ${n} ảnh mới?</h2><p>File XML không bị ảnh hưởng (chưa ghi gì).</p>`, () => { PH.pending.forEach(p => URL.revokeObjectURL(p.url)); PH.pending.clear(); phApplyFilter(); phPendingBar(); phChanged(); }, 'Bỏ hết');
 }
 
 /* ---------- Chuẩn bị ảnh mới: cắt khung đúng cỡ ảnh cũ, mã hóa theo số đông ---------- */
@@ -310,13 +320,13 @@ async function phPrepare(idx, bmp, cr, srcName){
   const h0 = photoHead(bytes);
   return { idx, bytes, b64: XCore.toB64(bytes), url: URL.createObjectURL(r.prev), chk, head:h0, src: { name: srcName || 'ảnh dán', w: bmp.width, h: bmp.height }, crop: Object.assign({}, cr), at: new Date().toISOString() };
 }
-function phSetPending(p){ const o = PH.pending.get(p.idx); if (o) URL.revokeObjectURL(o.url); PH.pending.set(p.idx, p); phCardImg(p.idx); phApplyFilter(); phPendingBar(); if (typeof build === 'function') build(); }
-const ccInName = (name) => { const ds = String(name || '').match(/\d{9,12}/g) || []; for (const d of ds) { const k = XCore.normCccd(d); if (k && S.byCccd.has(k)) return k; } return ds.length ? XCore.normCccd(ds[0]) || ds[0] : ''; };
+function phSetPending(p){ const o = PH.pending.get(p.idx); if (o) URL.revokeObjectURL(o.url); PH.pending.set(p.idx, p); phCardImg(p.idx); phApplyFilter(); phPendingBar(); phChanged(); }
+const ccInName = (name) => { const ds = String(name || '').match(/\d{9,12}/g) || []; for (const d of ds) { const k = XCore.normCccd(d); if (k && PD.byCccd.has(k)) return k; } return ds.length ? XCore.normCccd(ds[0]) || ds[0] : ''; };
 
 /* Hộp thay ảnh 1 người (kéo thả / Ctrl+V / chọn file / lấy theo tên trong thư mục ảnh) */
 let PHD = null;
 async function phOpen(idx, file){
-  const r = S.recs[idx]; if (!r) return; if (!r.anh) return toast('Hồ sơ này không có thẻ ảnh để thay: ' + (r.anhErr || ''), 5000);
+  const r = PD.recs[idx]; if (!r) return; if (!r.anh) return toast('Hồ sơ này không có thẻ ảnh để thay: ' + (r.anhErr || ''), 5000);
   const inf = PH.info.get(idx) || {}, t = await phThumb(idx, 0), pend = PH.pending.get(idx), tg = phTarget(idx);
   PHD = { idx, bmp:null, cr:null, file:null, busy:false };
   dialog(`<h2>Thay ảnh — ${esc(r.ten)}</h2><p class="small" style="margin-top:-4px">CCCD ${esc(r.cccd)} · SBD ${esc(r.sbd || '—')} · Khóa ${esc(r.khoa || '—')}</p>
@@ -336,7 +346,7 @@ async function phOpen(idx, file){
         toast(`Đã chọn ảnh mới cho ${r.ten} (${Math.round(p.bytes.length / 1024)} KB, PSNR ${p.chk.psnr.toFixed(1)} dB)` + (p.chk.psnr < 35 ? ' — ảnh nhiều hạt/nhiễu nên giảm chi tiết sau nén, nên xem lại' : ''), p.chk.psnr < 35 ? 7000 : 3200); PHD = null; return true; }
       catch(e){ $('#phdInfo').innerHTML = `<span class="st-bad">${esc(e.message)}</span>`; PHD.busy = false; return false; } }, 'Dùng ảnh này', { wide:true });
   $('#dlg').addEventListener('close', () => { PHD = null; }, { once:true });
-  if (pend) $('#phdUndo').onclick = () => { URL.revokeObjectURL(pend.url); PH.pending.delete(idx); phCardImg(idx); phApplyFilter(); phPendingBar(); build(); $('#dlg').close(); toast('Đã bỏ ảnh mới của ' + r.ten); };
+  if (pend) $('#phdUndo').onclick = () => { URL.revokeObjectURL(pend.url); PH.pending.delete(idx); phCardImg(idx); phApplyFilter(); phPendingBar(); phChanged(); $('#dlg').close(); toast('Đã bỏ ảnh mới của ' + r.ten); };
   const drop = $('#phdDrop');
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('over'));
@@ -364,7 +374,7 @@ async function phdFromDir(){
     phdLoad(await fh.getFile()); } catch(e){ $('#phdInfo').innerHTML = `<span class="st-bad">${esc(e.message)}</span>`; }
 }
 async function phdLoad(file){
-  if (!PHD) return; const idx = PHD.idx, r = S.recs[idx];
+  if (!PHD) return; const idx = PHD.idx, r = PD.recs[idx];
   $('#phdInfo').innerHTML = '<span class="st-warn">Đang đọc ảnh…</span>';
   try { const bmp = await phBitmap(file); if (!PHD || PHD.idx !== idx) return; const { w:W, h:H } = phTarget(idx);
     PHD.bmp = bmp; PHD.file = file; PHD.cr = phCropInit(bmp.width, bmp.height, W, H);
@@ -380,10 +390,10 @@ function phdPaint(){ if (!PHD || !PHD.bmp) return; const cv = $('#phdCv'); if (!
 const isImg = f => /^image\//.test(f.type || '') || /\.(jpe?g|png|webp|bmp|jp2|j2k|gif)$/i.test(f.name || '');
 async function phBatch(files, from){
   files = files.filter(isImg); if (!files.length) return toast('Không có file ảnh nào');
-  if (!S.xml) return toast('Nạp file XML trước');
+  if (!PD.xml) return toast('Nạp file XML trước');
   const by = new Map(), un = [], dupe = [];
-  for (const f of files) { const cc = ccInName(f.name); if (cc && S.byCccd.has(cc)) { if (by.has(cc)) { const o = by.get(cc); if ((f.lastModified || 0) > (o.lastModified || 0)) { dupe.push(o.name); by.set(cc, f); } else dupe.push(f.name); } else by.set(cc, f); } else un.push(f); }
-  const rows = Array.from(by.entries()).map(([cc, f]) => ({ rec:S.byCccd.get(cc), f, url:URL.createObjectURL(f) }));
+  for (const f of files) { const cc = ccInName(f.name); if (cc && PD.byCccd.has(cc)) { if (by.has(cc)) { const o = by.get(cc); if ((f.lastModified || 0) > (o.lastModified || 0)) { dupe.push(o.name); by.set(cc, f); } else dupe.push(f.name); } else by.set(cc, f); } else un.push(f); }
+  const rows = Array.from(by.entries()).map(([cc, f]) => ({ rec:PD.byCccd.get(cc), f, url:URL.createObjectURL(f) }));
   rows.sort((a, b) => a.rec.idx - b.rec.idx);
   for (const r of rows) phThumb(r.rec.idx, 2);
   dialog(`<h2>Thay ảnh hàng loạt — ghép theo số CCCD trong tên file</h2>
@@ -431,21 +441,21 @@ function zipStore(files){   // ZIP không nén (ảnh JPEG đã nén sẵn), tê
 }
 const expName = r => `${r.cccd}_${r.sbd || 'x'}_${deaccent(r.ten).replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '')}.jpg`;
 async function phExport(){
-  if (!S.xml) return;
-  const vis = $$('#phGrid .pcard').filter(c => c.style.display !== 'none').map(c => S.recs[+c.dataset.i]).filter(r => r.anh);
+  if (!PD.xml) return;
+  const vis = $$('#phGrid .pcard').filter(c => c.style.display !== 'none').map(c => PD.recs[+c.dataset.i]).filter(r => r.anh);
   if (!vis.length) return toast('Không có ảnh nào đang hiện để xuất');
   const sup = typeof window.showDirectoryPicker === 'function';
   dialog(`<h2>Xuất ${vis.length} ảnh ra để xử lý ở Ảnh Thẻ Pro</h2><p>Mỗi ảnh lưu thành file JPEG chất lượng cao, tên <code>CCCD_SBD_HoTen.jpg</code>, ví dụ <code>${esc(expName(vis[0]))}</code>.</p>
     <p class="small">Sau khi xử lý ở Ảnh Thẻ Pro, <b>giữ tên file bắt đầu bằng số CCCD</b> khi lưu. Nạp lại bằng nút “Nạp ảnh hàng loạt” (hoặc kéo thả cả loạt vào lưới) — tool tự ghép đúng người.</p>
-    <p class="small">${sup ? 'Chọn thư mục để lưu (tool tạo thư mục con <code>AnhXML_' + esc(S.head.ky || 'KY') + '</code>).' : 'Trình duyệt này không ghi thẳng vào thư mục — tool tải về 1 file ZIP.'}</p><div id="exInfo" class="small"></div>`,
+    <p class="small">${sup ? 'Chọn thư mục để lưu (tool tạo thư mục con <code>AnhXML_' + esc(PD.head.ky || 'KY') + '</code>).' : 'Trình duyệt này không ghi thẳng vào thư mục — tool tải về 1 file ZIP.'}</p><div id="exInfo" class="small"></div>`,
     async () => {
       let dir = null;
-      if (sup) { try { const root = await window.showDirectoryPicker({ id:'suaNDSHexport', mode:'readwrite' }); dir = await root.getDirectoryHandle('AnhXML_' + safeName(S.head.ky || 'KY'), { create:true }); } catch(e){ if (e && e.name === 'AbortError') return false; toast('Không mở được thư mục — tải ZIP thay thế', 4000); } }
+      if (sup) { try { const root = await window.showDirectoryPicker({ id:'suaNDSHexport', mode:'readwrite' }); dir = await root.getDirectoryHandle('AnhXML_' + safeName(PD.head.ky || 'KY'), { create:true }); } catch(e){ if (e && e.name === 'AbortError') return false; toast('Không mở được thư mục — tải ZIP thay thế', 4000); } }
       const zipFiles = []; let k = 0;
       for (const r of vis) { $('#exInfo').innerHTML = `<span class="st-warn">Đang xuất ${++k}/${vis.length}…</span>`;
         const b = phBytes(r.idx); const d = await eng('jpeg', { bytes: b.buffer, q:0.95 }, 3, [b.buffer]); const data = new Uint8Array(await d.blob.arrayBuffer());
         if (dir) { const fh = await dir.getFileHandle(expName(r), { create:true }), w = await fh.createWritable(); await w.write(data); await w.close(); } else zipFiles.push({ name: expName(r), data }); }
-      if (!dir) download(zipStore(zipFiles), `AnhXML_${safeName(S.head.ky || 'KY')}.zip`, 'application/zip');
+      if (!dir) download(zipStore(zipFiles), `AnhXML_${safeName(PD.head.ky || 'KY')}.zip`, 'application/zip');
       toast(`Đã xuất ${vis.length} ảnh` + (dir ? ' vào thư mục ' + dir.name : ' (ZIP)'), 5000); return true;
     }, sup ? 'Chọn thư mục & xuất' : 'Tải ZIP');
 }

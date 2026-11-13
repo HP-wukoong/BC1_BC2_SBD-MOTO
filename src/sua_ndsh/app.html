@@ -124,8 +124,15 @@ html.hasbg #bgLayer{display:block;position:fixed;inset:0;z-index:-1;background:v
 html.hasbg #bgLayer i{position:absolute;inset:0;background:var(--bg)}
 html.bgglass .card,html.bgglass .steps div,html.bgglass .kpi{background:color-mix(in srgb,var(--card) 86%,transparent)}
 html.hasbg nav.tabs button:not(.on){background:color-mix(in srgb,#e3e8ef 88%,transparent)}
+html.embedded header{padding:8px 16px} html.embedded header .sub,html.embedded header .logo{display:none} html.embedded header h1{font-size:14px}
 /* tab ảnh chân dung */
 .phtool{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.phsrc{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+.seg button{border:0;background:transparent;padding:8px 14px;font:inherit;font-size:13.5px;cursor:pointer;color:var(--ink)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--pri);color:#fff;font-weight:600}
+.seg button:focus-visible{outline:2px solid var(--pri);outline-offset:-3px}
 .phtool input[type=text]{min-width:240px}
 .phgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px;margin-top:10px}
 .pcard{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px;cursor:pointer;outline:none;transition:border-color .12s,box-shadow .12s;content-visibility:auto;contain-intrinsic-size:132px 230px}
@@ -220,6 +227,7 @@ dialog#dlg.wide{max-width:min(980px,calc(100vw - 24px))}
     </div>
     <div class="card">
       <h2><span class="n">2</span>Danh sách thi lại (Excel)<i class="tip" data-tip="excel" tabindex="0" role="button" aria-label="Giải thích">!</i></h2>
+      <div id="embBox" class="hide" style="margin-bottom:10px;padding:10px 12px;border:1px solid #9fd3b5;background:var(--okbg);border-radius:8px"></div>
       <label class="drop" id="dropE"><input type="file" id="fE" accept=".xls,.xlsx,.xlsm">Bấm chọn hoặc kéo thả file .xls / .xlsx</label>
       <div id="mE" class="small" style="margin-top:8px"></div>
       <div class="row hide" id="colsBox">
@@ -281,6 +289,13 @@ dialog#dlg.wide{max-width:min(980px,calc(100vw - 24px))}
 <section class="pane hide" id="tabPhoto">
   <div class="card">
     <h2>Ảnh chân dung trong file XML<i class="tip" data-tip="photo" tabindex="0" role="button" aria-label="Giải thích">!</i></h2>
+    <div class="phsrc"><span class="small"><b>File cần thay ảnh:</b></span>
+      <div class="seg" id="phSeg" role="tablist" aria-label="Nguồn file XML"><button data-src="pc08" class="on" role="tab">XML PC-08 (mục ①)</button><button data-src="thuong" role="tab">XML thường — chỉ thay ảnh</button></div>
+      <i class="tip" data-tip="psrc" tabindex="0" role="button" aria-label="Giải thích">!</i></div>
+    <div id="phThuong" class="hide" style="margin-bottom:12px">
+      <label class="drop" id="dropT"><input type="file" id="fT" accept=".xml">Bấm chọn hoặc kéo thả file XML thường (BC1, BC2…) vào đây — tool chỉ thay ảnh chân dung, mọi thông tin khác giữ nguyên</label>
+      <div id="mT"></div>
+    </div>
     <div id="phEmpty" class="small">Nạp file XML ở mục <b>① Hiệu chỉnh file XML</b> trước — ảnh của từng thí sinh sẽ hiện ở đây.</div>
     <div id="phMain" class="hide">
       <div class="small" style="margin:-4px 0 8px">Ảnh mới ghi theo số đông ảnh trong file: <b id="phProf"></b> <i class="tip" data-tip="pprof" tabindex="0" role="button" aria-label="Giải thích">!</i></div>
@@ -298,6 +313,24 @@ dialog#dlg.wide{max-width:min(980px,calc(100vw - 24px))}
       <div id="phTray" class="hide"></div>
       <div class="phgrid" id="phGrid"></div>
       <div class="phbar hide" id="phBar"></div>
+    </div>
+  </div>
+  <div class="card hide" id="phOut">
+    <h2>Xuất XML (chỉ thay ảnh)<i class="tip" data-tip="pout" tabindex="0" role="button" aria-label="Giải thích">!</i></h2>
+    <div class="actions">
+      <button class="btn" id="phRun" disabled>Xuất XML</button>
+      <span class="small" id="phRunInfo"></span>
+    </div>
+    <ul class="checks" id="phChecks"></ul>
+    <div id="phDlBox" class="hide">
+      <div class="kpis" id="phKpis"></div>
+      <div class="ack hide" id="phAckBox"><input type="checkbox" id="phAck"><label for="phAck">Tôi đã biết: file mới giữ nguyên cấu trúc, chỉ khác ảnh chân dung, nhưng chữ ký số trong file không còn khớp với dữ liệu đã sửa, và sẽ xác nhận với đơn vị nhận file trước khi sử dụng.</label></div>
+      <div class="actions" style="margin-top:12px">
+        <label class="f" style="flex:1;min-width:280px"><span class="lh">Tên file XML tải về<i class="tip" data-tip="outname" tabindex="0" role="button" aria-label="Giải thích">!</i></span><input type="text" id="phOutName"></label>
+        <button class="btn ok" id="phDl" disabled>Tải file XML đã thay ảnh</button>
+        <button class="btn sec" id="phCsv">Xuất báo cáo (CSV)</button>
+      </div>
+      <div class="small" id="phLogInfo" style="margin-top:8px"></div>
     </div>
   </div>
 </section>
@@ -365,7 +398,7 @@ dialog#dlg.wide{max-width:min(980px,calc(100vw - 24px))}
 <script>/*CORE*/</script>
 <script>
 'use strict';
-const APP_VER = '4.0';
+const APP_VER = '4.1';
 const DEFAULT_MAP = `1 = SH lần đầu L+H
 2 = SH lại L
 3 = SH lại L+H
@@ -400,7 +433,10 @@ const stamp = d => `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())
 const safeName = (s, max) => String(s || '').normalize('NFC').replace(/[\\/:*?"<>|\s]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, max || 150);
 const S = { xml:null, xmlName:'', recs:[], byCccd:new Map(), dupX:new Set(), head:{}, wb:null, wbName:'', rows:[], filter:'all', items:[],
   label2num:new Map(), num2label:new Map(), alias:new Map(), uncheck:new Set(), check:new Set(), out:null, outOk:false, report:null, stats:null,
-  auto:{}, sheetScores:[], autoSheet:'', modeForced:false };
+  auto:{}, sheetScores:[], autoSheet:'', modeForced:false, kind:'pc08' };
+/* File XML thường (BC1, BC2…) — CHỈ thay ảnh. Trạng thái riêng, không đụng tới file PC-08 (S) ở mục ① */
+const T = { kind:'thuong', xml:null, xmlName:'', recs:[], byCccd:new Map(), dupX:new Set(), head:{}, out:null, outOk:false, report:null };
+let PD = S;   // file đang mở ở tab ② Ảnh chân dung: S (PC-08) hoặc T (XML thường)
 
 /* ---------- Lưu trữ an toàn (không bao giờ làm tool lỗi nếu trình duyệt chặn) ---------- */
 const LS = { get(k, d){ try { const v = localStorage.getItem('suaNDSH.' + k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
@@ -561,8 +597,9 @@ function countBytes(buf, s){ const p = new TextEncoder().encode(s); let n = 0, i
 function readHead(buf){
   const t = new TextDecoder().decode(buf.subarray(0, 6000));
   const H = { tong: headTag(t,'TONG_SO_BAN_GHI'), ky: headTag(t,'MAKYSH'), ngay: headTag(t,'NGAYSH'), qd: headTag(t,'SOQD'), ngayqd: headTag(t,'NGAYQD'),
-    dv: headTag(t,'TEN_DV_GUI'), gui: headTag(t,'NGAY_GUI'), mgd: headTag(t,'MA_GIAO_DICH') };
-  H.ndsAll = countBytes(buf, '<NOI_DUNG_SH'); H.anhAll = countBytes(buf, '<ANH_CHAN_DUNG'); H.bom = buf[0]===0xEF && buf[1]===0xBB && buf[2]===0xBF;
+    dv: headTag(t,'TEN_DV_GUI'), gui: headTag(t,'NGAY_GUI'), mgd: headTag(t,'MA_GIAO_DICH'), khoa: headTag(t,'MA_KHOA_HOC'), tenKhoa: headTag(t,'TEN_KHOA_HOC'),
+    root: ((t.replace(/^\uFEFF/, '').replace(/<\?[\s\S]*?\?>/g, '').replace(/<!--[\s\S]*?-->/g, '').match(/<([A-Za-z_][\w.\-:]*)/) || [])[1] || '') };
+  H.ndsAll = countBytes(buf, '<NOI_DUNG_SH'); H.lxAll = countBytes(buf, '<NGUOI_LX>'); H.anhAll = countBytes(buf, '<ANH_CHAN_DUNG'); H.bom = buf[0]===0xEF && buf[1]===0xBB && buf[2]===0xBF;
   H.crlf = XCore.find(buf, new Uint8Array([13,10]), 0, 6000) >= 0;
   H.sig = countBytes(buf, '<Signature ') + countBytes(buf, '<Signature>');
   const d = H.ngay.match(/^(\d{4})-(\d{2})-(\d{2})$/); H.ngayVN = d ? `${d[3]}/${d[2]}/${d[1]}` : H.ngay;
@@ -592,9 +629,9 @@ hookDrop('#dropX', '#fX', async f => {
       <span>Chữ ký số</span><b>${H.sig ? 'Có (XML Signature)' : 'Không có'}</b></div>` +
       (warn.length ? `<div class="banner bad" style="margin-top:8px">${warn.map(esc).join('<br>')}</div>` : '');
     S.uncheck.clear(); S.check.clear();
-    phOnXml(); if (!$('#tabPhoto').classList.contains('hide')) phAudit();
+    if (PD === S) { phOnXml(); if (!$('#tabPhoto').classList.contains('hide')) phAudit(); } embRender();
     if (S.wb) autoDetect(); else build();
-  } catch (e) { S.xml = null; phReset(); phRenderAll(); $('#mX').innerHTML = `<div class="banner bad" style="margin-top:8px">Lỗi: ${esc(e.message)}</div>`; build(); }
+  } catch (e) { S.xml = null; if (PD === S) { phReset(); phRenderAll(); } $('#mX').innerHTML = `<div class="banner bad" style="margin-top:8px">Lỗi: ${esc(e.message)}</div>`; build(); }
   steps();
 });
 hookDrop('#dropE', '#fE', async f => {
@@ -602,7 +639,7 @@ hookDrop('#dropE', '#fE', async f => {
   try {
     const wb = XLSX.read(await readFileBytes(f), { type:'array' });
     if (!wb.SheetNames || !wb.SheetNames.length) throw new Error('File không có sheet nào');
-    S.wb = wb; S.wbName = f.name;
+    S.wb = wb; S.wbName = f.name; S.embPart = '';
     $('#mE').innerHTML = `<b>${esc(f.name)}</b> · ${wb.SheetNames.length} sheet`;
     $('#colsBox').classList.remove('hide');
     $('#sSheet').innerHTML = wb.SheetNames.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
@@ -664,7 +701,7 @@ function invalidate(){ S.out = null; S.outOk = false; S.report = null; $('#check
 function build(){
   invalidate();
   if (!S.xml) { $('#cardRes').classList.add('hide'); $('#cardOut').classList.add('hide'); return; }
-  if (!S.wb) { S.items = []; $('#cardRes').classList.add('hide'); $('#cardOut').classList.toggle('hide', !PH.pending.size); runBtn(); return; }
+  if (!S.wb) { S.items = []; $('#cardRes').classList.add('hide'); $('#cardOut').classList.toggle('hide', !pcPhotos().length); runBtn(); return; }
   const cC = +$('#sCccd').value, cN = +$('#sNum').value, cL = +$('#sLabel').value, cT = +$('#sName').value;
   // #4: không có cột Số → tự dùng bảng mã
   const exR = $('input[name=mode][value=excel]'), mpR = $('input[name=mode][value=map]');
@@ -674,7 +711,7 @@ function build(){
   const mode = mpR.checked ? 'map' : 'excel';
   const bm = $('#bannerMode');
   if (cN < 0 && cL < 0) { bm.className = 'banner bad'; bm.innerHTML = 'Không tìm thấy cột Số lẫn cột Nội dung — chọn lại cột ở mục 2.'; }
-  else if (cN < 0) { bm.className = 'banner info'; bm.innerHTML = '<b>File Excel không có cột Số</b> — tool tự chuyển sang <b>lấy mã theo bảng mã</b>, suy từ cột Nội dung (kể cả cách viết tắt như L, H, L+H, V-L…).'; }
+  else if (cN < 0) { bm.className = 'banner info'; bm.innerHTML = S.embPart ? '<b>Danh sách từ TOOLS BC1+BC2+SBD</b> — mã lấy theo <b>bảng mã</b>, suy từ nội dung sát hạch đã nhập ở tool (SH lại L / H / L+H…).' : '<b>File Excel không có cột Số</b> — tool tự chuyển sang <b>lấy mã theo bảng mã</b>, suy từ cột Nội dung (kể cả cách viết tắt như L, H, L+H, V-L…).'; }
   else bm.className = 'banner';
   const cntE = new Map(); S.rows.forEach(r => { const k = XCore.normCccd(r[cC]); if (k) cntE.set(k, (cntE.get(k) || 0) + 1); });
   const items = []; let n = 0;
@@ -735,7 +772,7 @@ function render(){
   runBtn();
 }
 function runBtn(){
-  const sel = (S.items || []).filter(i => i.apply).length, np = PH.pending.size;
+  const sel = (S.items || []).filter(i => i.apply).length, np = pcPhotos().length;
   $('#bRun').disabled = !(sel || np) || running;
   $('#bRun').textContent = 'Tạo file & kiểm định (' + [sel ? `${sel} mã NDSH` : '', np ? `${np} ảnh` : ''].filter(Boolean).join(' + ') + (sel || np ? ')' : '0 thay đổi)');
 }
@@ -758,9 +795,64 @@ function sigLine(box, sOld, sNew, changed){
   if (!sOld.present) return null;
   if (!sOld.supported) return addCheck(box, 'warn', 'Có chữ ký số nhưng dạng chữ ký không kiểm tra được trong tool', 'Sau khi sửa dữ liệu, chữ ký số gần như chắc chắn không còn khớp.');
   if (sOld.valid && sNew.supported && !sNew.valid && changed) return addCheck(box, 'warn', 'Chữ ký số: file GỐC hợp lệ — file MỚI KHÔNG còn khớp chữ ký',
-    `Chữ ký của PC-08 bao trùm toàn bộ dữ liệu; mọi thay đổi (kể cả sửa tay) đều làm mã băm lệch (gốc ${esc(sOld.dv)} · mới ${esc(sNew.computed)}). Thẻ &lt;Signature&gt; được giữ nguyên, tool không xóa và không giả lập chữ ký. Hãy xác nhận với PC-08 / Trung tâm sát hạch phần mềm nhận file có kiểm tra chữ ký không.`);
+    `Chữ ký số bao trùm toàn bộ dữ liệu (kể cả ảnh); mọi thay đổi (kể cả sửa tay) đều làm mã băm lệch (gốc ${esc(sOld.dv)} · mới ${esc(sNew.computed)}). Thẻ &lt;Signature&gt; được giữ nguyên, tool không xóa và không giả lập chữ ký. Hãy xác nhận với đơn vị nhận file (PC-08 / Trung tâm sát hạch / Sở) phần mềm nhận file có kiểm tra chữ ký không.`);
   if (sOld.valid && sNew.valid) return addCheck(box, 'ok', 'Chữ ký số vẫn khớp (không có thay đổi dữ liệu)');
   return addCheck(box, 'warn', 'Chữ ký số của file GỐC đã không khớp từ trước', `Mã băm khai báo ${esc(sOld.dv)}, tính được ${esc(sOld.computed || '?')}.`);
+}
+// Ảnh chờ ghi cho file PC-08 (chỉ khi tab ảnh đang mở file PC-08)
+const pcPhotos = () => PD === S ? Array.from(PH.pending.values()).sort((a, b) => a.idx - b.idx) : [];
+/* Tạo file mới + kiểm định độc lập — DÙNG CHUNG cho file PC-08 (mục ①) và file XML thường (tab ②).
+   D: file gốc {xml, recs, head, kind}; todo: đổi mã NDSH; photos: ảnh mới; box: nơi hiện danh sách kiểm tra */
+async function makeAndCheck(D, todo, photos, box){
+  let fatal = false;
+  for (const p of photos) { const r = D.recs[p.idx]; if (!r || !r.anh) throw new Error('Hồ sơ #' + (p.idx + 1) + ' không có thẻ ảnh'); }
+  const patches = todo.map(i => ({ start:i.rec.nds.start, end:i.rec.nds.end, val:i.newVal, kind:'nds' }))
+    .concat(photos.map(p => ({ start:D.recs[p.idx].anh.start, end:D.recs[p.idx].anh.end, val:p.b64, kind:'anh' })));
+  const expect = new Map(todo.map(i => [i.rec.idx, i.newVal])), expectAnh = new Map(photos.map(p => [p.idx, p.b64]));
+  const out = XCore.applyPatches(D.xml, patches);
+  addCheck(box, 'ok', `Đã ghi trực tiếp trên nội dung file gốc: ${[todo.length ? todo.length + ' mã NOI_DUNG_SH' : '', photos.length ? photos.length + ' ảnh ANH_CHAN_DUNG' : ''].filter(Boolean).join(' + ')}`, 'Chỉ thay nội dung bên trong đúng thẻ của đúng người; định dạng, thụt lề, CRLF, BOM, thẻ tự đóng, ảnh của người khác, chữ ký giữ nguyên từng byte.');
+  await tick();
+  const v = XCore.verify(D.xml, out, expect, expectAnh);
+  if (v.ok && v.changed === todo.length && v.changedAnh === photos.length) addCheck(box, 'ok', 'So sánh từng byte với file gốc: chỉ khác đúng ở các vùng đã chọn', `${fmt(v.records)} hồ sơ · ${D.kind === 'thuong' ? '' : v.changed + ' mã NDSH + '}${v.changedAnh} ảnh thay đổi · mọi byte còn lại giống hệt.`);
+  else { fatal = true; addCheck(box, 'bad', 'So sánh byte THẤT BẠI', esc(v.problems.slice(0, 10).join(' | ') || `Số thay đổi ${v.changed}/${v.changedAnh} ≠ ${todo.length}/${photos.length}`)); }
+  if (photos.length) {
+    const bad = [], P = PH.prof || {}, sizes = photos.map(p => p.bytes.length), ps = photos.map(p => p.chk.psnr);
+    const recsChk = XCore.scan(out);
+    for (const p of photos) { const back = XCore.fromB64(out, recsChk[p.idx].anh); if (back.length !== p.bytes.length || back.some((x, k) => x !== p.bytes[k])) bad.push(D.recs[p.idx].ten + ': dữ liệu ảnh trong file mới khác ảnh đã chuẩn bị');
+      const h = photoHead(back), tg = phTarget(p.idx); if (h.fmt !== P.fmt || h.w !== tg.w || h.h !== tg.h) bad.push(D.recs[p.idx].ten + `: ảnh ${h.fmt} ${h.w}×${h.h} không đúng ${P.fmt} ${tg.w}×${tg.h}`);
+      if (P.fmt === 'JP2' && (!!h.rev !== !!P.rev || h.levels !== P.levels || h.layers !== P.layers || h.cb !== P.cb || h.nc !== 3)) bad.push(D.recs[p.idx].ten + ': thông số JPEG 2000 không khớp số đông'); }
+    if (bad.length) { fatal = true; addCheck(box, 'bad', 'Kiểm tra ảnh mới THẤT BẠI', esc(bad.slice(0, 8).join(' | '))); }
+    else addCheck(box, 'ok', `${photos.length} ảnh mới: đọc lại từ file mới giống hệt ảnh đã chuẩn bị, đúng định dạng & cỡ ảnh cũ`,
+      `${esc(profTxt(P))}. Dung lượng ${Math.round(Math.min(...sizes) / 1024)}–${Math.round(Math.max(...sizes) / 1024)} KB` + (P.maxSize ? ` (ảnh gốc cùng loại ${Math.round(P.minSize / 1024)}–${Math.round(P.maxSize / 1024)} KB)` : '') + ` · chất lượng PSNR thấp nhất ${Math.min(...ps).toFixed(1)} dB (≥ 40 dB: mắt thường không phân biệt${Math.min(...ps) < 35 ? '; có ảnh dưới 35 dB — ảnh nhiều hạt/nhiễu, nên xem lại' : ''}).`);
+  }
+  const expSize = D.xml.length + patches.reduce((s, p) => s + p.val.length - (p.end - p.start), 0);
+  if (out.length === expSize) addCheck(box, 'ok', 'Kích thước file khớp tính toán', `${fmt(D.xml.length)} → ${fmt(out.length)} byte (chênh ${out.length - D.xml.length >= 0 ? '+' : ''}${out.length - D.xml.length}).`);
+  else { fatal = true; addCheck(box, 'bad', 'Kích thước file không khớp tính toán'); }
+  const H = D.head, ndsNew = countBytes(out, '<NOI_DUNG_SH'), lxNew = countBytes(out, '<NGUOI_LX>'), anhNew = countBytes(out, '<ANH_CHAN_DUNG');
+  const tongNew = readHead(out).tong;
+  if (D.kind === 'thuong') {
+    // XML thường: chỉ yêu cầu số thẻ & TONG_SO_BAN_GHI GIỮ NGUYÊN như file gốc (tool không đụng tới)
+    if (ndsNew === H.ndsAll && lxNew === H.lxAll && lxNew === D.recs.length && anhNew === H.anhAll && tongNew === H.tong) addCheck(box, 'ok', 'Số lượng thẻ không đổi', `NGUOI_LX: ${lxNew} · ANH_CHAN_DUNG: ${anhNew}${ndsNew ? ' · NOI_DUNG_SH: ' + ndsNew : ''}${H.tong ? ` · TONG_SO_BAN_GHI = ${esc(H.tong)} giữ nguyên` : ''}.`);
+    else { fatal = true; addCheck(box, 'bad', 'Số lượng thẻ hoặc TONG_SO_BAN_GHI bị thay đổi so với file gốc'); }
+    if (H.tong && +H.tong !== lxNew) addCheck(box, 'warn', `File GỐC đã khai báo TONG_SO_BAN_GHI = ${esc(H.tong)} nhưng có ${lxNew} hồ sơ`, 'Tool giữ nguyên như file gốc, không tự sửa.');
+  } else if (ndsNew === H.ndsAll && lxNew === D.recs.length && anhNew === H.anhAll && (!H.tong || +H.tong === lxNew)) addCheck(box, 'ok', 'Số lượng thẻ không đổi', `NGUOI_LX: ${lxNew} · NOI_DUNG_SH: ${ndsNew} · ANH_CHAN_DUNG: ${anhNew}${H.tong ? ` · khớp TONG_SO_BAN_GHI = ${H.tong}` : ''}.`);
+  else { fatal = true; addCheck(box, 'bad', 'Số lượng thẻ thay đổi hoặc không khớp TONG_SO_BAN_GHI'); }
+  const li5 = addCheck(box, 'run', 'Đang kiểm tra file mới là XML hợp lệ…'); await tick();
+  const pNew = parseDoc(out);
+  if (pNew.err) { fatal = true; setCheck(li5, 'bad', 'File mới KHÔNG phải XML hợp lệ', esc(pNew.err)); }
+  else setCheck(li5, 'ok', 'File mới là XML hợp lệ (well-formed), đọc được bằng trình phân tích chuẩn', `Phần tử gốc: &lt;${esc(pNew.doc.documentElement.nodeName)}&gt;, mã hóa UTF-8${H.bom ? ' có BOM' : ''}${H.crlf ? ', xuống dòng CRLF' : ''}.`);
+  const recsNew = XCore.scan(out);
+  let sigInfo = { present:false };
+  if (H.sig && pNew.doc) {
+    const li7 = addCheck(box, 'run', 'Đang kiểm tra chữ ký số (XML Signature)…'); await tick();
+    const pOld = parseDoc(D.xml);
+    const sOld = pOld.doc ? await sigCheck(pOld.doc) : { present:true, supported:false };
+    const sNew = await sigCheck(pNew.doc);
+    sigInfo = { present:true, old:sOld, neu:sNew }; li7.remove(); sigLine(box, sOld, sNew, todo.length + photos.length);
+  }
+  const [h0, h1] = [hex(await sha('SHA-256', D.xml)), hex(await sha('SHA-256', out))];
+  addCheck(box, 'ok', 'Mã băm SHA-256 (lưu nhật ký đối chiếu)', `Gốc: ${h0}<br>Mới: ${h1}`);
+  return { out, fatal, v, recsNew, sigInfo, h0, h1 };
 }
 let running = false;
 $('#bRun').onclick = async () => {
@@ -769,52 +861,13 @@ $('#bRun').onclick = async () => {
   const t0 = performance.now(); let fatal = false;
   try {
     const todo = (S.items || []).filter(i => i.apply && i.st === 'chg');
-    const photos = Array.from(PH.pending.values()).sort((a, b) => a.idx - b.idx);
+    const photos = pcPhotos();
     if (!todo.length && !photos.length) throw new Error('Chưa chọn thay đổi nào (mã NDSH hoặc ảnh)');
-    for (const p of photos) { const r = S.recs[p.idx]; if (!r || !r.anh) throw new Error('Hồ sơ #' + (p.idx + 1) + ' không có thẻ ảnh'); }
-    const patches = todo.map(i => ({ start:i.rec.nds.start, end:i.rec.nds.end, val:i.newVal, kind:'nds' }))
-      .concat(photos.map(p => ({ start:S.recs[p.idx].anh.start, end:S.recs[p.idx].anh.end, val:p.b64, kind:'anh' })));
-    const expect = new Map(todo.map(i => [i.rec.idx, i.newVal])), expectAnh = new Map(photos.map(p => [p.idx, p.b64]));
-    const out = XCore.applyPatches(S.xml, patches);
-    addCheck('#checks', 'ok', `Đã ghi trực tiếp trên nội dung file gốc: ${[todo.length ? todo.length + ' mã NOI_DUNG_SH' : '', photos.length ? photos.length + ' ảnh ANH_CHAN_DUNG' : ''].filter(Boolean).join(' + ')}`, 'Chỉ thay nội dung bên trong đúng thẻ của đúng người; định dạng, thụt lề, CRLF, BOM, thẻ tự đóng, ảnh của người khác, chữ ký giữ nguyên từng byte.');
-    await tick();
-    const v = XCore.verify(S.xml, out, expect, expectAnh);
-    if (v.ok && v.changed === todo.length && v.changedAnh === photos.length) addCheck('#checks', 'ok', 'So sánh từng byte với file gốc: chỉ khác đúng ở các vùng đã chọn', `${fmt(v.records)} hồ sơ · ${v.changed} mã NDSH + ${v.changedAnh} ảnh thay đổi · mọi byte còn lại giống hệt.`);
-    else { fatal = true; addCheck('#checks', 'bad', 'So sánh byte THẤT BẠI', esc(v.problems.slice(0, 10).join(' | ') || `Số thay đổi ${v.changed}/${v.changedAnh} ≠ ${todo.length}/${photos.length}`)); }
-    if (photos.length) {
-      const bad = [], P = PH.prof || {}, sizes = photos.map(p => p.bytes.length), ps = photos.map(p => p.chk.psnr);
-      const recsChk = XCore.scan(out);
-      for (const p of photos) { const back = XCore.fromB64(out, recsChk[p.idx].anh); if (back.length !== p.bytes.length || back.some((x, k) => x !== p.bytes[k])) bad.push(S.recs[p.idx].ten + ': dữ liệu ảnh trong file mới khác ảnh đã chuẩn bị');
-        const h = photoHead(back), tg = phTarget(p.idx); if (h.fmt !== P.fmt || h.w !== tg.w || h.h !== tg.h) bad.push(S.recs[p.idx].ten + `: ảnh ${h.fmt} ${h.w}×${h.h} không đúng ${P.fmt} ${tg.w}×${tg.h}`);
-        if (P.fmt === 'JP2' && (!!h.rev !== !!P.rev || h.levels !== P.levels || h.layers !== P.layers || h.cb !== P.cb || h.nc !== 3)) bad.push(S.recs[p.idx].ten + ': thông số JPEG 2000 không khớp số đông'); }
-      if (bad.length) { fatal = true; addCheck('#checks', 'bad', 'Kiểm tra ảnh mới THẤT BẠI', esc(bad.slice(0, 8).join(' | '))); }
-      else addCheck('#checks', 'ok', `${photos.length} ảnh mới: đọc lại từ file mới giống hệt ảnh đã chuẩn bị, đúng định dạng & cỡ ảnh cũ`,
-        `${esc(profTxt(P))}. Dung lượng ${Math.round(Math.min(...sizes) / 1024)}–${Math.round(Math.max(...sizes) / 1024)} KB` + (P.maxSize ? ` (ảnh gốc cùng loại ${Math.round(P.minSize / 1024)}–${Math.round(P.maxSize / 1024)} KB)` : '') + ` · chất lượng PSNR thấp nhất ${Math.min(...ps).toFixed(1)} dB (≥ 40 dB: mắt thường không phân biệt${Math.min(...ps) < 35 ? '; có ảnh dưới 35 dB — ảnh nhiều hạt/nhiễu, nên xem lại' : ''}).`);
-    }
-    const expSize = S.xml.length + patches.reduce((s, p) => s + p.val.length - (p.end - p.start), 0);
-    if (out.length === expSize) addCheck('#checks', 'ok', 'Kích thước file khớp tính toán', `${fmt(S.xml.length)} → ${fmt(out.length)} byte (chênh ${out.length - S.xml.length >= 0 ? '+' : ''}${out.length - S.xml.length}).`);
-    else { fatal = true; addCheck('#checks', 'bad', 'Kích thước file không khớp tính toán'); }
-    const H = S.head, ndsNew = countBytes(out, '<NOI_DUNG_SH'), lxNew = countBytes(out, '<NGUOI_LX>'), anhNew = countBytes(out, '<ANH_CHAN_DUNG');
-    if (ndsNew === H.ndsAll && lxNew === S.recs.length && anhNew === H.anhAll && (!H.tong || +H.tong === lxNew)) addCheck('#checks', 'ok', 'Số lượng thẻ không đổi', `NGUOI_LX: ${lxNew} · NOI_DUNG_SH: ${ndsNew} · ANH_CHAN_DUNG: ${anhNew}${H.tong ? ` · khớp TONG_SO_BAN_GHI = ${H.tong}` : ''}.`);
-    else { fatal = true; addCheck('#checks', 'bad', 'Số lượng thẻ thay đổi hoặc không khớp TONG_SO_BAN_GHI'); }
-    const li5 = addCheck('#checks', 'run', 'Đang kiểm tra file mới là XML hợp lệ…'); await tick();
-    const pNew = parseDoc(out);
-    if (pNew.err) { fatal = true; setCheck(li5, 'bad', 'File mới KHÔNG phải XML hợp lệ', esc(pNew.err)); }
-    else setCheck(li5, 'ok', 'File mới là XML hợp lệ (well-formed), đọc được bằng trình phân tích chuẩn', `Phần tử gốc: &lt;${esc(pNew.doc.documentElement.nodeName)}&gt;, mã hóa UTF-8${H.bom ? ' có BOM' : ''}${H.crlf ? ', xuống dòng CRLF' : ''}.`);
-    const recsNew = XCore.scan(out);
-    let sigInfo = { present:false };
-    if (H.sig && pNew.doc) {
-      const li7 = addCheck('#checks', 'run', 'Đang kiểm tra chữ ký số (XML Signature)…'); await tick();
-      const pOld = parseDoc(S.xml);
-      const sOld = pOld.doc ? await sigCheck(pOld.doc) : { present:true, supported:false };
-      const sNew = await sigCheck(pNew.doc);
-      sigInfo = { present:true, old:sOld, neu:sNew }; li7.remove(); sigLine('#checks', sOld, sNew, todo.length + photos.length);
-    }
-    const [h0, h1] = [await sha('SHA-256', S.xml), await sha('SHA-256', out)];
-    addCheck('#checks', 'ok', 'Mã băm SHA-256 (lưu nhật ký đối chiếu)', `Gốc: ${hex(h0)}<br>Mới: ${hex(h1)}`);
+    const K = await makeAndCheck(S, todo, photos, '#checks');
+    const { out, v, recsNew, sigInfo, h0, h1 } = K; fatal = K.fatal;
     S.out = out; S.outOk = !fatal;
     const now = new Date();
-    S.report = { todo, photos, v, recsNew, sigInfo, h0:hex(h0), h1:hex(h1), time:now, mode: $('input[name=mode][value=map]').checked ? 'map' : 'excel', checks: checkList('#checks'),
+    S.report = { todo, photos, v, recsNew, sigInfo, h0, h1, time:now, mode: $('input[name=mode][value=map]').checked ? 'map' : 'excel', checks: checkList('#checks'),
       sheet: $('#sSheet').value, cols: { cccd: colName(+$('#sCccd').value), num: +$('#sNum').value >= 0 ? colName(+$('#sNum').value) : '', label: +$('#sLabel').value >= 0 ? colName(+$('#sLabel').value) : '' } };
     $('#runInfo').innerHTML = fatal ? '<b style="color:var(--bad)">Kiểm định KHÔNG đạt — không cho tải file.</b>' : `<b style="color:var(--ok)">Kiểm định đạt</b> · ${((performance.now() - t0) / 1000).toFixed(1)} giây`;
     if (!fatal) { $('#outName').value = defaultStem() + '.xml'; showStats(); }
@@ -965,7 +1018,7 @@ $('#hHist').onclick = () => {
   const h = LS.get('history', []);
   dialog(`<h2>Lịch sử hiệu chỉnh trên máy này</h2><p class="small">${h.length ? `${h.length} lần gần nhất (tối đa 100).` : 'Chưa có lần nào.'} Nhật ký đầy đủ nằm trong thư mục nhật ký (nếu đã chọn).</p>` +
     (h.length ? `<div class="tblwrap" style="max-height:52vh"><table><thead><tr><th>Thời điểm</th><th>Kỳ SH</th><th class="r">Đã đổi</th><th>File tải về</th><th>Nhật ký</th></tr></thead><tbody>` +
-      h.map(x => `<tr><td>${esc(new Date(x.at).toLocaleString('vi-VN'))}</td><td>${esc(x.ky)}<br><span class="small">${esc(x.ngay || '')}</span></td><td class="r"><b>${fmt(x.changed)}</b>/${fmt(x.total)}${x.anh ? `<br><span class="small">${fmt(x.anh)} ảnh</span>` : ''}</td><td class="w">${esc(x.out)}<br><span class="small">${esc(x.excel)} / ${esc(x.sheet)} · ${x.mode === 'map' ? 'bảng mã' : 'cột Số'}</span></td><td>${x.log ? '<span class="st-ok">✔ ' + esc(x.log) + '</span>' : '<span class="small">–</span>'}</td></tr>`).join('') + '</tbody></table></div>' : ''),
+      h.map(x => `<tr><td>${esc(new Date(x.at).toLocaleString('vi-VN'))}</td><td>${esc(x.ky)}<br><span class="small">${esc(x.ngay || '')}</span></td><td class="r"><b>${fmt(x.changed)}</b>/${fmt(x.total)}${x.anh ? `<br><span class="small">${fmt(x.anh)} ảnh</span>` : ''}</td><td class="w">${esc(x.out)}<br><span class="small">${esc(x.excel)} / ${esc(x.sheet)} · ${x.mode === 'map' ? 'bảng mã' : x.mode === 'anh' ? 'chỉ thay ảnh' : 'cột Số'}</span></td><td>${x.log ? '<span class="st-ok">✔ ' + esc(x.log) + '</span>' : '<span class="small">–</span>'}</td></tr>`).join('') + '</tbody></table></div>' : ''),
     h.length ? () => { dialog('<h2>Xóa lịch sử?</h2><p>Chỉ xóa danh sách trong tool trên máy này. Nhật ký đã ghi vào thư mục vẫn giữ nguyên.</p>', () => { LS.set('history', []); toast('Đã xóa lịch sử'); }, 'Xóa'); return false; } : null, 'Xóa lịch sử…');
 };
 
@@ -1239,10 +1292,19 @@ function tipHtml(k){
     P('Sửa được', 'Anh có thể gõ tên khác. Báo cáo CSV, nhật ký và biên bản dùng cùng tên này.');
   case 'bb': return `<h4>In biên bản (A4)</h4>` + P('Gồm', 'Thông tin kỳ sát hạch, file gốc / file mới kèm mã SHA-256, kết quả kiểm định, ghi chú chữ ký số, thống kê nội dung sát hạch, danh sách từng hồ sơ đã đổi mã (cũ → mới), chỗ ký Người lập / Người kiểm tra.') +
     P('Cách in', 'Bấm nút → chọn máy in hoặc “Lưu dưới dạng PDF”. Tên đơn vị và địa danh sửa trong Cài đặt.');
+  case 'emb': return `<h4>Danh sách từ TOOLS BC1+BC2+SBD</h4>` + P('Là gì', 'Khi mở tool trong mục “Sửa XML PC-08” của TOOLS BC1+BC2+SBD, danh sách thi lại / học mới / khóa ghép của khóa đang mở được đưa thẳng sang — không cần xuất hay nạp Excel.') +
+    P('Nội dung', 'Thi lại: “SH lại L / SH lại H / SH lại L+H” theo nội dung đã nhập ở tool. Học mới / khóa ghép: “SH lần đầu L+H”; người đã có GPLX ghi “SH lần đầu(H)” — chữ này <b>chưa có trong bảng mã</b>, tool sẽ báo đỏ để anh xác nhận mã đúng với PC-08 rồi thêm vào Cài đặt → Tên gọi khác.') +
+    P('Chọn danh sách', 'Bấm nút danh sách tương ứng file XML (tool gợi ý danh sách khớp nhiều CCCD nhất). Đổi khóa ở TOOLS thì danh sách ở đây cập nhật theo.');
   case 'photo': return `<h4>Ảnh chân dung</h4>` + P('Là gì', 'Ảnh của từng thí sinh nằm trong thẻ <code>&lt;ANH_CHAN_DUNG&gt;</code> (JPEG 2000 hoặc JPEG). Tool giải mã để xem, soát lỗi, và thay ảnh.') +
     P('Thay từng người', 'Bấm vào ảnh → kéo thả ảnh mới vào, dán bằng Ctrl+V, chọn file, hoặc gõ / dán tên file trong thư mục ảnh đã liên kết. Kéo thả thẳng 1 ảnh lên ô của người đó cũng được.') +
     P('Chính xác', 'Ảnh mới được cắt đúng cỡ ảnh cũ (lệch ≤ 8px thì cắt giữa, không co giãn), mã hóa theo số đông ảnh trong file, giải mã lại để kiểm tra. Khi tạo file chỉ thay dữ liệu trong thẻ ảnh của đúng người.') +
-    P('Ghi vào file', 'Ảnh mới chỉ được ghi khi bấm “Tạo file & kiểm định” ở mục ① — cùng lúc với đổi mã NDSH (nếu có), cùng 1 file XML mới.');
+    P('Ghi vào file', 'File PC-08: ảnh mới được ghi khi bấm “Xuất XML” (tạo ở mục ①, cùng lúc với đổi mã NDSH nếu có). File XML thường: bấm “Xuất XML” ngay trong mục ảnh.');
+  case 'psrc': return `<h4>File cần thay ảnh</h4>` + P('XML PC-08 (mục ①)', 'File kỳ sát hạch PC-08 trả về, nạp ở mục ①. Thay ảnh ở đây được ghi cùng lúc với đổi mã NOI_DUNG_SH (nếu có) khi tạo file ở mục ①.') +
+    P('XML thường — chỉ thay ảnh', 'File XML khác có ảnh chân dung (BC1, BC2… — thẻ &lt;NGUOI_LX&gt; và &lt;ANH_CHAN_DUNG&gt;). Không gán, không đổi bất kỳ thông tin nào: tool chỉ thay dữ liệu trong thẻ ảnh của đúng người, đối chiếu từng byte rồi mới cho tải file.') +
+    P('Độc lập', 'Hai file được giữ riêng: nạp / thay ảnh file XML thường không làm thay đổi file PC-08 và danh sách đang đối chiếu ở mục ①. Chuyển qua lại giữa hai file chỉ bỏ những ảnh mới <b>chưa ghi</b> (tool hỏi trước).');
+  case 'pout': return `<h4>Xuất XML (chỉ thay ảnh)</h4>` + P('Làm gì', 'Ghi ảnh mới vào bản sao của file gốc (file gốc trên máy không bị đụng tới), sau đó kiểm định độc lập: so từng byte ngoài thẻ ảnh, đọc lại & giải mã từng ảnh mới, đếm thẻ, TONG_SO_BAN_GHI, XML hợp lệ, chữ ký số, mã băm SHA-256.') +
+    P('Chỉ cho tải khi đạt', 'Có bất kỳ sai khác nào ngoài ảnh đã chọn → báo ✘ và không cho tải. File tải về tên <code>&lt;tên file gốc&gt;_DA_THAY_ANH_&lt;ngày-giờ&gt;.xml</code>.') +
+    P('Chữ ký số', 'Nếu file có chữ ký số, chữ ký bao trùm cả ảnh nên sẽ không còn khớp sau khi thay ảnh — thẻ chữ ký được giữ nguyên, tool không xóa và không giả lập. Cần tích xác nhận trước khi tải.');
   case 'pprof': return `<h4>Thông số ảnh mới</h4>` + P('Lấy từ đâu', 'Tool đọc phần đầu mọi ảnh trong file XML đang mở và lấy <b>số đông</b>: định dạng, kiểu wavelet, tỷ lệ nén, số mức phân giải, số lớp, cỡ khối mã, biến đổi màu, cỡ ảnh.') +
     P('File PC-08 hiện tại', 'Ảnh JPEG 2000 được nén theo tỷ lệ 10:1 (wavelet 5/3, 5 mức, 1 lớp, khối 64×64, không biến đổi màu) → ảnh 353×471 nặng ≈ 49,7 KB. Ảnh mới ra đúng thông số này; phần đầu file ảnh giống hệt ảnh gốc từng byte.') +
     P('Bộ mã hóa', 'OpenJPEG 2.5.2 (thư viện JPEG 2000 chuẩn) chạy ngay trong trình duyệt, không cần mạng.');
@@ -1297,9 +1359,183 @@ function tipHtml(k){
 
 /*PHOTO*/
 
+/* ---------- Tab ②: file XML thường (BC1, BC2…) — CHỈ thay ảnh, xuất XML ngay tại tab ảnh.
+   Trạng thái riêng (T), không đụng file PC-08 (S) và danh sách đang đối chiếu ở mục ①. ---------- */
+function phChanged(){ if (PD === S) build(); else xtInvalidate(); }
+function phSrcUI(){
+  const th = PD === T;
+  $$('#phSeg button').forEach(b => { const on = (b.dataset.src === 'thuong') === th; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+  $('#phThuong').classList.toggle('hide', !th);
+  $('#phEmpty').innerHTML = th ? 'Nạp file XML thường ở ô phía trên — ảnh của từng người sẽ hiện ở đây.' : 'Nạp file XML ở mục <b>① Hiệu chỉnh file XML</b> trước — ảnh của từng thí sinh sẽ hiện ở đây.';
+  $('#phOut').classList.toggle('hide', !(th && T.xml));
+  xtBtn();
+}
+function phSetSrc(src){
+  const want = src === 'thuong' ? T : S; if (want === PD) return;
+  const hadPc = PD === S && PH.pending.size > 0;
+  const go = () => { PD = want; if (PD.xml) { phOnXml(); phAudit(); } else { phReset(); phRenderAll(); } xtInvalidate(); phSrcUI(); if (hadPc) build(); else runBtn(); return true; };
+  const n = PH.pending.size;
+  if (n) dialog(`<h2>Chuyển sang ${src === 'thuong' ? 'file XML thường' : 'file XML PC-08'}?</h2><p>Đang có <b>${n}</b> ảnh mới chọn cho file <b>${esc(PD.xmlName)}</b> nhưng <b>chưa ghi</b> vào file. Chuyển sẽ bỏ các ảnh mới này (file gốc không bị ảnh hưởng).</p>`, go, 'Chuyển & bỏ ảnh mới');
+  else go();
+}
+async function xtLoad(f){
+  $('#mT').innerHTML = '<div class="small" style="margin-top:8px">Đang đọc…</div>'; await tick();
+  try {
+    const buf = await readFileBytes(f);
+    const recs = XCore.scan(buf);
+    if (!recs.length) throw new Error('Không tìm thấy khối <NGUOI_LX> nào — file này không có danh sách người học / thí sinh.');
+    if (!recs.some(r => r.anh)) throw new Error('File không có ảnh chân dung (thẻ ANH_CHAN_DUNG) nào để thay.');
+    const H = readHead(buf); H.ky = H.ky || H.khoa;
+    const p0 = parseDoc(buf);
+    Object.assign(T, { xml:buf, xmlName:f.name, recs, head:H, byCccd:new Map(), dupX:new Set(), out:null, outOk:false, report:null });
+    for (const r of recs) { if (!r.cccd) continue; if (T.byCccd.has(r.cccd)) T.dupX.add(r.cccd); else T.byCccd.set(r.cccd, r); }
+    const warn = [], info = [];
+    if (p0.err) warn.push('File gốc KHÔNG phải XML hợp lệ (' + p0.err + ') — tool sẽ không cho xuất file.');
+    if (H.tong && +H.tong !== recs.length) warn.push(`TONG_SO_BAN_GHI = ${H.tong} nhưng đếm được ${recs.length} hồ sơ (tool giữ nguyên, không sửa)`);
+    const noAnh = recs.filter(r => !r.anh); if (noAnh.length) warn.push(`${noAnh.length} hồ sơ không thay ảnh được: ` + noAnh.slice(0, 5).map(r => `${r.ten || '#' + (r.idx + 1)} (${r.anhErr})`).join('; ') + (noAnh.length > 5 ? '…' : ''));
+    if (T.dupX.size) warn.push(`${T.dupX.size} số định danh bị trùng trong file — khi nạp ảnh hàng loạt theo CCCD chỉ ghép được người đầu tiên; nên thay ảnh từng người`);
+    if (H.ndsAll) info.push(`File có ${H.ndsAll} thẻ NOI_DUNG_SH — ở đây chỉ thay ảnh, mã NDSH giữ nguyên. Muốn sửa mã NDSH, nạp file ở mục ①.`);
+    $('#mT').innerHTML = `<div class="kv" style="margin-top:8px">
+      <span>File</span><b>${esc(f.name)} · ${(buf.length / 1048576).toFixed(1)} MB</b>
+      <span>Loại file</span><b>&lt;${esc(H.root || '?')}&gt; · XML thường (chỉ thay ảnh)</b>
+      ${H.khoa ? `<span>Khóa học</span><b>${esc(H.khoa)}${H.tenKhoa ? ' · ' + esc(H.tenKhoa) : ''}</b>` : ''}
+      ${H.dv ? `<span>Đơn vị gửi</span><b>${esc(H.dv)}${H.gui ? ' · ' + esc(H.gui) : ''}</b>` : ''}
+      <span>Số hồ sơ</span><b>${fmt(recs.length)}${H.tong ? ` / khai báo ${esc(H.tong)}` : ''} · ${fmt(recs.length - noAnh.length)} có ảnh</b>
+      <span>Chữ ký số</span><b>${H.sig ? 'Có (XML Signature)' : 'Không có'}</b></div>` +
+      (warn.length ? `<div class="banner bad" style="margin-top:8px">${warn.map(esc).join('<br>')}</div>` : '') +
+      (info.length ? `<div class="banner info" style="margin-top:8px">${info.map(esc).join('<br>')}</div>` : '');
+    if (PD === T) { phOnXml(); phAudit(); }
+  } catch (e) {
+    Object.assign(T, { xml:null, xmlName:'', recs:[], head:{}, byCccd:new Map(), dupX:new Set(), out:null, outOk:false, report:null });
+    if (PD === T) { phReset(); phRenderAll(); }
+    $('#mT').innerHTML = `<div class="banner bad" style="margin-top:8px">Lỗi: ${esc(e.message)}</div>`;
+  }
+  xtInvalidate(); phSrcUI();
+}
+hookDrop('#dropT', '#fT', f => {
+  if (PD === T && PH.pending.size) dialog(`<h2>Nạp file XML thường khác?</h2><p>Đang có <b>${PH.pending.size}</b> ảnh mới chọn cho <b>${esc(T.xmlName)}</b> nhưng chưa xuất file. Nạp file mới sẽ bỏ các ảnh này.</p>`, () => { xtLoad(f); return true; }, 'Nạp file mới');
+  else xtLoad(f);
+});
+let xtRunning = false;
+function xtInvalidate(){ T.out = null; T.outOk = false; T.report = null; $('#phChecks').innerHTML = ''; $('#phRunInfo').textContent = ''; $('#phDlBox').classList.add('hide'); $('#phLogInfo').innerHTML = ''; xtBtn(); }
+function xtBtn(){ const n = PD === T && T.xml ? PH.pending.size : 0; $('#phRun').disabled = !n || xtRunning; $('#phRun').textContent = n ? `Xuất XML (${n} ảnh mới)` : 'Xuất XML (chưa thay ảnh nào)'; }
+const xtStem = () => `${safeName(T.xmlName.replace(/\.xml$/i, '')) || 'XML'}_DA_THAY_ANH_${stamp(T.report ? T.report.time : new Date())}`;
+async function xtRun(){
+  if (xtRunning || PD !== T || !T.xml) return; xtRunning = true;
+  xtInvalidate(); $('#phRun').disabled = true; $('#phRunInfo').textContent = 'Đang tạo file & kiểm định…'; await tick();
+  const t0 = performance.now();
+  try {
+    const photos = Array.from(PH.pending.values()).sort((a, b) => a.idx - b.idx);
+    if (!photos.length) throw new Error('Chưa thay ảnh nào');
+    const K = await makeAndCheck(T, [], photos, '#phChecks');
+    // Đối chiếu lần 2 bằng thuật toán so sánh riêng (giống mục ③): ngoài ảnh đã chọn không được khác byte nào
+    const c = XCore.compare(T.xml, K.out), want = new Set(photos.map(p => p.idx)), got = new Set(c.anh.map(x => x.rec.idx));
+    if (c.onlyAllowed && !c.nds.length && got.size === want.size && [...want].every(i => got.has(i))) addCheck('#phChecks', 'ok', 'Đối chiếu lần 2 (thuật toán độc lập): file mới chỉ khác file gốc ở ảnh của đúng những người đã chọn', `${c.anh.length} ảnh thay đổi · 0 khác biệt nào khác · ${fmt(c.A.length)} hồ sơ.`);
+    else { K.fatal = true; addCheck('#phChecks', 'bad', 'Đối chiếu lần 2 THẤT BẠI', esc([...c.structural, ...c.other.slice(0, 5).map(o => `byte ${o.at} (${o.tag})`)].join(' | ') || `ảnh thay đổi ${c.anh.length}/${photos.length}, mã NDSH đổi ${c.nds.length}`)); }
+    // Giải mã thử từng ảnh mới đọc ra từ chính file mới
+    const li = addCheck('#phChecks', 'run', 'Đang giải mã thử ảnh mới từ file mới…'); await tick();
+    const recsOut = XCore.scan(K.out), dBad = [];
+    for (const p of photos) { try { const b = XCore.fromB64(K.out, recsOut[p.idx].anh); const d = await eng('rgba', { bytes: b.buffer }, 1, [b.buffer]); const tg = phTarget(p.idx); if (d.w !== tg.w || d.h !== tg.h) dBad.push(`${T.recs[p.idx].ten}: ${d.w}×${d.h}`); } catch (e) { dBad.push(T.recs[p.idx].ten + ': ' + e.message); } }
+    if (dBad.length) { K.fatal = true; setCheck(li, 'bad', 'Có ảnh mới không giải mã được từ file mới', esc(dBad.slice(0, 8).join(' | '))); }
+    else setCheck(li, 'ok', `Giải mã thử ${photos.length} ảnh mới đọc ra từ file mới: đều xem được, đúng cỡ`);
+    T.out = K.out; T.outOk = !K.fatal;
+    T.report = { photos, sigInfo:K.sigInfo, v:K.v, h0:K.h0, h1:K.h1, time:new Date(), checks:checkList('#phChecks') };
+    if (K.fatal) $('#phRunInfo').innerHTML = '<b style="color:var(--bad)">Kiểm định KHÔNG đạt — không cho tải file.</b>';
+    else { $('#phRunInfo').innerHTML = `<b style="color:var(--ok)">Kiểm định đạt</b> · ${((performance.now() - t0) / 1000).toFixed(1)} giây`; xtShowDl(); }
+  } catch (e) { addCheck('#phChecks', 'bad', 'Lỗi: ' + esc(e.message)); T.outOk = false; $('#phRunInfo').textContent = ''; }
+  finally { xtRunning = false; xtBtn(); }
+}
+function xtShowDl(){
+  const R = T.report, H = T.head, sig = R.sigInfo;
+  const sigTxt = !sig.present ? 'Không có' : (sig.neu && sig.neu.valid) ? 'Khớp' : (sig.old && sig.old.supported && sig.old.valid) ? 'Không còn khớp' : 'Cần xác nhận';
+  $('#phKpis').innerHTML = [['Tổng hồ sơ', fmt(T.recs.length) + (H.tong ? ` / ${esc(H.tong)}` : '')], ['Thay ảnh', fmt(R.photos.length)], ['Thông tin khác bị đổi', '0'], ['Toàn vẹn cấu trúc', '✔ Đạt'], ['Chữ ký số', sigTxt]]
+    .map(([l, v]) => `<div class="kpi"><div class="l">${l}</div><div class="v" ${v === 'Không còn khớp' ? 'style="color:var(--warn);font-size:18px"' : ''}>${v}</div></div>`).join('');
+  const needAck = sig.present && !(sig.neu && sig.neu.valid);
+  $('#phAckBox').classList.toggle('hide', !needAck); $('#phAck').checked = false;
+  $('#phDl').disabled = needAck; $('#phAck').onchange = () => { $('#phDl').disabled = !$('#phAck').checked; };
+  $('#phOutName').value = xtStem() + '.xml';
+  $('#phLogInfo').innerHTML = LOG.h ? `Nhật ký sẽ lưu vào thư mục “${esc(LOG.h.name)}/SuaNDSH”.` : 'Chưa chọn thư mục lưu nhật ký (Cài đặt → Thư mục lưu nhật ký).';
+  $('#phDlBox').classList.remove('hide'); $('#phOut').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+function xtCsv(){
+  const R = T.report, H = T.head, L = [];
+  L.push(q('BÁO CÁO THAY ẢNH CHÂN DUNG — FILE XML THƯỜNG'));
+  L.push([q('File gốc'), q(T.xmlName), q('SHA-256'), q(R.h0)].join(','));
+  L.push([q('Khóa học'), q(H.khoa || ''), q('Tên khóa'), q(H.tenKhoa || '')].join(','));
+  L.push([q('Thời điểm'), q(R.time.toLocaleString('vi-VN')), q('SHA-256 file mới'), q(R.h1)].join(','));
+  L.push(''); L.push(['STT','Họ tên','Số định danh','Ảnh cũ','Ảnh mới','Nguồn ảnh'].map(q).join(','));
+  R.photos.forEach((p, k) => { const r = T.recs[p.idx], ia = PH.info.get(p.idx) || {};
+    L.push([k + 1, q(r.ten), `="${r.cccd}"`, q(`${ia.fmt || ''} ${ia.w || '?'}x${ia.h || '?'} ${ia.size || ''} byte`), q(`${p.head.fmt} ${p.chk.w}x${p.chk.h} ${p.bytes.length} byte`), q(p.src.name)].join(',')); });
+  L.push(''); L.push(q('KIỂM ĐỊNH')); R.checks.forEach(c => L.push([q(c.st === 'ok' ? 'Đạt' : c.st === 'bad' ? 'Không đạt' : 'Lưu ý'), q(c.title), q(c.detail)].join(',')));
+  return '﻿' + L.join('\r\n');
+}
+function xtLog(outName){
+  const R = T.report, H = T.head;
+  return JSON.stringify({ app:'SuaNDSH_XML', loai:'XML_thuong_chi_thay_anh', version:APP_VER, at:R.time.toISOString(),
+    xml:{ name:T.xmlName, size:T.xml.length, sha256:R.h0, goc:H.root, maKhoaHoc:H.khoa, tenKhoaHoc:H.tenKhoa, soHoSo:T.recs.length },
+    out:{ name:outName, size:T.out.length, sha256:R.h1 },
+    chuKySo: R.sigInfo.present ? { goc: R.sigInfo.old.valid ? 'hop_le' : 'khong_kiem_duoc', moi: R.sigInfo.neu && R.sigInfo.neu.valid ? 'khop' : 'khong_con_khop' } : 'khong_co',
+    kiemDinh:R.checks,
+    thayAnh:R.photos.map(p => { const r = T.recs[p.idx], ia = PH.info.get(p.idx) || {}; return { cccd:r.cccd, hoTen:r.ten, nguon:p.src.name, nguonCo:p.src.w + 'x' + p.src.h,
+      cu:{ dinhDang:ia.fmt, co:(ia.w || '?') + 'x' + (ia.h || '?'), byte:ia.size }, moi:{ dinhDang:p.head.fmt, co:p.chk.w + 'x' + p.chk.h, byte:p.bytes.length, psnr:+p.chk.psnr.toFixed(2) } }; }),
+    thongSoAnhMoi: PH.prof ? profTxt(PH.prof) : '' }, null, 2);
+}
+$('#phRun').onclick = xtRun;
+$('#phCsv').onclick = () => { if (T.report) download(xtCsv(), (safeName($('#phOutName').value.trim().replace(/\.xml$/i, '')) || xtStem()) + '_BAO_CAO.csv', 'text/csv'); };
+$('#phDl').onclick = async () => {
+  if (!T.out || !T.outOk || PD !== T) return;
+  const stem = safeName($('#phOutName').value.trim().replace(/\.xml$/i, '')) || xtStem(), name = stem + '.xml';
+  let dir = null; try { dir = await logDirReady(true); } catch (e) { dir = null; }
+  download(T.out, name, 'application/xml');
+  let saved = '';
+  if (dir) {
+    try { const sub = await dir.getDirectoryHandle('SuaNDSH', { create:true }); await writeFile(sub, stem + '_BAO_CAO.csv', xtCsv()); await writeFile(sub, stem + '_NHAT_KY.json', xtLog(name));
+      if (LS.get('logXml', false)) await writeFile(sub, name, T.out);
+      saved = stem + '_BAO_CAO.csv, ' + stem + '_NHAT_KY.json'; $('#phLogInfo').innerHTML = `<span class="st-ok">✔ Đã lưu nhật ký vào thư mục “${esc(dir.name)}/SuaNDSH”</span>: ${esc(saved)}`; toast('Đã tải file và lưu nhật ký'); }
+    catch (e) { $('#phLogInfo').innerHTML = `<span class="st-bad">Không ghi được nhật ký vào thư mục: ${esc(e.message)}</span> — file XML vẫn đã tải về.`; }
+  } else toast('Đã tải file ' + name);
+  addHistory({ at:T.report.time.toISOString(), ky:T.head.ky || '', ngay:T.head.tenKhoa || '', xml:T.xmlName, excel:'XML thường', sheet:'không dùng danh sách', out:name, changed:0, anh:T.report.photos.length, total:T.recs.length, sha:T.report.h1, mode:'anh', log: saved ? (LOG.h && LOG.h.name) : '' });
+};
+$$('#phSeg button').forEach(b => b.onclick = () => phSetSrc(b.dataset.src));
+
+/* ---------- Mục riêng trong TOOLS BC1+BC2+SBD: nhận danh sách của khóa đang mở, không cần Excel ---------- */
+const EMB = { on: window.parent !== window, data:null };
+function embRows(part){
+  const P = EMB.data && EMB.data.parts && EMB.data.parts[part]; if (!P) return null;
+  return [['STT','Họ và tên','Số định danh','Ngày sinh','Nội dung sát hạch']].concat(P.rows.map((r, i) => [i + 1, r.ten, r.cccd, r.ns || '', r.nd]));
+}
+function embUse(part){
+  const rows = embRows(part); if (!rows) return;
+  const P = EMB.data.parts[part], wb = XLSX.utils.book_new(), sh = (EMB.data.course + ' ' + P.short).replace(/[\\/?*\[\]:]/g, '-').slice(0, 31);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), sh);
+  S.wb = wb; S.wbName = `TOOLS BC1+BC2+SBD · khóa ${EMB.data.course} · ${P.ten}`; S.embPart = part;
+  $('#mE').innerHTML = `<b>${esc(S.wbName)}</b> · ${P.rows.length} người <span class="st-ok">(lấy thẳng từ tool, không cần file Excel)</span>`;
+  $('#colsBox').classList.remove('hide'); $('#sSheet').innerHTML = `<option value="${esc(sh)}">${esc(sh)}</option>`;
+  S.uncheck.clear(); S.check.clear(); autoDetect(); embRender(); steps();
+}
+function embRender(){
+  const box = $('#embBox'); if (!box) return;
+  if (!EMB.data) { box.classList.add('hide'); return; }
+  const parts = Object.entries(EMB.data.parts).filter(([, p]) => p.rows.length);
+  let best = '', bn = 0;
+  if (S.xml) parts.forEach(([k, p]) => { const n = p.rows.filter(r => S.byCccd.has(XCore.normCccd(r.cccd))).length; if (n > bn) { bn = n; best = k; } });
+  box.classList.remove('hide');
+  box.innerHTML = `<div><b>Danh sách từ TOOLS BC1+BC2+SBD — khóa ${esc(EMB.data.course)}</b> <i class="tip" data-tip="emb" tabindex="0" role="button" aria-label="Giải thích">!</i></div>` +
+    (parts.length ? `<div class="row" style="margin-top:6px">${parts.map(([k, p]) => { const n = S.xml ? p.rows.filter(r => S.byCccd.has(XCore.normCccd(r.cccd))).length : null;
+      return `<button class="btn ${S.embPart === k ? 'ok' : k === best ? '' : 'sec'} sm" data-part="${k}">${esc(p.ten)} · ${p.rows.length} người${n !== null ? ` · khớp XML ${n}` : ''}${S.embPart === k ? ' ✔' : ''}</button>`; }).join('')}</div>
+      <div class="small" style="margin-top:4px">${S.xml ? (best ? `Gợi ý: file XML này khớp nhiều nhất với <b>${esc(EMB.data.parts[best].ten)}</b>.` : '<span class="st-warn">File XML không khớp ai trong các danh sách của khóa này — kiểm tra lại đúng khóa / đúng file.</span>') : 'Nạp file XML để tool gợi ý danh sách khớp.'} Hoặc vẫn nạp file Excel như thường ở ô bên dưới.</div>`
+      : '<div class="small">Khóa này chưa có người thi lại / học mới.</div>');
+  $$('#embBox button[data-part]').forEach(b => b.onclick = () => embUse(b.dataset.part));
+}
+window.addEventListener('message', e => {
+  if (!EMB.on || e.source !== window.parent) return; const m = e.data;
+  if (m && m.type === 'ndsh-ds' && m.parts) { const same = EMB.data && EMB.data.course === m.course; EMB.data = m; if (S.embPart && same && m.parts[S.embPart]) embUse(S.embPart); else { if (!same && S.embPart) { S.embPart = ''; } embRender(); } }
+});
+
 /* ---------- Khởi động ---------- */
 $('#ver').textContent = 'Phiên bản ' + APP_VER;
-applySettings(); initSettingsUI(); steps(); bgBoot(); logBoot(); phInitUI(); phRenderAll();
+applySettings(); initSettingsUI(); steps(); bgBoot(); logBoot(); phInitUI(); phRenderAll(); phSrcUI();
+if (EMB.on) { document.documentElement.classList.add('embedded'); try { window.parent.postMessage({ type:'ndsh-ready' }, '*'); } catch(e){} }
 window.__ndshReady = true;
 </script>
 </body>

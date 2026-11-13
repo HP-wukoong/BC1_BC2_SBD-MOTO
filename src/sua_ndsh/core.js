@@ -222,7 +222,7 @@
       bomA: bom(a), bomB: bom(b), crlfA: countPair(a, 13, 10), crlfB: countPair(b, 13, 10), sizeA: a.length, sizeB: b.length };
     if (res.bomA !== res.bomB) res.structural.push(res.bomA ? 'File đã sửa bị MẤT ký tự BOM đầu file (thường do Notepad / trình soạn thảo lưu lại)' : 'File đã sửa bị THÊM ký tự BOM đầu file');
     if (res.crlfA !== res.crlfB) res.structural.push(`Kiểu xuống dòng bị đổi: gốc có ${res.crlfA} lần CRLF, file sửa có ${res.crlfB} (thường do trình soạn thảo lưu lại)`);
-    const aligned = A.length === B.length && A.every((r, i) => r.cccd === B[i].cccd && r.nds && B[i].nds && fields(r).map(x => x[0]).join() === fields(B[i]).map(x => x[0]).join());
+    const aligned = A.length === B.length && A.every((r, i) => r.cccd === B[i].cccd && fields(r).map(x => x[0]).join() === fields(B[i]).map(x => x[0]).join());
     res.aligned = aligned;
     if (aligned) {
       let pa = 0, pb = 0;
