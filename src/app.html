@@ -429,6 +429,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.14.2','13/11/2026',['Mục Số báo danh: mỗi khóa đào tạo CHỈ hiện danh sách thi (file GLĐ) của chính khóa đó — khóa thi thuộc khóa có nhiều thí sinh trùng nhất (theo số CMT, từ một nửa danh sách thi trở lên; nếu không thì thuộc khóa đang mở lúc nạp); khóa thi của khóa khác bị ẩn, tránh xuất nhầm SBD khóa cũ']],
   ['4.14.1','13/11/2026',['Báo cáo 2 (file BC2, các file PC-08, In BC2): người thi lần đầu (học mới, khóa ghép) đã có GPLX (cột “Đã có GPLX hạng” có hạng) → cột Ghi chú ghi “SH lần đầu(H)”; thi lại giữ nguyên “SH lại L / H / L+H”; DS thí sinh dự sát hạch và các file khác không đổi',
     'Sheet khóa ghép: thời gian đào tạo, khai giảng, bế giảng, ngày ký lấy ĐỒNG BỘ với khóa chính (không lấy theo XML khóa ghép); XML khóa ghép chỉ dùng lấy mã']],
   ['4.14','13/11/2026',['KHÓA GHÉP: nạp file <khóa>_G (vd A1m-48_G.xls) giống file hồ sơ học mới / thi lại — vào danh sách khóa ghép của khóa đang mở, giữ đúng thứ tự file, không vào BC1; nạp file XML Báo cáo 2 của khóa ghép (tên khóa có đuôi -G) và chọn “Mã cho KHÓA GHÉP”',
@@ -1613,11 +1614,12 @@ function crossHtml(ex){
 function examCourses(e){ const m={}; e.rows.forEach(r=>{ const f=findPerson(r.id); const k=f?f.c.ten:'—'; m[k]=(m[k]||0)+1; }); return m; }
 let QE='', QEY='';
 function examPicker(ex){
-  const all=examsSorted(); if(all.length<1) return '';
+  const own=examsOf(), orph=examsOrphan(), all=own.concat(orph); if(all.length<1) return '';
+  const m=examOwners(), other=examsSorted().filter(e=>m.get(e)&&m.get(e)!==C());
   const years=[...new Set(all.map(e=>(String(e.ngayThi).match(/(\d{4})$/)||[])[1]).filter(Boolean))];
   const L=all.filter(e=>(!QEY||String(e.ngayThi).endsWith(QEY)) && (!QE||norm(e.khoaThi+' '+e.ngayThi).includes(norm(QE))));
   return `<div class="card"><div class="row">
-    <h2 style="margin:0">Chọn khóa thi</h2><span class="muted">${all.length} khóa thi đã nạp</span><span style="flex:1"></span>
+    <h2 style="margin:0">Chọn khóa thi</h2><span class="muted">${own.length} khóa thi của khóa ${esc(C().ten)}${orph.length?` · ${orph.length} chưa khớp khóa nào`:''}</span><span style="flex:1"></span>
     <span class="search">${ic('search')}<input type="text" id="qe" placeholder="Tìm mã khóa thi (vd K232) hoặc ngày thi" value="${esc(QE)}" style="min-width:260px"></span>
     ${years.length>1?`<select id="qey"><option value="">Mọi năm</option>${years.map(y=>`<option ${QEY===y?'selected':''}>${y}</option>`).join('')}</select>`:''}
     <button class="btn" id="exAdd">${ic('upload')}Nạp khóa thi mới</button></div>
@@ -1627,10 +1629,26 @@ function examPicker(ex){
         <span class="n">${e.rows.length} thí sinh</span>
         <span class="c">${Object.entries(cs).filter(([k])=>k!=='—').map(([k,n])=>esc(k)+': '+n).join(' · ')||'<i>chưa khớp khóa nào</i>'}</span>
         ${e.lastExport?`<span class="x">${ic('check')} đã xuất ${new Date(e.lastExport).toLocaleDateString('vi-VN')}</span>`:'<span class="x no">chưa xuất</span>'}
-      </button>`;}).join('')||'<div class="muted" style="padding:10px">Không có khóa thi nào khớp tìm kiếm.</div>'}</div></div>`;
+      </button>`;}).join('')||'<div class="muted" style="padding:10px">Không có khóa thi nào khớp tìm kiếm.</div>'}</div>
+    ${other.length?`<div class="muted" style="font-size:12.5px;margin-top:8px">Đã ẩn ${other.length} khóa thi của khóa đào tạo khác (${esc([...new Set(other.map(e=>m.get(e).ten))].join(', '))}) — mở đúng khóa đó ở thanh bên để xem / xuất.</div>`:''}</div>`;
 }
 function examBad(e){ const pn=parseName(e.file||''); return !(pn&&pn.rule&&pn.rule.id==='sbd') || !/^[A-ZĐ]{2,5}-\d{4}-K\d+$/.test(e.khoaThi||''); }
-function curExam(){ return (DB.exams||[]).find(e=>e.id===DB.curExam) || (DB.exams||[])[0] || null; }
+/* ===== Mỗi khóa đào tạo CHỈ thấy danh sách thi (file GLĐ) của chính nó — tránh xuất nhầm SBD khóa cũ =====
+   Khóa thi thuộc về khóa đào tạo có NHIỀU thí sinh trùng nhất (so theo số CMT, kể cả khóa ghép / thi lại) và trùng từ một nửa danh sách thi trở lên;
+   chưa khớp ai → thuộc khóa đang mở lúc nạp (e.cid); vẫn không có → “chưa khớp khóa nào”. */
+function examOwners(){
+  const S=Object.values(DB.courses).map(c=>[c,new Set(c.students.map(s=>s.cccd))]), m=new Map();
+  for(const e of (DB.exams||[])){ let best=null, bn=0;
+    for(const [c,ids] of S){ let n=0; for(const r of e.rows) if(ids.has(r.id)) n++; if(n>bn){ bn=n; best=c; } }
+    if(bn<e.rows.length*0.5) best=null;              // trùng dưới một nửa danh sách thi → không coi là của khóa đó
+    if(!best&&e.cid) best=DB.courses[e.cid]||null;
+    m.set(e,best); }
+  return m;
+}
+function examsOf(c){ c=c||C(); const m=examOwners(); return examsSorted().filter(e=>m.get(e)===c); }
+function examsOrphan(){ const m=examOwners(); return examsSorted().filter(e=>!m.get(e)); }
+function curExam(){ const own=examsOf(), orph=examsOrphan();
+  return own.find(e=>e.id===DB.curExam) || orph.find(e=>e.id===DB.curExam) || own[0] || null; }
 /* File thi lại đã lọc (<khóa>_LOCTL): quét và TỰ ĐIỀN nội dung SH lại theo số định danh.
    gcfill = chỉ điền nội dung, giữ nguyên danh sách thi lại
    tlr    = điền nội dung + THAY danh sách: người có trong file mà chưa có thì thêm, người cũ không có trong file → Loại */
@@ -1700,8 +1718,10 @@ function applySBDServer(p, conf){
     DB.exams=DB.exams.filter(e=>!same(e));
     conf.push(`Khóa thi ${ex.khoaThi}: đã THAY danh sách cũ bằng file “${p.file}”.`);
   }
+  ex.cid=C().id;
   DB.exams.unshift(ex);
   DB.curExam=ex.id;
+  { const ow=examOwners().get(ex); if(ow&&ow!==C()) conf.push(`Khóa thi ${ex.khoaThi} có nhiều thí sinh thuộc khóa ${ow.ten} nhất → chỉ hiện ở mục Số báo danh của khóa ${ow.ten} (đang mở ${C().ten}).`); }
   // gán SBD cho học viên các khóa đào tạo có trong file
   const per={}; let nf=0;
   for(const r of ex.rows){ const f=findPerson(r.id); if(!f){ nf++; continue; }
@@ -2629,6 +2649,11 @@ let QS='';
 function vSBD(v){
   sbdCfgGet();
   const ex=curExam();
+  if(!ex&&(DB.exams||[]).length){ const m=examOwners(), oth=examsSorted().filter(e=>m.get(e));
+    v.innerHTML=`<div class="card"><div class="note">${ic('info')}<span>Khóa <b>${esc(C().ten)}</b> chưa có danh sách thi (file GLĐ) nào. Nạp file máy chủ phòng thi của đợt thi khóa này (vd GLĐ-2026-K250.xls).</span></div>
+    ${oth.length?`<div class="muted" style="font-size:13px;margin-top:10px">Các khóa thi đã nạp đều thuộc khóa đào tạo khác — đã ẩn để tránh xuất nhầm: ${oth.map(e=>`<b>${esc(e.khoaThi)}</b> (${esc(m.get(e).ten)})`).join(', ')}.</div>`:''}
+    <div class="row" style="margin-top:12px"><button class="btn pri" id="pickSrv">${ic('upload')}Chọn file phòng thi</button></div></div>`;
+    $('#pickSrv').onclick=()=>$('#fileIn').click(); return; }
   if(!ex){ v.innerHTML=`<div class="card"><div class="note">${ic('info')}<span>Chưa có khóa thi nào. Nạp <b>file xuất từ máy chủ phòng thi lý thuyết</b> (ví dụ GLĐ-2026-K150.xls) — tool lấy SBD, họ tên, số CMT, nội dung sát hạch, rồi điền hạng GPLX đã có từ hồ sơ.</span></div>
     <div class="row" style="margin-top:12px"><button class="btn pri" id="pickSrv">${ic('upload')}Chọn file phòng thi</button></div></div>`;
     $('#pickSrv').onclick=()=>$('#fileIn').click(); return; }
