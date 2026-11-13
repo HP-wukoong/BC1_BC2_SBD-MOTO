@@ -327,35 +327,12 @@ async def photo_suite(ctx, url, lab, full):
     ok(f'{lab} ảnh: không có lỗi JavaScript', not errs, errs[:3])
     await pg.close()
 
-# ---------- Mục “Sửa XML PC-08” trong TOOLS BC1+BC2+SBD ----------
-async def main_app_suite(ctx, url, lab):
-    pg = await ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
-    await pg.goto(url); await pg.wait_for_function("typeof render==='function' && typeof DB!=='undefined' && !!DB && !!DB.courses", timeout=30000)
-    async def close_dlg():
-        for _ in range(10):
-            await pg.wait_for_timeout(300); await pg.evaluate("()=>{ document.querySelectorAll('dialog[open]').forEach(d=>d.close()); document.querySelectorAll('.popcard').forEach(e=>e.style.display='none'); }")
-    await close_dlg()
-    await pg.evaluate("""(R)=>{ const c=C(); R.forEach(([ten,cc,gc],i)=>c.students.push({cccd:cc,ten,ns:'01/01/1990',dc:'Gia Lai',sk:'x',hangHS:'',hangG:'',soGPLX:'',maDK:'',soHS:'',srcs:['tay'],biLoai:false,lyDo:'',phuTrach:'',sbd:'',loai:gc?'tl':'moi',gcTL:gc,ord:c.seq++})); TAB='ndsh'; render(); }""",
-        [[p['ho'] + ' ' + p['ten'], p['cccd'], ['L', 'L+H', 'H'][i % 3] if i < 9 else ''] for i, p in enumerate(P_[:12])])
-    fr = None
-    for _ in range(150):
-        await pg.wait_for_timeout(200); fr = next((f for f in pg.frames if f != pg.main_frame), None)
-        if fr:
-            try:
-                if await fr.evaluate("window.__ndshReady===true && !document.querySelector('#embBox').classList.contains('hide')"): break
-            except Exception: pass
-    ok(f'{lab}: mục “Sửa XML PC-08” mở tool trong khung, nhận danh sách khóa đang mở', bool(fr) and 'Thi lại · 9 người' in await fr.inner_text('#embBox'))
-    X = make_xml(); await pg.evaluate("()=>{ document.querySelectorAll('dialog[open]').forEach(d=>d.close()); document.querySelectorAll('.popcard').forEach(e=>e.style.display='none'); }")
-    await fr.set_input_files('#fX', files=[{'name': 'x.xml', 'mimeType': 'text/xml', 'buffer': X}]); await pg.wait_for_timeout(500)
-    await pg.evaluate("()=>{ document.querySelectorAll('dialog[open]').forEach(d=>d.close()); document.querySelectorAll('.popcard').forEach(e=>e.style.display='none'); }")
-    await pg.evaluate("()=>{ document.querySelectorAll('dialog[open]').forEach(d=>d.close()); document.querySelectorAll('.popcard').forEach(e=>e.style.display='none'); }")
-    await fr.click('#embBox button[data-part=tl]'); await pg.wait_for_timeout(400)
-    sel = await fr.evaluate("S.items.filter(i=>i.apply).map(i=>[i.cccd,i.newVal])")
-    want = [[P_[i]['cccd'], str({'L': 2, 'L+H': 3, 'H': 7}[['L', 'L+H', 'H'][i % 3]])] for i in range(9) if str({'L': 2, 'L+H': 3, 'H': 7}[['L', 'L+H', 'H'][i % 3]]) != P_[i]['code']]
-    ok(f'{lab}: dùng danh sách thi lại của tool → đúng người, đúng mã (SH lại L / L+H / H)', sorted(sel) == sorted(want), sel)
-    await pg.evaluate("()=>{TAB='bc1';render();}"); await pg.wait_for_timeout(300); await pg.evaluate("()=>{TAB='ndsh';render();}"); await pg.wait_for_timeout(300)
-    ok(f'{lab}: chuyển mục rồi quay lại — file XML đã nạp vẫn còn', await fr.evaluate("!!S.xml && S.recs.length") == N)
-    ok(f'{lab}: không có lỗi JavaScript', not errs, errs[:3]); await pg.close()
+# ---------- TOOLS BC1+BC2+SBD phải ĐỘC LẬP với tool Sửa NDSH XML ----------
+def independent_check():
+    for f in ('src/app.html', 'dist/TOOLS BC1+BC2+SBD.html', 'docs/index.html'):
+        t = open(os.path.join(ROOT, f), encoding='utf-8').read(); i = t.index('const VERSIONS=['); j = t.index('\n];', i)
+        code = (t[:i] + t[j:]).lower()   # bỏ phần lịch sử phiên bản (chỉ là ghi chú)
+        ok(f'TOOLS BC1+BC2+SBD độc lập ({f}): không có mục / mã của tool Sửa NDSH XML', not any(k in code for k in ('data-t="ndsh"', 'ndshsrc', 'ndshshow', 'ndshsend', 'vndsh', 'sua-ndsh', 'sửa xml pc-08', 'ndsh-ds')))
 
 async def real(ctx, url, xml_p, xls_p, exp_p):
     pg = await ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
@@ -387,8 +364,7 @@ async def main():
         print('Bản file'); await suite(ctx, 'file://' + os.path.join(ROOT, 'dist', 'Sua_NDSH_XML.html'), 'Bản file', False)
         print('Ảnh chân dung (web)'); await photo_suite(ctx, web, 'Web', True)
         print('Ảnh chân dung (bản file)'); await photo_suite(ctx, 'file://' + os.path.join(ROOT, 'dist', 'Sua_NDSH_XML.html'), 'Bản file', False)
-        print('TOOLS BC1+BC2+SBD — mục Sửa XML PC-08'); await main_app_suite(ctx, f'http://127.0.0.1:{port}/', 'App chính (web)')
-        await main_app_suite(ctx, 'file://' + os.path.join(ROOT, 'dist', 'TOOLS BC1+BC2+SBD.html'), 'App chính (bản file)')
+        print('TOOLS BC1+BC2+SBD độc lập'); independent_check()
         # service worker: mở tool rồi mất mạng → trang chính vẫn là trang chính
         pg = await ctx.new_page(); await pg.goto(f'http://127.0.0.1:{port}/')
         await pg.wait_for_function("()=>navigator.serviceWorker&&navigator.serviceWorker.ready.then(()=>true)", timeout=20000)

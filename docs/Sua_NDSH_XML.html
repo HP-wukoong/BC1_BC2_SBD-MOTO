@@ -124,7 +124,6 @@ html.hasbg #bgLayer{display:block;position:fixed;inset:0;z-index:-1;background:v
 html.hasbg #bgLayer i{position:absolute;inset:0;background:var(--bg)}
 html.bgglass .card,html.bgglass .steps div,html.bgglass .kpi{background:color-mix(in srgb,var(--card) 86%,transparent)}
 html.hasbg nav.tabs button:not(.on){background:color-mix(in srgb,#e3e8ef 88%,transparent)}
-html.embedded header{padding:8px 16px} html.embedded header .sub,html.embedded header .logo{display:none} html.embedded header h1{font-size:14px}
 /* tab ảnh chân dung */
 .phtool{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .phtool input[type=text]{min-width:240px}
@@ -221,7 +220,6 @@ dialog#dlg.wide{max-width:min(980px,calc(100vw - 24px))}
     </div>
     <div class="card">
       <h2><span class="n">2</span>Danh sách thi lại (Excel)<i class="tip" data-tip="excel" tabindex="0" role="button" aria-label="Giải thích">!</i></h2>
-      <div id="embBox" class="hide" style="margin-bottom:10px;padding:10px 12px;border:1px solid #9fd3b5;background:var(--okbg);border-radius:8px"></div>
       <label class="drop" id="dropE"><input type="file" id="fE" accept=".xls,.xlsx,.xlsm">Bấm chọn hoặc kéo thả file .xls / .xlsx</label>
       <div id="mE" class="small" style="margin-top:8px"></div>
       <div class="row hide" id="colsBox">
@@ -885,7 +883,7 @@ hookDrop('#dropX', '#fX', async f => {
       <span>Chữ ký số</span><b>${H.sig ? 'Có (XML Signature)' : 'Không có'}</b></div>` +
       (warn.length ? `<div class="banner bad" style="margin-top:8px">${warn.map(esc).join('<br>')}</div>` : '');
     S.uncheck.clear(); S.check.clear();
-    phOnXml(); if (!$('#tabPhoto').classList.contains('hide')) phAudit(); embRender();
+    phOnXml(); if (!$('#tabPhoto').classList.contains('hide')) phAudit();
     if (S.wb) autoDetect(); else build();
   } catch (e) { S.xml = null; phReset(); phRenderAll(); $('#mX').innerHTML = `<div class="banner bad" style="margin-top:8px">Lỗi: ${esc(e.message)}</div>`; build(); }
   steps();
@@ -895,7 +893,7 @@ hookDrop('#dropE', '#fE', async f => {
   try {
     const wb = XLSX.read(await readFileBytes(f), { type:'array' });
     if (!wb.SheetNames || !wb.SheetNames.length) throw new Error('File không có sheet nào');
-    S.wb = wb; S.wbName = f.name; S.embPart = '';
+    S.wb = wb; S.wbName = f.name;
     $('#mE').innerHTML = `<b>${esc(f.name)}</b> · ${wb.SheetNames.length} sheet`;
     $('#colsBox').classList.remove('hide');
     $('#sSheet').innerHTML = wb.SheetNames.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
@@ -967,7 +965,7 @@ function build(){
   const mode = mpR.checked ? 'map' : 'excel';
   const bm = $('#bannerMode');
   if (cN < 0 && cL < 0) { bm.className = 'banner bad'; bm.innerHTML = 'Không tìm thấy cột Số lẫn cột Nội dung — chọn lại cột ở mục 2.'; }
-  else if (cN < 0) { bm.className = 'banner info'; bm.innerHTML = S.embPart ? '<b>Danh sách từ TOOLS BC1+BC2+SBD</b> — mã lấy theo <b>bảng mã</b>, suy từ nội dung sát hạch đã nhập ở tool (SH lại L / H / L+H…).' : '<b>File Excel không có cột Số</b> — tool tự chuyển sang <b>lấy mã theo bảng mã</b>, suy từ cột Nội dung (kể cả cách viết tắt như L, H, L+H, V-L…).'; }
+  else if (cN < 0) { bm.className = 'banner info'; bm.innerHTML = '<b>File Excel không có cột Số</b> — tool tự chuyển sang <b>lấy mã theo bảng mã</b>, suy từ cột Nội dung (kể cả cách viết tắt như L, H, L+H, V-L…).'; }
   else bm.className = 'banner';
   const cntE = new Map(); S.rows.forEach(r => { const k = XCore.normCccd(r[cC]); if (k) cntE.set(k, (cntE.get(k) || 0) + 1); });
   const items = []; let n = 0;
@@ -1532,9 +1530,6 @@ function tipHtml(k){
     P('Sửa được', 'Anh có thể gõ tên khác. Báo cáo CSV, nhật ký và biên bản dùng cùng tên này.');
   case 'bb': return `<h4>In biên bản (A4)</h4>` + P('Gồm', 'Thông tin kỳ sát hạch, file gốc / file mới kèm mã SHA-256, kết quả kiểm định, ghi chú chữ ký số, thống kê nội dung sát hạch, danh sách từng hồ sơ đã đổi mã (cũ → mới), chỗ ký Người lập / Người kiểm tra.') +
     P('Cách in', 'Bấm nút → chọn máy in hoặc “Lưu dưới dạng PDF”. Tên đơn vị và địa danh sửa trong Cài đặt.');
-  case 'emb': return `<h4>Danh sách từ TOOLS BC1+BC2+SBD</h4>` + P('Là gì', 'Khi mở tool trong mục “Sửa XML PC-08” của TOOLS BC1+BC2+SBD, danh sách thi lại / học mới / khóa ghép của khóa đang mở được đưa thẳng sang — không cần xuất hay nạp Excel.') +
-    P('Nội dung', 'Thi lại: “SH lại L / SH lại H / SH lại L+H” theo nội dung đã nhập ở tool. Học mới / khóa ghép: “SH lần đầu L+H”; người đã có GPLX ghi “SH lần đầu(H)” — chữ này <b>chưa có trong bảng mã</b>, tool sẽ báo đỏ để anh xác nhận mã đúng với PC-08 rồi thêm vào Cài đặt → Tên gọi khác.') +
-    P('Chọn danh sách', 'Bấm nút danh sách tương ứng file XML (tool gợi ý danh sách khớp nhiều CCCD nhất). Đổi khóa ở TOOLS thì danh sách ở đây cập nhật theo.');
   case 'photo': return `<h4>Ảnh chân dung</h4>` + P('Là gì', 'Ảnh của từng thí sinh nằm trong thẻ <code>&lt;ANH_CHAN_DUNG&gt;</code> (JPEG 2000 hoặc JPEG). Tool giải mã để xem, soát lỗi, và thay ảnh.') +
     P('Thay từng người', 'Bấm vào ảnh → kéo thả ảnh mới vào, dán bằng Ctrl+V, chọn file, hoặc gõ / dán tên file trong thư mục ảnh đã liên kết. Kéo thả thẳng 1 ảnh lên ô của người đó cũng được.') +
     P('Chính xác', 'Ảnh mới được cắt đúng cỡ ảnh cũ (lệch ≤ 8px thì cắt giữa, không co giãn), mã hóa theo số đông ảnh trong file, giải mã lại để kiểm tra. Khi tạo file chỉ thay dữ liệu trong thẻ ảnh của đúng người.') +
@@ -2089,44 +2084,9 @@ function phInitUI(){
 window.addEventListener('beforeunload', () => { ENG.ws.forEach(w => { try { w.terminate && w.terminate(); } catch(_){} }); });
 
 
-/* ---------- Mục riêng trong TOOLS BC1+BC2+SBD: nhận danh sách của khóa đang mở, không cần Excel ---------- */
-const EMB = { on: window.parent !== window, data:null };
-function embRows(part){
-  const P = EMB.data && EMB.data.parts && EMB.data.parts[part]; if (!P) return null;
-  return [['STT','Họ và tên','Số định danh','Ngày sinh','Nội dung sát hạch']].concat(P.rows.map((r, i) => [i + 1, r.ten, r.cccd, r.ns || '', r.nd]));
-}
-function embUse(part){
-  const rows = embRows(part); if (!rows) return;
-  const P = EMB.data.parts[part], wb = XLSX.utils.book_new(), sh = (EMB.data.course + ' ' + P.short).replace(/[\\/?*\[\]:]/g, '-').slice(0, 31);
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), sh);
-  S.wb = wb; S.wbName = `TOOLS BC1+BC2+SBD · khóa ${EMB.data.course} · ${P.ten}`; S.embPart = part;
-  $('#mE').innerHTML = `<b>${esc(S.wbName)}</b> · ${P.rows.length} người <span class="st-ok">(lấy thẳng từ tool, không cần file Excel)</span>`;
-  $('#colsBox').classList.remove('hide'); $('#sSheet').innerHTML = `<option value="${esc(sh)}">${esc(sh)}</option>`;
-  S.uncheck.clear(); S.check.clear(); autoDetect(); embRender(); steps();
-}
-function embRender(){
-  const box = $('#embBox'); if (!box) return;
-  if (!EMB.data) { box.classList.add('hide'); return; }
-  const parts = Object.entries(EMB.data.parts).filter(([, p]) => p.rows.length);
-  let best = '', bn = 0;
-  if (S.xml) parts.forEach(([k, p]) => { const n = p.rows.filter(r => S.byCccd.has(XCore.normCccd(r.cccd))).length; if (n > bn) { bn = n; best = k; } });
-  box.classList.remove('hide');
-  box.innerHTML = `<div><b>Danh sách từ TOOLS BC1+BC2+SBD — khóa ${esc(EMB.data.course)}</b> <i class="tip" data-tip="emb" tabindex="0" role="button" aria-label="Giải thích">!</i></div>` +
-    (parts.length ? `<div class="row" style="margin-top:6px">${parts.map(([k, p]) => { const n = S.xml ? p.rows.filter(r => S.byCccd.has(XCore.normCccd(r.cccd))).length : null;
-      return `<button class="btn ${S.embPart === k ? 'ok' : k === best ? '' : 'sec'} sm" data-part="${k}">${esc(p.ten)} · ${p.rows.length} người${n !== null ? ` · khớp XML ${n}` : ''}${S.embPart === k ? ' ✔' : ''}</button>`; }).join('')}</div>
-      <div class="small" style="margin-top:4px">${S.xml ? (best ? `Gợi ý: file XML này khớp nhiều nhất với <b>${esc(EMB.data.parts[best].ten)}</b>.` : '<span class="st-warn">File XML không khớp ai trong các danh sách của khóa này — kiểm tra lại đúng khóa / đúng file.</span>') : 'Nạp file XML để tool gợi ý danh sách khớp.'} Hoặc vẫn nạp file Excel như thường ở ô bên dưới.</div>`
-      : '<div class="small">Khóa này chưa có người thi lại / học mới.</div>');
-  $$('#embBox button[data-part]').forEach(b => b.onclick = () => embUse(b.dataset.part));
-}
-window.addEventListener('message', e => {
-  if (!EMB.on || e.source !== window.parent) return; const m = e.data;
-  if (m && m.type === 'ndsh-ds' && m.parts) { const same = EMB.data && EMB.data.course === m.course; EMB.data = m; if (S.embPart && same && m.parts[S.embPart]) embUse(S.embPart); else { if (!same && S.embPart) { S.embPart = ''; } embRender(); } }
-});
-
 /* ---------- Khởi động ---------- */
 $('#ver').textContent = 'Phiên bản ' + APP_VER;
 applySettings(); initSettingsUI(); steps(); bgBoot(); logBoot(); phInitUI(); phRenderAll();
-if (EMB.on) { document.documentElement.classList.add('embedded'); try { window.parent.postMessage({ type:'ndsh-ready' }, '*'); } catch(e){} }
 window.__ndshReady = true;
 </script>
 </body>
