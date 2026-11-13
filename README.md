@@ -34,7 +34,7 @@ Sửa mã nội dung sát hạch `<NOI_DUNG_SH>` trong file XML PC-08 trả về
 - Tab **Ảnh chân dung** (từ bản 4.0): xem ảnh `<ANH_CHAN_DUNG>` (JPEG 2000 / JPEG) của mọi thí sinh; **soát ảnh** (hỏng, trùng hệt, cùng một ảnh dùng cho 2 người, ảnh nhỏ, sai tỷ lệ 3:4, quá tối / sáng); **thay ảnh** từng người (kéo thả, Ctrl+V, chọn file, tên file trong thư mục ảnh liên kết) hoặc **hàng loạt** (ghép theo số CCCD trong tên file + khay ảnh kéo vào đúng người); **xuất ảnh** `CCCD_SBD_HoTen.jpg` để xử lý ở Ảnh Thẻ Pro rồi nạp lại.
   Ảnh mới ghi theo **số đông** ảnh trong file — với file PC-08: JPEG 2000, wavelet 5/3, tỷ lệ 10:1, 5 mức, 1 lớp, khối 64×64, không MCT → phần đầu ảnh giống hệt ảnh gốc từng byte. Bộ mã hóa: OpenJPEG 2.5.2 biên dịch WebAssembly (`src/sua_ndsh/jp2/`, dựng lại bằng `build_jp2.sh`), chạy trong luồng nền.
 - Tab **Kiểm tra file đã sửa**: so file gốc với file đã sửa (bằng tool, sửa tay…), liệt kê người đổi mã / đổi ảnh (kèm ảnh cũ / mới) và mọi thay đổi khác ngoài NOI_DUNG_SH và ảnh.
-- Mở ngay trong TOOLS BC1+BC2+SBD ở mục **5 · Sửa XML PC-08**: nhận thẳng danh sách thi lại / học mới / khóa ghép của khóa đang mở — không cần xuất Excel.
+- Tool **độc lập** với TOOLS BC1+BC2+SBD (không nhúng, không trao đổi dữ liệu) — danh sách thi lại nạp bằng file Excel.
 - Bảng mã, tên gọi khác lưu trên máy; **nhật ký** tự ghi vào thư mục chọn sẵn (nên là thư mục Google Drive); ảnh nền.
 - Lưu ý: file PC-08 có **chữ ký số**; sửa bất kỳ số nào (kể cả sửa tay) thì chữ ký không còn khớp — tool giữ nguyên thẻ chữ ký và báo rõ.
 - Mã nguồn: `src/sua_ndsh/` (`app.html`, `core.js`, `photo.js`, `jp2/`); kiểm tra: `python3 tests/kiemtra_ndsh.py` (dữ liệu giả lập, cần `pip install playwright pillow`).
