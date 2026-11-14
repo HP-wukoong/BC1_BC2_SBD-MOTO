@@ -431,6 +431,8 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.17','14/11/2026',['Mục Số báo danh: thêm 2 nút “DS thi Lý thuyết” và “DS thi Hình” — xuất SBD_<khóa thi>_LYTHUYET.xlsx / _HINH.xlsx đúng mẫu: đủ danh sách như file SBD (giữ SBD, thứ tự), bộ lọc Excel ở cột Nội dung sát hạch bỏ chọn người không thi phần đó (Lý thuyết: “Sát hạch H”, “SH lại H”; Hình: “SH lại LT”); cột H “Số thăm SH lý thuyết” / “Số XE SH Hình”; tool đọc lại file, so từng ô và từng dòng ẩn / hiện',
+    'Đối chiếu với Báo cáo 2: khóa thi ghép / thi cùng đợt (không phải khóa chính) hiện bảng thông tin từng người: SBD, họ tên, số CMT, ngày sinh, nội dung trong DS thi, loại trong tool (học mới / thi lại L-H / khóa ghép / bị loại, có GPLX), kết quả khớp']],
   ['4.16','13/11/2026',['Đưa lại mục “5 · Sửa XML PC-08” vào TOOLS — chạy trong khung riêng, chỉ ĐỌC danh sách của khóa đang mở, không ghi gì vào dữ liệu TOOLS: các mục 1 · Nạp dữ liệu, 2 · BC1, 3 · BC2, 4 · SBD giữ nguyên như bản 4.14.2',
     'Tool Sửa NDSH XML 4.1: thêm ô nạp “XML thường” (BC1, BC2…) trong mục Ảnh chân dung — chỉ thay ảnh, không gán / không đổi thông tin nào khác; nút “Xuất XML” ngay trong mục ảnh: ghi ảnh, đối chiếu từng byte 2 lần, giải mã thử ảnh mới, kiểm tra XML hợp lệ, chữ ký số, SHA-256 rồi mới cho tải. File PC-08 giữ nguyên mọi chức năng']],
   ['4.15','13/11/2026',['Mục mới “5 · Sửa XML PC-08”: tool Sửa NDSH XML chạy ngay trong TOOLS, nhận thẳng danh sách thi lại / học mới / khóa ghép của khóa đang mở (không cần xuất Excel); khung giữ nguyên khi chuyển mục',
@@ -1587,9 +1589,10 @@ function crossCheck(ex){
   const out=[];
   for(const {c,hit} of Object.values(byC)){
     const active=c.students.filter(s=>!s.biLoai), main=hit.length>=Math.max(1,active.length*0.5);
-    const R={c,main,n:hit.length,active:active.length,missing:[],loai:[],nd:[],ok:0};
+    const R={c,main,n:hit.length,active:active.length,missing:[],loai:[],nd:[],ok:0,ppl:[]};
     for(const [s,r] of hit){
       const k=ndClass(r.nd);
+      R.ppl.push({s,r,ok:!s.biLoai&&(s.loai!=='tl'?(k==='moi'||k==='moiH'):(!!s.gcTL&&GC2ND[s.gcTL]===k))});
       if(s.biLoai){ R.loai.push(`${s.ten} (SBD ${r.sbd}) đã bị LOẠI trong khóa ${c.ten}${s.lyDo?' — '+s.lyDo:''} nhưng vẫn có trong danh sách thi`); continue; }
       let want, got=k;
       if(s.loai!=='tl'){ want='lần đầu'; if(k!=='moi'&&k!=='moiH') R.nd.push(`${s.ten} (SBD ${r.sbd}): BC2 là ${s.loai==='g'?'khóa ghép':'học mới'} (SH lần đầu), danh sách thi ghi “${r.nd}”`); else R.ok++; }
@@ -1613,6 +1616,10 @@ function crossHtml(ex){
     <div class="muted" style="margin:6px 0 2px">So từng thí sinh (theo số CMT) với danh sách Báo cáo 2 trong tool: người bị loại, nội dung sát hạch, và ai có trong BC2 mà thiếu trong danh sách thi. Chỉ để kiểm tra — không sửa danh sách thi.</div>
     ${X.map(R=>`<div style="margin-top:12px"><b>Khóa ${esc(R.c.ten)}</b> <span class="muted">— ${R.n} người trong danh sách thi${R.main?` / ${R.active} người dự thi trong BC2`:' (thi ghép, không phải khóa chính của đợt này)'}</span>
       ${R.ok===R.n&&!R.missing.length?` <span class="tag gplx">${ic('check')} khớp ${R.ok}/${R.n}</span>`:''}
+      ${!R.main?`<div class="tblwrap" style="margin-top:6px"><table style="font-size:13px"><thead><tr><th class="c">SBD</th><th>Họ và tên</th><th class="c">Số CMT</th><th class="c">Ngày sinh</th><th>Nội dung (DS thi)</th><th>Trong tool (khóa ${esc(R.c.ten)})</th><th class="c">Kết quả</th></tr></thead><tbody>
+        ${R.ppl.map(({s,r,ok})=>`<tr><td class="c sbdv">${esc(r.sbd)}</td><td class="nm">${esc(r.ten)}${norm(r.ten)!==norm(s.ten)?`<div class="muted" style="font-size:12px">tool: ${esc(s.ten)}</div>`:''}</td><td class="c">${esc(r.cmt)}</td><td class="c">${esc(r.ns)}${s.ns&&s.ns!==r.ns?`<div class="muted" style="font-size:12px">tool: ${esc(s.ns)}</div>`:''}</td><td>${esc(r.nd)}</td>
+          <td>${s.biLoai?'<b style="color:var(--seal)">Đã bị loại</b>'+(s.lyDo?' — '+esc(s.lyDo):''):s.loai==='tl'?'Thi lại — '+(s.gcTL?esc(GC_LABEL[s.gcTL]):'<i>chưa chọn L/H</i>'):s.loai==='g'?'Khóa ghép — SH lần đầu':'Học mới — SH lần đầu'}${s.hangHS||s.hangG?` · có GPLX ${esc(s.hangHS||s.hangG)}`:''}</td>
+          <td class="c">${ok?`<span class="tag gplx">${ic('check')} khớp</span>`:'<span class="tag" style="background:var(--seal-tint);color:var(--seal)">cần xem</span>'}</td></tr>`).join('')}</tbody></table></div>`:''}
       ${R.loai.length?`<div class="lv-err" style="font-weight:600;margin-top:4px">${R.loai.length} người đã bị loại vẫn có tên thi</div>${lst(R.loai,'lv-err')}`:''}
       ${R.nd.length?`<div class="lv-err" style="font-weight:600;margin-top:4px">${R.nd.length} người khác nội dung sát hạch</div>${lst(R.nd,'lv-err')}`:''}
       ${R.missing.length?`<div class="lv-warn" style="font-weight:600;margin-top:4px">${R.missing.length} người có trong BC2 nhưng không có trong danh sách thi này</div>${lst(R.missing,'lv-warn')}`:''}
@@ -2707,7 +2714,7 @@ function vSBD(v){
     <h2 style="margin:0">Khóa thi ${esc(ex.khoaThi)}</h2><span class="muted">Ngày thi ${esc(ex.ngayThi||'?')} · nạp từ ${esc(ex.file)}</span>
     <span style="flex:1"></span>
     <button class="btn loai sm" id="exDel">${ic('trash')}Xóa khóa thi</button>
-    <button class="btn acc" id="xSBD" ${examBad(ex)?'disabled':''}>${ic('download')}Xuất danh sách SBD</button><button class="btn" id="xGPLX" ${examBad(ex)?'disabled':''} title="Thí sinh có GPLX: số GPLX, ngày cấp, ngày hết hạn (theo file GPLX_<khóa>)">${ic('download')}Xuất DS có GPLX (${ex.rows.filter(r=>gplxHang(r)).length})</button><button class="btn" id="pSBD" ${examBad(ex)?'disabled':''}>${ic('print')}In / PDF</button><button class="btn" id="pdfSBD" ${examBad(ex)?'disabled':''} title="File PDF A4 danh sách SBD để in dán bảng tin (SBD, họ tên, số CMT, ngày sinh, hạng, nội dung)">${ic('download')}PDF dán bảng tin</button><button class="btn" id="tbSBD" ${examBad(ex)?'disabled':''} title="Thông báo kỳ sát hạch — ảnh gửi Zalo / PDF in A4, sửa được mọi nội dung">${ic('bell')}Thông báo (ảnh / PDF)</button></div>
+    <button class="btn acc" id="xSBD" ${examBad(ex)?'disabled':''}>${ic('download')}Xuất danh sách SBD</button><button class="btn" id="xSBDLT" ${examBad(ex)?'disabled':''} title="File SBD_${esc(asciiName(ex.khoaThi))}_LYTHUYET.xlsx: đủ danh sách, bỏ chọn (ẩn) người “Sát hạch H” và “SH lại H”">${ic('download')}DS thi Lý thuyết (${sbdPartKeep(ex,'LT').filter(Boolean).length})</button><button class="btn" id="xSBDH" ${examBad(ex)?'disabled':''} title="File SBD_${esc(asciiName(ex.khoaThi))}_HINH.xlsx: đủ danh sách, bỏ chọn (ẩn) người “SH lại LT”">${ic('download')}DS thi Hình (${sbdPartKeep(ex,'H').filter(Boolean).length})</button><button class="btn" id="xGPLX" ${examBad(ex)?'disabled':''} title="Thí sinh có GPLX: số GPLX, ngày cấp, ngày hết hạn (theo file GPLX_<khóa>)">${ic('download')}Xuất DS có GPLX (${ex.rows.filter(r=>gplxHang(r)).length})</button><button class="btn" id="pSBD" ${examBad(ex)?'disabled':''}>${ic('print')}In / PDF</button><button class="btn" id="pdfSBD" ${examBad(ex)?'disabled':''} title="File PDF A4 danh sách SBD để in dán bảng tin (SBD, họ tên, số CMT, ngày sinh, hạng, nội dung)">${ic('download')}PDF dán bảng tin</button><button class="btn" id="tbSBD" ${examBad(ex)?'disabled':''} title="Thông báo kỳ sát hạch — ảnh gửi Zalo / PDF in A4, sửa được mọi nội dung">${ic('bell')}Thông báo (ảnh / PDF)</button></div>
     ${examBad(ex)?`<div class="note warn" style="margin-top:12px;border-color:var(--seal)">${ic('alert')}<span><b>Danh sách này không hợp lệ</b>: nạp từ “${esc(ex.file)}” — không phải file máy chủ phòng thi (tên bắt đầu bằng GLĐ). Không dùng để xuất SBD. Bấm <b>Xóa khóa thi</b> để bỏ.</span></div>`:''}
     ${st.noTool?`<div class="note warn" style="margin-top:12px">${ic('alert')}<span><b>${st.noTool}</b> thí sinh không có trong dữ liệu tool nên chưa biết hạng GPLX đã có — bảng tổng hợp coi như <b>chưa có GPLX</b>. Nạp hồ sơ của các khóa đó (hoặc file GPLX) nếu cần chính xác.</span></div>`:''}
     ${st.unk?`<div class="note warn" style="margin-top:8px">${ic('alert')}<span>${st.unk} dòng có nội dung sát hạch lạ, không đưa vào bảng tổng hợp.</span></div>`:''}
@@ -2737,7 +2744,7 @@ function vSBD(v){
   if($('#qey')) $('#qey').onchange=e=>{ QEY=e.target.value; render(); };
   const qe=$('#qe'); qe.oninput=()=>{ QE=qe.value; clearTimeout(qe._t); qe._t=setTimeout(()=>{ render(); const n=$('#qe'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); },250); };
   $('#exDel').onclick=()=>{ if(confirm('Xóa khóa thi '+ex.khoaThi+' khỏi tool? (SBD đã gán cho học viên vẫn giữ)')){ snapshot('Xóa khóa thi '+ex.khoaThi); DB.exams=DB.exams.filter(e=>e!==ex); DB.curExam=(DB.exams[0]||{}).id; save(); render(); } };
-  $('#xSBD').onclick=()=>exportSBD(ex); $('#xGPLX').onclick=()=>askGPLX(ex); $('#pSBD').onclick=()=>printSBD(ex); $('#pdfSBD').onclick=()=>exportSBDPdf(ex); $('#tbSBD').onclick=()=>askTB(ex);
+  $('#xSBD').onclick=()=>exportSBD(ex); $('#xSBDLT').onclick=()=>exportSBDPart(ex,'LT'); $('#xSBDH').onclick=()=>exportSBDPart(ex,'H'); $('#xGPLX').onclick=()=>askGPLX(ex); $('#pSBD').onclick=()=>printSBD(ex); $('#pdfSBD').onclick=()=>exportSBDPdf(ex); $('#tbSBD').onclick=()=>askTB(ex);
   v.querySelectorAll('[data-cf]').forEach(i=>i.onchange=()=>{ cfg[i.dataset.cf]=i.value.trim(); save(); });
   const q=$('#qs'); q.oninput=()=>{ QS=q.value; clearTimeout(q._t); q._t=setTimeout(()=>{ render(); const n=$('#qs'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); },250); };
 }
@@ -4166,6 +4173,75 @@ async function exportSBD(ex){
     <li>Thứ tự giữ nguyên như file phòng thi</li><li>Bảng tổng hợp: Thi mới ${st.moiLT} LT / ${st.moiH} Hình · Thi lại ${st.L} LT / ${st.H} Hình / ${st.LH} LT+Hình</li>
     ${chk.W.length?`<li style="color:var(--amber)">Còn ${chk.W.length} cảnh báo ở phần kiểm tra toàn vẹn — nên xem lại</li>`:''}</ul>`,[['Đóng',''],['Làm thông báo','pri',()=>{ setTimeout(()=>askTB(ex),50); }]]);
 }
+/* ===== DS THI LÝ THUYẾT / DS THI HÌNH — đúng mẫu SBD_<khóa thi>_LYTHUYET.xlsx / SBD_<khóa thi>_HINH.xlsx
+   = file SBD đầy đủ (GIỮ NGUYÊN thứ tự, SBD, mọi dòng như file phòng thi) + bộ lọc Excel ở cột F “Nội dung sát hạch”:
+   người không thi phần đó bị BỎ CHỌN (ẩn dòng), không xóa — in từ Excel chỉ ra người đang hiện.
+   Lý thuyết: bỏ chọn “Sát hạch H” và “SH lại H”.   Hình: bỏ chọn “SH lại LT”.
+   Cột H: Lý thuyết “Số thăm SH lý thuyết” · Hình “Số XE SH Hình”. */
+const SBD_PART={
+  LT:{ten:'Lý thuyết', file:'LYTHUYET', drop:['moiH','H'], colH:'Số thăm SH \nlý thuyết', bo:['sat hach h','sh lai h']},
+  H: {ten:'Hình',      file:'HINH',     drop:['L'],        colH:'Số XE SH \nHình',        bo:['sh lai lt','sh lai l']}};
+function sbdPartKeep(ex,part){ const D=SBD_PART[part].drop; return ex.rows.map(r=>!D.includes(ndClass(r.nd))); }
+async function exportSBDPart(ex,part){
+  ex=ex||curExam(); const PT=SBD_PART[part]; if(!ex){ toast('Chưa có khóa thi.'); return; }
+  if(examBad(ex)){ toast('Danh sách này không phải từ file GLĐ — không xuất.',5000); return; }
+  const unk=ex.rows.filter(r=>ndClass(r.nd)==='?');
+  if(unk.length){ dialog('Chưa xuất được DS thi '+PT.ten,`<div class="note warn">${ic('alert')}<span>Có <b>${unk.length}</b> dòng nội dung sát hạch lạ — tool không biết người này thi ${PT.ten.toLowerCase()} hay không, nên dừng để tránh lọc sai:</span></div>
+    <div style="font-size:13px;margin-top:8px;max-height:240px;overflow:auto">${unk.slice(0,60).map(r=>`• SBD ${esc(r.sbd)} — ${esc(r.ten)} (${esc(r.cmt)}): “${esc(r.nd)}”`).join('<br>')}</div>`,[['Đóng','pri']]); return; }
+  if(!await cccdGate('Danh sách thi '+PT.ten+' '+ex.khoaThi,ccRowsSBD(ex))) return;
+  const chk=examCheck(ex);
+  if(chk.E.length && !confirm(`Khóa thi này còn ${chk.E.length} LỖI ở phần “Kiểm tra toàn vẹn dữ liệu”.\nNên xử lý xong rồi mới xuất. Vẫn xuất?`)) return;
+  const cfg=sbdCfgGet(), st=examStats(ex), S=sbdScal(cfg,ex,st), R=ex.rows.map(sbdRow), keep=sbdPartKeep(ex,part);
+  const last=18+R.length, nShow=keep.filter(Boolean).length;
+  const vals=[...new Set(ex.rows.filter((r,i)=>keep[i]).map(r=>String(r.nd)))], hidT=new Set(ex.rows.filter((r,i)=>!keep[i]).map(r=>String(r.nd)));
+  const wb=new ExcelJS.Workbook(); wb.creator='So Sat Hach A1';
+  const ws=sbdSheet(wb,ex.khoaThi,S,R); ws.getCell('H16').value=PT.colH;
+  keep.forEach((k,i)=>{ if(!k) ws.getRow(19+i).hidden=true; });
+  const name=`SBD_${asciiName(ex.khoaThi)}_${PT.file}.xlsx`, sn=ex.khoaThi.slice(0,31);
+  const xe=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  let lastBuf=null;
+  const post=buf=>{ const z=zOpen(buf), sp='xl/worksheets/sheet1.xml'; let x=zGet(z,sp); if(!x) throw new Error('không thấy sheet1.xml');
+    const af=`<autoFilter ref="A18:I${last}"/>`; if(x.split(af).length!==2) throw new Error('không thấy đúng 1 bộ lọc A18:I'+last);
+    x=x.replace(af,`<autoFilter ref="A18:I${last}"><filterColumn colId="5"><filters>${vals.map(v=>`<filter val="${xe(v)}"/>`).join('')}</filters></filterColumn></autoFilter>`);
+    if(/<sheetPr\b/.test(x)) x=x.replace(/<sheetPr\b/,'<sheetPr filterMode="1"'); else x=x.replace(/(<worksheet\b[^>]*>)/,'$1<sheetPr filterMode="1"/>');
+    zPut(z,sp,x);
+    let w=zGet(z,'xl/workbook.xml'); const dn=`<definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">&apos;${xe(sn)}&apos;!$A$18:$I$${last}</definedName>`;
+    w=w.includes('<definedNames>')?w.replace('<definedNames>','<definedNames>'+dn):w.replace('</sheets>','</sheets><definedNames>'+dn+'</definedNames>');
+    zPut(z,'xl/workbook.xml',w);
+    const now=new Date(); z.FileIndex.forEach(e=>{ e.mt=now; e.ct=now; });
+    const o=XLSX.CFB.write(z,{fileType:'zip',type:'array',compression:true}); lastBuf=o instanceof Uint8Array?o:new Uint8Array(o); return lastBuf; };
+  const exp=ex.rows.map(r=>[String(r.sbd),r.ten,r.cmt,r.ns,r.hang,r.nd,gplxHang(r)]);
+  const ok=await download(wb,name,back=>{
+    const w=back.worksheets[0], P=verifyRows(w,19,exp,['A','B','C','D','E','F','G'],'DS thi '+PT.ten);
+    const want={E6:st.a1,H6:st.tong,C12:st.moiLT,D12:st.moiH,C13:st.L,D13:st.H,G13:st.LH,C14:st.cLT,D14:st.cH,G14:st.cLH,B6:'Khóa thi: '+ex.khoaThi,B7:'Ngày thi: '+(ex.ngayThi||''),H16:PT.colH};
+    for(const a in want) if(cellStr(w,a)!==String(want[a])) P.push(`Ô ${a}: file ghi “${cellStr(w,a)}”, đúng phải là “${want[a]}”`);
+    // từng dòng: ẩn đúng người không thi phần này
+    let vis=0; keep.forEach((k,i)=>{ const h=!!w.getRow(19+i).hidden; if(h===k) P.push(`Dòng ${19+i} (SBD ${ex.rows[i].sbd} — ${ex.rows[i].ten}, “${ex.rows[i].nd}”): ${k?'đang bị ẩn, đúng phải hiện':'đang hiện, đúng phải ẩn'}`); if(!h) vis++; });
+    // đếm lại theo cách khác (theo chữ, không qua ndClass)
+    const bo=ex.rows.filter(r=>PT.bo.includes(norm(r.nd).replace(/\s+/g,' ').trim())).length;
+    if(vis!==ex.rows.length-bo) P.push(`Số người hiện ${vis}, đếm lại theo chữ “${PT.bo.join('”, “')}” phải là ${ex.rows.length-bo}`);
+    for(const v of vals) if(hidT.has(v)) P.push(`Nội dung “${v}” vừa có người hiện vừa có người ẩn`);
+    // bộ lọc Excel trong file
+    try{ const z=zOpen(lastBuf), x=zGet(z,'xl/worksheets/sheet1.xml')||'', wx=zGet(z,'xl/workbook.xml')||'';
+      const m=x.match(/<autoFilter ref="A18:I(\d+)"><filterColumn colId="5"><filters>(.*?)<\/filters><\/filterColumn><\/autoFilter>/);
+      if(!m) P.push('File không có bộ lọc cột Nội dung sát hạch'); else {
+        if(+m[1]!==last) P.push(`Bộ lọc tới dòng ${m[1]}, đúng phải là ${last}`);
+        const got=[...m[2].matchAll(/<filter val="([^"]*)"\/>/g)].map(a=>a[1].replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')).sort().join('|');
+        if(got!==vals.slice().sort().join('|')) P.push('Danh sách giá trị đang chọn trong bộ lọc không đúng'); }
+      if(!/<sheetPr filterMode="1"/.test(x)) P.push('Thiếu cờ đang lọc (filterMode)');
+      if(!wx.includes('_xlnm._FilterDatabase')) P.push('Thiếu vùng lọc _FilterDatabase');
+    }catch(e){ P.push('Không đọc lại được bộ lọc: '+e.message); }
+    if(nShow!==vis) P.push('Số người hiện không khớp');
+    return P; },post);
+  if(!ok) return;
+  const cnt={}; ex.rows.forEach((r,i)=>{ if(!keep[i]) cnt[r.nd]=(cnt[r.nd]||0)+1; });
+  const cust=DB.forms&&DB.forms.sbd&&DB.forms.sbd.cur;
+  dialog('Đã xuất DS thi '+PT.ten,`<div class="note ok">${ic('check')}<span>Tool đã đọc lại file <b>${esc(name)}</b> và so từng ô, từng dòng ẩn / hiện:</span></div>
+    <ul style="margin:10px 0 0;padding-left:20px;line-height:1.8"><li>Đủ <b>${ex.rows.length}/${ex.rows.length}</b> dòng như file phòng thi — SBD, thứ tự giữ nguyên</li>
+    <li>Đang hiện <b>${nShow}</b> người thi ${PT.ten.toLowerCase()}; bỏ chọn (ẩn) <b>${ex.rows.length-nShow}</b> người: ${Object.entries(cnt).map(([k,n])=>`${n} “${esc(k)}”`).join(', ')||'không có'}</li>
+    <li>Cột H: “${esc(PT.colH.replace('\n',''))}”</li><li>Mở file bằng Excel → In: chỉ in người đang hiện. Bỏ bộ lọc ở cột “Nội dung sát hạch” để thấy lại đủ danh sách.</li>
+    ${cust?`<li style="color:var(--amber)">Bạn đang dùng form SBD riêng — DS thi Lý thuyết / Hình dùng mẫu chuẩn của tool (giống file mẫu)</li>`:''}</ul>`,[['Đóng','pri']]);
+}
 /* ===== THI THỬ — mục riêng, ĐỘC LẬP: file tên <khóa>_Thithu; lưu ở DB.thithu, KHÔNG đụng khóa thi (DB.exams), BC1, BC2, SBD của học viên ===== */
 let QTT='';
 function analyzeThiThu(wb,file,pn){
@@ -5059,6 +5135,8 @@ const HELP={
   xBCDN:'Word “Báo cáo đề nghị tổ chức sát hạch” — mã trong ngoặc lấy từ 2 file XML (thi mới / thi lại).',
   xTCVP:'Excel tra cứu vi phạm: họ tên + số CCCD người thi mới, thi lại, rồi khóa ghép (nếu có).',
   xSBD:'Excel danh sách SBD theo mẫu Hội đồng sát hạch, đúng thứ tự file phòng thi (GLĐ).',
+  xSBDLT:'DS thi LÝ THUYẾT: file SBD đầy đủ (giữ SBD, thứ tự) có bộ lọc ở cột Nội dung sát hạch — bỏ chọn người “Sát hạch H”, “SH lại H”; cột H “Số thăm SH lý thuyết”. Mở bằng Excel rồi In: chỉ in người đang hiện.',
+  xSBDH:'DS thi HÌNH: file SBD đầy đủ (giữ SBD, thứ tự) có bộ lọc ở cột Nội dung sát hạch — bỏ chọn người “SH lại LT”; cột H “Số XE SH Hình”. Mở bằng Excel rồi In: chỉ in người đang hiện.',
   xGPLX:'Lọc riêng thí sinh đã có GPLX: số GPLX, ngày cấp, ngày hết hạn (theo file GPLX_<khóa>).',
   pSBD:'In nhanh danh sách SBD bằng trình duyệt.',
   pdfSBD:'File PDF A4 để in dán bảng tin: SBD, họ tên, số CMT, ngày sinh, hạng, nội dung. Khi in chọn tỉ lệ 100%.',
