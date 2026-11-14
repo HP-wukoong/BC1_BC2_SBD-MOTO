@@ -710,6 +710,8 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.18','14/11/2026',['Mục Số báo danh: thêm nút “DS bảo lưu” — file DS BAOLUU <khóa>_<ngày thi>.xlsx đúng mẫu (SBD, Họ và tên, Số CMT, Ngày bảo lưu, HẠNG, Ghi chú, Có GPLX): người “Sát hạch H”, “SH lại LT”, “SH lại H” theo đúng thứ tự danh sách SBD; Ngày bảo lưu lấy từ cột “Ngày bảo lưu” của file _LOCTL đã nạp (theo số CCCD); báo trước người thi lại không có ngày / file _LOCTL ghi nội dung khác; đọc lại file so từng ô',
+    'Nạp file _LOCTL: đọc thêm cột “Ngày bảo lưu” (không thay đổi cách điền Nội dung SH lại)']],
   ['4.17','14/11/2026',['Mục Số báo danh: thêm 2 nút “DS thi Lý thuyết” và “DS thi Hình” — xuất SBD_<khóa thi>_LYTHUYET.xlsx / _HINH.xlsx đúng mẫu: đủ danh sách như file SBD (giữ SBD, thứ tự), bộ lọc Excel ở cột Nội dung sát hạch bỏ chọn người không thi phần đó (Lý thuyết: “Sát hạch H”, “SH lại H”; Hình: “SH lại LT”); cột H “Số thăm SH lý thuyết” / “Số XE SH Hình”; tool đọc lại file, so từng ô và từng dòng ẩn / hiện',
     'Đối chiếu với Báo cáo 2: khóa thi ghép / thi cùng đợt (không phải khóa chính) hiện bảng thông tin từng người: SBD, họ tên, số CMT, ngày sinh, nội dung trong DS thi, loại trong tool (học mới / thi lại L-H / khóa ghép / bị loại, có GPLX), kết quả khớp']],
   ['4.16','13/11/2026',['Đưa lại mục “5 · Sửa XML PC-08” vào TOOLS — chạy trong khung riêng, chỉ ĐỌC danh sách của khóa đang mở, không ghi gì vào dữ liệu TOOLS: các mục 1 · Nạp dữ liệu, 2 · BC1, 3 · BC2, 4 · SBD giữ nguyên như bản 4.14.2',
@@ -1156,14 +1158,15 @@ const colName=c=>{ let s=''; c++; while(c>0){ const m=(c-1)%26; s=String.fromCha
 function locSheetInfo(ws){
   const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:'',blankrows:true});
   const ncol=rows.reduce((m,r)=>Math.max(m,r.length),0);
-  let hr=-1, id=null, nd=null, ten=null;
+  let hr=-1, id=null, nd=null, ten=null, bl=null;
   for(let r=0;r<Math.min(rows.length,25)&&hr<0;r++){
-    let i=null,n=null,nSh=null,t=null;
+    let i=null,n=null,nSh=null,t=null,b=null;
     rows[r].forEach((v,c)=>{ const x=norm(v); if(!x||x.length>60) return;
       if(i==null&&(KW.id.some(w=>x.includes(w))||/^(so )?(cccd|cmt|cmnd|dinh danh)$/.test(x))) i=c;
       if(/noi dung/.test(x)){ if(/sh lai|thi lai/.test(x)){ if(nSh==null) nSh=c; } else if(n==null) n=c; }
-      if(t==null&&(/^(ho va ten|ho ten|ten|ho va ten hoc vien|ten hoc vien|ho ten thi sinh)$/.test(x))) t=c; });
-    if(i!=null||nSh!=null||n!=null){ hr=r; id=i; nd=nSh!=null?nSh:n; ten=t; }
+      if(t==null&&(/^(ho va ten|ho ten|ten|ho va ten hoc vien|ten hoc vien|ho ten thi sinh)$/.test(x))) t=c;
+      if(b==null&&/^(ngay )?bao luu$/.test(x)) b=c; });
+    if(i!=null||nSh!=null||n!=null){ hr=r; id=i; nd=nSh!=null?nSh:n; ten=t; bl=b; }
   }
   // không có tiêu đề → nhận theo giá trị trong cột
   const data=rows.slice(hr+1);
@@ -1172,24 +1175,33 @@ function locSheetInfo(ws){
   const idBy=id==null, ndBy=nd==null;
   if(id==null) id=best(isIdV);
   if(nd==null) nd=best(v=>!!parseGC(v,true));
-  return {rows, ncol, hr, id, nd, ten, idBy, ndBy};
+  return {rows, ncol, hr, id, nd, ten, bl, idBy, ndBy};
+}
+/* ô “Ngày bảo lưu” của file _LOCTL → chữ dd/mm/yyyy (ô ngày Excel) hoặc giữ nguyên chữ gốc */
+function blText(v){
+  if(v==null||v==='') return '';
+  if(typeof v==='number'&&isFinite(v)&&v>20000&&v<80000){ const d=XLSX.SSF.parse_date_code(v); if(d&&d.y) return `${String(d.d).padStart(2,'0')}/${String(d.m).padStart(2,'0')}/${d.y}`; }
+  if(v instanceof Date&&!isNaN(v)) return `${String(v.getDate()).padStart(2,'0')}/${String(v.getMonth()+1).padStart(2,'0')}/${v.getFullYear()}`;
+  return String(v).trim();
 }
 function locBuild(file, sn, info){
-  const {rows,id,nd,ten}=info; const recs=[], skipped=[], seen={}; let bad=0;
+  const {rows,id,nd,ten,bl}=info; const recs=[], skipped=[], seen={}; let bad=0;
   for(let r=info.hr+1;r<rows.length;r++){
     const row=rows[r], rawId=String(row[id]??'').trim(), rawNd=String(row[nd]??'').trim(), nm=ten!=null?String(row[ten]||'').trim():'';
     if(!rawId&&!rawNd) continue;
     const cc=normId(rawId), gc=parseGC(rawNd,true), line=r+1;
     if(!isIdV(rawId)){ if(gc) skipped.push({row:line, ten:nm, id:rawId, reason:rawId?'Số CCCD không hợp lệ':'Thiếu số CCCD'}); continue; }
     if(!gc){ bad++; skipped.push({row:line, ten:nm, id:cc, reason:rawNd?`Nội dung “${rawNd}” không phải SH lại LT / H / LT + H`:'Cột nội dung để trống'}); continue; }
+    const nbl=bl!=null?blText(row[bl]):'';
     if(seen[cc]){ const f=seen[cc];
+      if(bl!=null&&f.nbl!==nbl) f.nblConflict=`dòng ${f.row} ghi “${f.nbl||'trống'}”, dòng ${line} ghi “${nbl||'trống'}”`;
       if(f.gcTL!==gc){ skipped.push({row:line, ten:nm, id:cc, reason:`Trùng số CCCD với dòng ${f.row} nhưng nội dung khác (${GC_LABEL[f.gcTL]} / ${GC_LABEL[gc]}) — KHÔNG điền người này, kiểm tra lại file`}); f.conflict=true; }
       continue; }
-    const rec={id:cc, ten:nm, ns:'', dc:'', ndRaw:rawNd, gcTL:gc, row:line}; seen[cc]=rec; recs.push(rec);
+    const rec={id:cc, ten:nm, ns:'', dc:'', ndRaw:rawNd, gcTL:gc, row:line, nbl, hasBL:bl!=null}; seen[cc]=rec; recs.push(rec);
   }
   const ok=recs.filter(r=>!r.conflict);
   const fit=ok.length>0 && ok.length>=0.8*(ok.length+bad);
-  const cols=`cột số CCCD: ${colName(id)}, cột nội dung: ${colName(nd)}${ten!=null?`, cột tên: ${colName(ten)}`:''}`;
+  const cols=`cột số CCCD: ${colName(id)}, cột nội dung: ${colName(nd)}${ten!=null?`, cột tên: ${colName(ten)}`:''}${bl!=null?`, cột ngày bảo lưu: ${colName(bl)}`:''}`;
   return {file:file.name, sheet:sn, kind:'loctl', target:fit?'gcfill':'skip', recs:ok, skipped:fit?skipped:[],
     note: fit? cols : `Bỏ qua mặc định: chỉ ${ok.length}/${ok.length+bad} dòng là nội dung SH lại (phần lớn là “${(rows.slice(info.hr+1).map(r=>String(r[nd]??'').trim()).find(v=>v&&!parseGC(v,true))||'khác')}”) — có vẻ là bảng tổng hợp, không phải danh sách đã lọc`};
 }
@@ -1967,6 +1979,12 @@ function applyLocTL(p, conf){
     if(!s.srcs.includes('loctl')) s.srcs.push('loctl');
   }
   if(p.target==='tlr') for(const s of c.students){ if(s.loai==='tl'&&!ids.has(s.cccd)&&!s.biLoai){ s.biLoai=true; s.lyDo='Không có trong file thi lại đã lọc'; R.out++; } }
+  // Ngày bảo lưu (dùng cho DS bảo lưu ở mục Số báo danh) — lưu theo số CCCD, KHÔNG đụng dữ liệu khác
+  if(p.recs.some(r=>r.hasBL)){ const B=c.locBL=c.locBL||{m:{}}; let nb=0;
+    for(const r of p.recs){ if(!r.hasBL) continue; B.m[r.id]={v:r.nblConflict?'':r.nbl, ten:upper(r.ten||''), nd:r.ndRaw, file:p.file, sheet:p.sheet, row:r.row, conflict:r.nblConflict||''}; if(r.nbl&&!r.nblConflict) nb++;
+      if(r.nblConflict) conf.push(`File lọc “${p.file}”: ${upper(r.ten||'')} (${r.id}) có 2 dòng khác ngày bảo lưu (${r.nblConflict}) — để TRỐNG ngày bảo lưu, kiểm tra lại file.`); }
+    B.t=new Date().toISOString();
+    conf.push(`File lọc “${p.file}”: đọc cột Ngày bảo lưu — ${nb} người có ngày (dùng cho DS bảo lưu ở mục Số báo danh).`); }
   // tự kiểm lại: mọi người trong file đã khớp phải mang đúng nội dung của file
   R.verifyFail=p.recs.filter(r=>{ const s=c.students.find(x=>x.cccd===r.id); return s&&s.loai==='tl'&&s.gcTL!==r.gcTL; }).length;
   R.nameDiff.forEach(x=>conf.push(`File lọc “${p.file}”: cùng số CCCD nhưng khác tên — ${x}. Đã điền theo số CCCD, kiểm tra lại.`));
@@ -2993,7 +3011,7 @@ function vSBD(v){
     <h2 style="margin:0">Khóa thi ${esc(ex.khoaThi)}</h2><span class="muted">Ngày thi ${esc(ex.ngayThi||'?')} · nạp từ ${esc(ex.file)}</span>
     <span style="flex:1"></span>
     <button class="btn loai sm" id="exDel">${ic('trash')}Xóa khóa thi</button>
-    <button class="btn acc" id="xSBD" ${examBad(ex)?'disabled':''}>${ic('download')}Xuất danh sách SBD</button><button class="btn" id="xSBDLT" ${examBad(ex)?'disabled':''} title="File SBD_${esc(asciiName(ex.khoaThi))}_LYTHUYET.xlsx: đủ danh sách, bỏ chọn (ẩn) người “Sát hạch H” và “SH lại H”">${ic('download')}DS thi Lý thuyết (${sbdPartKeep(ex,'LT').filter(Boolean).length})</button><button class="btn" id="xSBDH" ${examBad(ex)?'disabled':''} title="File SBD_${esc(asciiName(ex.khoaThi))}_HINH.xlsx: đủ danh sách, bỏ chọn (ẩn) người “SH lại LT”">${ic('download')}DS thi Hình (${sbdPartKeep(ex,'H').filter(Boolean).length})</button><button class="btn" id="xGPLX" ${examBad(ex)?'disabled':''} title="Thí sinh có GPLX: số GPLX, ngày cấp, ngày hết hạn (theo file GPLX_<khóa>)">${ic('download')}Xuất DS có GPLX (${ex.rows.filter(r=>gplxHang(r)).length})</button><button class="btn" id="pSBD" ${examBad(ex)?'disabled':''}>${ic('print')}In / PDF</button><button class="btn" id="pdfSBD" ${examBad(ex)?'disabled':''} title="File PDF A4 danh sách SBD để in dán bảng tin (SBD, họ tên, số CMT, ngày sinh, hạng, nội dung)">${ic('download')}PDF dán bảng tin</button><button class="btn" id="tbSBD" ${examBad(ex)?'disabled':''} title="Thông báo kỳ sát hạch — ảnh gửi Zalo / PDF in A4, sửa được mọi nội dung">${ic('bell')}Thông báo (ảnh / PDF)</button></div>
+    <button class="btn acc" id="xSBD" ${examBad(ex)?'disabled':''}>${ic('download')}Xuất danh sách SBD</button><button class="btn" id="xSBDLT" ${examBad(ex)?'disabled':''} title="File SBD_${esc(asciiName(ex.khoaThi))}_LYTHUYET.xlsx: đủ danh sách, bỏ chọn (ẩn) người “Sát hạch H” và “SH lại H”">${ic('download')}DS thi Lý thuyết (${sbdPartKeep(ex,'LT').filter(Boolean).length})</button><button class="btn" id="xBL" ${examBad(ex)?'disabled':''} title="DS BAOLUU ${esc(C().ten)}_${esc(String(ex.ngayThi||'').replace(/\//g,'-'))}.xlsx: người “Sát hạch H”, “SH lại LT”, “SH lại H” + ngày bảo lưu từ file _LOCTL">${ic('download')}DS bảo lưu (${blRows(ex).length})</button><button class="btn" id="xSBDH" ${examBad(ex)?'disabled':''} title="File SBD_${esc(asciiName(ex.khoaThi))}_HINH.xlsx: đủ danh sách, bỏ chọn (ẩn) người “SH lại LT”">${ic('download')}DS thi Hình (${sbdPartKeep(ex,'H').filter(Boolean).length})</button><button class="btn" id="xGPLX" ${examBad(ex)?'disabled':''} title="Thí sinh có GPLX: số GPLX, ngày cấp, ngày hết hạn (theo file GPLX_<khóa>)">${ic('download')}Xuất DS có GPLX (${ex.rows.filter(r=>gplxHang(r)).length})</button><button class="btn" id="pSBD" ${examBad(ex)?'disabled':''}>${ic('print')}In / PDF</button><button class="btn" id="pdfSBD" ${examBad(ex)?'disabled':''} title="File PDF A4 danh sách SBD để in dán bảng tin (SBD, họ tên, số CMT, ngày sinh, hạng, nội dung)">${ic('download')}PDF dán bảng tin</button><button class="btn" id="tbSBD" ${examBad(ex)?'disabled':''} title="Thông báo kỳ sát hạch — ảnh gửi Zalo / PDF in A4, sửa được mọi nội dung">${ic('bell')}Thông báo (ảnh / PDF)</button></div>
     ${examBad(ex)?`<div class="note warn" style="margin-top:12px;border-color:var(--seal)">${ic('alert')}<span><b>Danh sách này không hợp lệ</b>: nạp từ “${esc(ex.file)}” — không phải file máy chủ phòng thi (tên bắt đầu bằng GLĐ). Không dùng để xuất SBD. Bấm <b>Xóa khóa thi</b> để bỏ.</span></div>`:''}
     ${st.noTool?`<div class="note warn" style="margin-top:12px">${ic('alert')}<span><b>${st.noTool}</b> thí sinh không có trong dữ liệu tool nên chưa biết hạng GPLX đã có — bảng tổng hợp coi như <b>chưa có GPLX</b>. Nạp hồ sơ của các khóa đó (hoặc file GPLX) nếu cần chính xác.</span></div>`:''}
     ${st.unk?`<div class="note warn" style="margin-top:8px">${ic('alert')}<span>${st.unk} dòng có nội dung sát hạch lạ, không đưa vào bảng tổng hợp.</span></div>`:''}
@@ -3023,7 +3041,7 @@ function vSBD(v){
   if($('#qey')) $('#qey').onchange=e=>{ QEY=e.target.value; render(); };
   const qe=$('#qe'); qe.oninput=()=>{ QE=qe.value; clearTimeout(qe._t); qe._t=setTimeout(()=>{ render(); const n=$('#qe'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); },250); };
   $('#exDel').onclick=()=>{ if(confirm('Xóa khóa thi '+ex.khoaThi+' khỏi tool? (SBD đã gán cho học viên vẫn giữ)')){ snapshot('Xóa khóa thi '+ex.khoaThi); DB.exams=DB.exams.filter(e=>e!==ex); DB.curExam=(DB.exams[0]||{}).id; save(); render(); } };
-  $('#xSBD').onclick=()=>exportSBD(ex); $('#xSBDLT').onclick=()=>exportSBDPart(ex,'LT'); $('#xSBDH').onclick=()=>exportSBDPart(ex,'H'); $('#xGPLX').onclick=()=>askGPLX(ex); $('#pSBD').onclick=()=>printSBD(ex); $('#pdfSBD').onclick=()=>exportSBDPdf(ex); $('#tbSBD').onclick=()=>askTB(ex);
+  $('#xSBD').onclick=()=>exportSBD(ex); $('#xSBDLT').onclick=()=>exportSBDPart(ex,'LT'); $('#xSBDH').onclick=()=>exportSBDPart(ex,'H'); $('#xBL').onclick=()=>exportBaoLuu(ex); $('#xGPLX').onclick=()=>askGPLX(ex); $('#pSBD').onclick=()=>printSBD(ex); $('#pdfSBD').onclick=()=>exportSBDPdf(ex); $('#tbSBD').onclick=()=>askTB(ex);
   v.querySelectorAll('[data-cf]').forEach(i=>i.onchange=()=>{ cfg[i.dataset.cf]=i.value.trim(); save(); });
   const q=$('#qs'); q.oninput=()=>{ QS=q.value; clearTimeout(q._t); q._t=setTimeout(()=>{ render(); const n=$('#qs'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); },250); };
 }
@@ -4521,6 +4539,90 @@ async function exportSBDPart(ex,part){
     <li>Cột H: “${esc(PT.colH.replace('\n',''))}”</li><li>Mở file bằng Excel → In: chỉ in người đang hiện. Bỏ bộ lọc ở cột “Nội dung sát hạch” để thấy lại đủ danh sách.</li>
     ${cust?`<li style="color:var(--amber)">Bạn đang dùng form SBD riêng — DS thi Lý thuyết / Hình dùng mẫu chuẩn của tool (giống file mẫu)</li>`:''}</ul>`,[['Đóng','pri']]);
 }
+/* ===== DS BẢO LƯU — đúng mẫu DS_BAOLUU (sheet “DS BAOLUU_<khóa>”, 7 cột SBD · Họ và tên · Số CMT · Ngày bảo lưu · HẠNG · Ghi chú · Có GPLX)
+   Lấy từ danh sách SBD của khóa thi, GIỮ NGUYÊN thứ tự, chỉ người có nội dung “Sát hạch H”, “SH lại LT”, “SH lại H”.
+   Ngày bảo lưu = cột “Ngày bảo lưu” của file _LOCTL đã nạp (theo số CMT / CCCD). File: DS BAOLUU <khóa>_<ngày thi>.xlsx */
+const BL_ND={moiH:'Sát hạch H', L:'SH lại LT', H:'SH lại H'}, BL_TXT=['sat hach h','sh lai lt','sh lai l','sh lai h'];
+function blRows(ex){ return ex.rows.filter(r=>BL_ND[ndClass(r.nd)]); }
+/* ngày bảo lưu của 1 người: tìm trong file _LOCTL đã nạp của mọi khóa; khóa đang mở ưu tiên; 2 nơi ghi khác nhau → báo lỗi */
+function blLookup(id){
+  const hits=[]; const cs=[C(),...Object.values(DB.courses).filter(c=>c!==C())];
+  for(const c of cs){ const x=c.locBL&&c.locBL.m&&c.locBL.m[id]; if(x) hits.push({c,x}); }
+  if(!hits.length) return {found:false,v:''};
+  const vs=[...new Set(hits.map(h=>h.x.v))];
+  return {found:true, v:hits[0].x.v, x:hits[0].x, c:hits[0].c, conflict:vs.length>1?hits.map(h=>`${h.c.ten}: “${h.x.v||'trống'}” (${h.x.file})`).join(' · '):(hits[0].x.conflict||'')};
+}
+async function exportBaoLuu(ex){
+  ex=ex||curExam(); if(!ex){ toast('Chưa có khóa thi.'); return; }
+  if(examBad(ex)){ toast('Danh sách này không phải từ file GLĐ — không xuất.',5000); return; }
+  const unk=ex.rows.filter(r=>ndClass(r.nd)==='?');
+  if(unk.length){ dialog('Chưa xuất được DS bảo lưu',`<div class="note warn">${ic('alert')}<span>Có <b>${unk.length}</b> dòng nội dung sát hạch lạ — tool không biết có thuộc DS bảo lưu không, nên dừng:</span></div>
+    <div style="font-size:13px;margin-top:8px;max-height:240px;overflow:auto">${unk.slice(0,60).map(r=>`• SBD ${esc(r.sbd)} — ${esc(r.ten)} (${esc(r.cmt)}): “${esc(r.nd)}”`).join('<br>')}</div>`,[['Đóng','pri']]); return; }
+  const c=C(), L=blRows(ex);
+  if(!L.length){ toast('Khóa thi này không có ai “Sát hạch H”, “SH lại LT”, “SH lại H”.',5000); return; }
+  if(!await cccdGate('DS bảo lưu '+ex.khoaThi,ccRowsSBD(ex).filter(x=>L.some(r=>normId(r.cmt)===x.id)))) return;
+  const chk=examCheck(ex);
+  if(chk.E.length && !confirm(`Khóa thi này còn ${chk.E.length} LỖI ở phần “Kiểm tra toàn vẹn dữ liệu”.\nNên xử lý xong rồi mới xuất. Vẫn xuất?`)) return;
+  // ngày bảo lưu + các trường hợp cần xem
+  const D=L.map(r=>({r,b:blLookup(r.id)}));
+  const tl=D.filter(d=>ndClass(d.r.nd)!=='moiH'), noFile=tl.filter(d=>!d.b.found), noDate=tl.filter(d=>d.b.found&&!d.b.v), conf=D.filter(d=>d.b.conflict);
+  const ndDiff=D.filter(d=>d.b.found&&d.b.x.nd&&GC2ND[parseGC(d.b.x.nd,true)]&&GC2ND[parseGC(d.b.x.nd,true)]!==ndClass(d.r.nd));
+  const anyLoc=Object.values(DB.courses).some(k=>k.locBL&&Object.keys(k.locBL.m||{}).length);
+  const who=d=>`SBD ${esc(d.r.sbd)} — ${esc(d.r.ten)} (${esc(d.r.cmt)}) · ${esc(d.r.nd)}`;
+  const sec=(t,a,cls,f)=>a.length?`<div class="${cls}" style="font-weight:600;margin-top:10px">${t} (${a.length})</div><div style="font-size:13px;max-height:150px;overflow:auto">${a.map(d=>'• '+(f?f(d):who(d))).join('<br>')}</div>`:'';
+  if(conf.length){ dialog('Chưa xuất được DS bảo lưu',`<div class="note warn">${ic('alert')}<span>Có người mà file _LOCTL ghi <b>2 ngày bảo lưu khác nhau</b> — tool không tự chọn. Sửa file _LOCTL rồi nạp lại.</span></div>
+    ${sec('Ngày bảo lưu không thống nhất',conf,'lv-err',d=>who(d)+' — '+esc(d.b.conflict))}`,[['Đóng','pri']]); return; }
+  const n=k=>L.filter(r=>ndClass(r.nd)===k).length;
+  const go=await new Promise(res=>{ let done=false; const fin=v=>{ if(!done){ done=true; res(v); } };
+    const d=dialog('Xuất DS bảo lưu — '+ex.khoaThi,`<div class="note ${noFile.length||noDate.length||!anyLoc||ndDiff.length?'warn':'ok'}">${ic(noFile.length||noDate.length||!anyLoc?'alert':'check')}<span><b>${L.length}</b> người: ${n('moiH')} “Sát hạch H” · ${n('L')} “SH lại LT” · ${n('H')} “SH lại H” — giữ đúng thứ tự SBD.<br>
+      Ngày bảo lưu lấy từ file _LOCTL đã nạp: <b>${D.filter(d=>d.b.v).length}</b> người có ngày.${anyLoc?'':' <b>Chưa nạp file _LOCTL nào có cột “Ngày bảo lưu”</b> — nạp file _LOCTL ở mục Nạp dữ liệu trước nếu cần điền ngày.'}</span></div>
+      ${sec('Thi lại không có trong file _LOCTL — ngày bảo lưu để trống',noFile,'lv-warn')}
+      ${sec('Có trong file _LOCTL nhưng cột Ngày bảo lưu trống',noDate,'lv-warn',d=>who(d)+` — file ${esc(d.b.x.file)}, dòng ${d.b.x.row}`)}
+      ${sec('Nội dung trong file _LOCTL khác danh sách thi',ndDiff,'lv-warn',d=>who(d)+` — file _LOCTL ghi “${esc(d.b.x.nd)}”`)}
+      <div class="muted" style="font-size:12.5px;margin-top:10px">“Sát hạch H” là thí sinh thi lần đầu có GPLX — điền ngày bảo lưu nếu có trong file _LOCTL, không có thì để trống.</div>`,
+      [['Đóng','',()=>fin(false)],['Xuất file','pri',()=>fin(true)]]);
+    d.addEventListener('close',()=>fin(false),{once:true}); });
+  if(!go) return;
+  const sn=('DS BAOLUU_'+c.ten).slice(0,31), name=`DS BAOLUU ${c.ten}_${String(ex.ngayThi||'').replace(/\//g,'-')}.xlsx`;
+  const wb=new ExcelJS.Workbook(); wb.creator='So Sat Hach A1';
+  const ws=wb.addWorksheet(sn,{properties:{defaultRowHeight:23.1},views:[{zoomScale:130,zoomScaleNormal:130}],
+    pageSetup:{paperSize:9,orientation:'portrait',margins:{left:0.25,right:0.2,top:0.4,bottom:0.3,header:0.3,footer:0.3}},headerFooter:{oddFooter:'&R&P'}});
+  [5.57,34,15.57,12,7.71,13.43,7.57,4.71,9.14].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  const F=b=>({name:'Aptos',size:11,bold:!!b}), AC={horizontal:'center',vertical:'middle',wrapText:true}, AV={vertical:'middle',wrapText:true};
+  const T={style:'thin'}, DB2={style:'double'}, HA={style:'hair'};
+  const hd=['SBD','Họ và tên','Số CMT','Ngày bảo lưu','HẠNG','Ghi chú','Có GPLX'];
+  ws.getRow(1).height=32.25;
+  hd.forEach((t,j)=>{ const x=ws.getRow(1).getCell(j+1); x.value=t; x.font=F(true); x.alignment=AC; x.border={left:j===0?DB2:T,right:j===6?DB2:T,top:DB2,bottom:j===5?undefined:HA}; });
+  const dateOf=t=>{ const m=String(t).match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m?new Date(Date.UTC(+m[3],+m[2]-1,+m[1])):null; };
+  D.forEach(({r,b},i)=>{ const row=ws.getRow(2+i); row.height=20.1;
+    const dv=b.v?dateOf(b.v):null;
+    const vals=[String(r.sbd),r.ten,String(r.cmt),dv||(b.v||null),r.hang,r.nd,gplxHang(r)||null];
+    vals.forEach((v,j)=>{ const x=row.getCell(j+1); x.value=v; x.font=F(false); x.alignment=(j===1||j===5)?AV:AC;
+      x.border={left:j===0?DB2:T,right:j===6?DB2:T,top:(i===0||j===3)?T:undefined,bottom:HA};
+      if(j===3) x.numFmt='dd/mm/yyyy'; else if(j<=2) x.numFmt='@'; }); });
+  const last=1+D.length;
+  ws.autoFilter=`A1:G${last}`; ws.pageSetup.printArea=`A1:G${last}`;
+  const exp=D.map(({r,b})=>[String(r.sbd),r.ten,String(r.cmt),b.v||'',r.hang,r.nd,gplxHang(r)||'']);
+  const ok=await download(wb,name,back=>{
+    const P=[], w=back.getWorksheet(sn); if(!w) return ['Thiếu sheet '+sn];
+    hd.forEach((t,j)=>{ const g=cellStr(w,String.fromCharCode(65+j)+'1'); if(g!==t) P.push(`Tiêu đề cột ${String.fromCharCode(65+j)}: “${g}”, đúng phải là “${t}”`); });
+    exp.forEach((vals,i)=>vals.forEach((want,j)=>{ const a=String.fromCharCode(65+j)+(2+i), v=w.getCell(a).value;
+      const got=v instanceof Date?`${String(v.getUTCDate()).padStart(2,'0')}/${String(v.getUTCMonth()+1).padStart(2,'0')}/${v.getUTCFullYear()}`:cellStr(w,a);
+      if(got!==String(want)) P.push(`Dòng ${2+i} (SBD ${exp[i][0]}) cột ${String.fromCharCode(65+j)}: file ghi “${got}”, đúng phải là “${want}”`); }));
+    if(cellStr(w,'B'+(last+1))||cellStr(w,'A'+(last+1))) P.push('Có dữ liệu thừa sau dòng '+last);
+    // đếm lại theo chữ (không qua ndClass) và theo thứ tự SBD của file phòng thi
+    const byTxt=ex.rows.filter(r=>BL_TXT.includes(norm(r.nd).replace(/\s+/g,' ').trim()));
+    if(byTxt.length!==D.length||byTxt.some((r,i)=>r!==D[i].r)) P.push(`Đếm lại theo chữ “Sát hạch H / SH lại LT / SH lại H” ra ${byTxt.length} người, danh sách có ${D.length} — không khớp`);
+    const idx=D.map(d=>ex.rows.indexOf(d.r)); if(idx.some((x,i)=>i&&x<=idx[i-1])) P.push('Thứ tự không đúng thứ tự file phòng thi');
+    // ngày bảo lưu: đối chiếu lại từng người với file _LOCTL đã nạp
+    D.forEach((d,i)=>{ const b=blLookup(d.r.id); if((b.v||'')!==exp[i][3]) P.push(`${d.r.ten}: ngày bảo lưu ghi “${exp[i][3]}”, file _LOCTL ghi “${b.v||''}”`); });
+    if(String(w.autoFilter||'').replace(/\$/g,'')!==`A1:G${last}`) P.push('Bộ lọc không đúng vùng A1:G'+last);
+    return P; });
+  if(!ok) return;
+  dialog('Đã xuất DS bảo lưu',`<div class="note ok">${ic('check')}<span>Tool đã đọc lại file <b>${esc(name)}</b> và so từng ô với danh sách thi + file _LOCTL:</span></div>
+    <ul style="margin:10px 0 0;padding-left:20px;line-height:1.8"><li><b>${D.length}</b> người: ${n('moiH')} “Sát hạch H” · ${n('L')} “SH lại LT” · ${n('H')} “SH lại H” — SBD, họ tên, số CMT, hạng, nội dung, GPLX khớp danh sách thi; thứ tự giữ nguyên</li>
+    <li>Ngày bảo lưu: <b>${D.filter(d=>d.b.v).length}</b> người có ngày, đúng theo file _LOCTL${noFile.length+noDate.length?` · ${noFile.length+noDate.length} người thi lại để trống (không có trong file / file để trống)`:''}</li></ul>`,[['Đóng','pri']]);
+}
 /* ===== THI THỬ — mục riêng, ĐỘC LẬP: file tên <khóa>_Thithu; lưu ở DB.thithu, KHÔNG đụng khóa thi (DB.exams), BC1, BC2, SBD của học viên ===== */
 let QTT='';
 function analyzeThiThu(wb,file,pn){
@@ -5414,6 +5516,7 @@ const HELP={
   xBCDN:'Word “Báo cáo đề nghị tổ chức sát hạch” — mã trong ngoặc lấy từ 2 file XML (thi mới / thi lại).',
   xTCVP:'Excel tra cứu vi phạm: họ tên + số CCCD người thi mới, thi lại, rồi khóa ghép (nếu có).',
   xSBD:'Excel danh sách SBD theo mẫu Hội đồng sát hạch, đúng thứ tự file phòng thi (GLĐ).',
+  xBL:'DS bảo lưu: người “Sát hạch H”, “SH lại LT”, “SH lại H” trong danh sách SBD (giữ thứ tự), cột Ngày bảo lưu lấy từ file _LOCTL đã nạp (theo số CCCD). File DS BAOLUU <khóa>_<ngày thi>.xlsx.',
   xSBDLT:'DS thi LÝ THUYẾT: file SBD đầy đủ (giữ SBD, thứ tự) có bộ lọc ở cột Nội dung sát hạch — bỏ chọn người “Sát hạch H”, “SH lại H”; cột H “Số thăm SH lý thuyết”. Mở bằng Excel rồi In: chỉ in người đang hiện.',
   xSBDH:'DS thi HÌNH: file SBD đầy đủ (giữ SBD, thứ tự) có bộ lọc ở cột Nội dung sát hạch — bỏ chọn người “SH lại LT”; cột H “Số XE SH Hình”. Mở bằng Excel rồi In: chỉ in người đang hiện.',
   xGPLX:'Lọc riêng thí sinh đã có GPLX: số GPLX, ngày cấp, ngày hết hạn (theo file GPLX_<khóa>).',
