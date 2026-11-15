@@ -14,7 +14,7 @@ Không muốn dùng bản web: tải bản file chạy trực tiếp trên máy 
 
 | Mục | Xuất ra |
 |---|---|
-| 1. Nạp dữ liệu | Nạp hồ sơ, thi lại (_TL, _LOCTL), GPLX, XML Báo cáo 2 (hỏi gán thi mới / thi lại), file GLĐ phòng thi |
+| 1. Nạp dữ liệu | Nạp hồ sơ, thi lại (_TL, _LOCTL), GPLX, XML Báo cáo 2 (hỏi gán thi mới / thi lại), file GLĐ phòng thi. **Kiểm tra họ tên** từng người khi nạp file hồ sơ Excel và XML: chữ Unicode tổ hợp, ký tự ẩn, tách họ đệm / tên sai — báo trước khi gửi PC-08; nạp lại file đã sửa thì lỗi tự hết |
 | 2. Báo cáo 1 | BC1 nộp Sở (sắp theo bảng chữ cái tiếng Việt, người bị loại bôi vàng) |
 | 3. Báo cáo 2 | BC2, 2 file cho PC-08, DS thí sinh dự sát hạch, **BC đề nghị tổ chức sát hạch (Word)**, **DS tra cứu vi phạm** |
 | 4. Số báo danh | DS SBD theo mẫu Hội đồng, DS thí sinh có GPLX (lọc thi mới / sát hạch lại), thông báo Zalo |
