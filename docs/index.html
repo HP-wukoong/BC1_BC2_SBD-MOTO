@@ -715,6 +715,10 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.19','15/11/2026',['Kiểm tra HỌ TÊN từng người ngay khi nạp file XML Báo cáo 2 và file hồ sơ Excel (nguồn của BC1, thi lại, khóa ghép): chữ có dấu ở dạng Unicode tổ hợp (dấu rời khỏi chữ — nhìn giống hệt nhưng tìm kiếm / đối chiếu theo tên không ra), thừa dấu cách, ký tự ẩn, chữ “Ð” gõ thay “Đ”; riêng XML thêm: tách họ đệm / tên sai (thẻ TEN ghi “THỊ BÌNH” → sắp theo “THỊ…”, sai thứ tự số báo danh), HO_TEN_DEM + TEN không khớp HO_VA_TEN',
+    'File hồ sơ Excel: báo bằng bảng (họ tên, số CCCD, file, dấu hiệu lỗi) ngay khi thả file, ở dòng file chờ nạp, ở mục Kiểm tra dữ liệu (mức Lỗi, theo từng người) và được nhắc khi xuất BC1 / BC2 / file PC-08 — biết từ lúc làm BC1 để sửa trong phần mềm đào tạo',
+    'File XML: báo trong hộp “File XML này là mã của phần nào?”, ở dòng file chờ nạp, dưới bảng Báo cáo 2 (đối chiếu XML), ở mục Kiểm tra dữ liệu (mức Lỗi) và hỏi lại trước khi “Xuất file cho PC-08”',
+    'Nạp lại file ĐÃ SỬA (file hồ sơ hoặc XML) thì lỗi họ tên của người đó tự hết — không phải xóa tay. XML đã nạp từ bản cũ: kiểm tra được chữ Unicode tổ hợp / ký tự lạ theo họ tên đã lưu; nạp lại file để kiểm tra đủ phần tách họ đệm / tên. Các file Excel, Word tool xuất ra không đổi']],
   ['4.18','14/11/2026',['Mục Số báo danh: thêm nút “DS bảo lưu” — file DS BAOLUU <khóa>_<ngày thi>.xlsx đúng mẫu (SBD, Họ và tên, Số CMT, Ngày bảo lưu, HẠNG, Ghi chú, Có GPLX): người “Sát hạch H”, “SH lại LT”, “SH lại H” theo đúng thứ tự danh sách SBD; Ngày bảo lưu lấy từ cột “Ngày bảo lưu” của file _LOCTL đã nạp (theo số CCCD); báo trước người thi lại không có ngày / file _LOCTL ghi nội dung khác; đọc lại file so từng ô',
     'Nạp file _LOCTL: đọc thêm cột “Ngày bảo lưu” (không thay đổi cách điền Nội dung SH lại)']],
   ['4.17','14/11/2026',['Mục Số báo danh: thêm 2 nút “DS thi Lý thuyết” và “DS thi Hình” — xuất SBD_<khóa thi>_LYTHUYET.xlsx / _HINH.xlsx đúng mẫu: đủ danh sách như file SBD (giữ SBD, thứ tự), bộ lọc Excel ở cột Nội dung sát hạch bỏ chọn người không thi phần đó (Lý thuyết: “Sát hạch H”, “SH lại H”; Hình: “SH lại LT”); cột H “Số thăm SH lý thuyết” / “Số XE SH Hình”; tool đọc lại file, so từng ô và từng dòng ẩn / hiện',
@@ -1109,6 +1113,7 @@ async function analyzeFile(file){
       const rec={id, ten, ns:fmtDate(g('ns')), dc:String(g('dc')||'').trim(), sk:String(g('sk')||'').trim(),
         hang:String(g('hang')||'').trim(), sogplx:String(g('sogplx')||'').trim().replace(/\.0+$/,''), madk:String(g('madk')||'').trim(),
         sohs:String(g('sohs')||'').trim(), gc:String(g('gc')||'').trim(), gt:gtNorm(g('gt')), pad0:String(row[map.id]??'').trim().replace(/\.0+$/,'').replace(/\D/g,'').length===11};
+      if(kind==='hoso'){ const nm=nameIssues(String(row[map.ten]??''),null,null,true); if(nm.length) rec.nm=nm; }   // họ tên trong file hồ sơ có dấu hiệu lỗi (chữ Unicode tổ hợp, ký tự ẩn, chữ Ð…) — từ bản 4.19
       if(kind==='gplx'){ rec.hangG=String(g('hangG')||'').trim(); rec.cap=fmtDate(g('ngaycap')); rec.hh=fmtDate(g('ngayhh'));
         if(!/^\d{2}\/\d{2}\/\d{4}$/.test(rec.hh)) rec.hh=gplxHanTinh(rec.hangG||rec.hang,rec.cap)||(/^\d{2}\/\d{2}\/\d{4}$/.test(rec.hh)?rec.hh:''); }
       if(kind==='loctl'){ rec.ndRaw=String(g('ndtl')??'').trim(); rec.gcTL=parseGC(rec.ndRaw,true);
@@ -1329,6 +1334,7 @@ function applyImport(){
       const set=(k,v)=>{ if(typeof v==='string') v=v.normalize('NFC').replace(/\s+/g,' ').trim(); if(v!==''&&v!=null && (strong||!s[k])) s[k]=v; };   // chữ Unicode dựng sẵn (NFC), bỏ khoảng trắng thừa
       set('ten',upper(r.ten)); set('ns',r.ns); set('dc',r.dc); set('sk',r.sk||(strong?'':'x')); set('hangHS',r.hang);
       set('soGPLX',r.sogplx); set('maDK',r.madk); set('soHS',r.sohs); if(r.gt) s.gt=r.gt; if(r.pad0) s.pad0=true;
+      if(src==='hoso') nmApply(s,r,p.file);   // lỗi họ tên theo file hồ sơ nạp gần nhất: file còn lỗi → ghi lại, file đã sửa → tự xóa lỗi
       { const dn=[...(r.dupNames||[])]; if(s.ten&&r.ten&&norm(upper(r.ten))!==norm(s.ten)&&src!=='gplx') dn.push(upper(r.ten));
         for(const n of dn) if(norm(n)!==norm(s.ten)&&!(s.dupNames||[]).some(x=>norm(x)===norm(n))) (s.dupNames=s.dupNames||[]).push(n); }
       if(p.target==='g'&&p.gTen) c.gTen=p.gTen;
@@ -2174,6 +2180,7 @@ function checks(){
     { const is=personCcIssues(s,G); if(is.length){ const ok=ccOk(s.cccd,is), x={lv:'err',s,msg:`Số CCCD có dấu hiệu sai: ${is.join('; ')}. Đối chiếu thẻ CCCD gốc.`,cc:is};
         if(ok){ x.ack={t:ok.at,u:ok.by,how:'Đã đối chiếu CCCD gốc'}; acked.push(x); } else out.push(x); } }
     if(s.pad0) add('info',s,'CCCD 11 số trong file (Excel mất số 0 đầu) → đã tự thêm 0.','pad0:'+s.cccd);
+    if(s.nm&&s.nm.is&&s.nm.is.length) add('err',s,`Họ tên trong file hồ sơ “${s.nm.f}” có dấu hiệu lỗi: ${s.nm.is.join('; ')}. Lỗi nằm trong dữ liệu gốc của phần mềm đào tạo nên file XML gửi PC-08 cũng sẽ mang lỗi — cần ${NM_FIX_HS}.`);
     const a=ageAt(s.ns,at); if(a!=null&&a<18&&!s.biLoai) add('err',s,`Chưa đủ 18 tuổi tại ngày ${c.ngaySH?'sát hạch':'bế giảng'} (${a} tuổi).`);
     if(!parseVN(s.ns)) add('err',s,/^\d{2}\/\d{2}\/\d{4}$/.test(s.ns)?`Ngày sinh “${s.ns}” không có thật — kiểm tra lại.`:`Ngày sinh không đúng dạng dd/mm/yyyy: “${s.ns}”.`);
     else if(parseVN(s.ns)>new Date()) add('err',s,`Ngày sinh “${s.ns}” sau ngày hôm nay.`);
@@ -2189,6 +2196,7 @@ function checks(){
   for(const [k,lb] of [['moi','thi mới'],['tl','thi lại'],['g','khóa ghép']]){ const R=xmlCheck(c,k); if(!R) continue;
     R.near.forEach(m=>out.push({lv:'err',s:null,msg:`XML ${lb}: CCCD lệch 1–2 số so với BC2 đã gửi (nghi gõ nhầm) — ${m}`}));
     R.bad.forEach(m=>out.push({lv:'warn',s:null,msg:`XML ${lb}: số CCCD có dấu hiệu sai — ${m}`}));
+    R.name.forEach(m=>out.push({lv:'err',s:null,msg:`XML ${lb}: họ tên có dấu hiệu lỗi — ${m}. Cần ${NM_FIX}.`}));
     R.missXml.forEach(m=>out.push({lv:'warn',s:null,msg:`XML ${lb}: có trong BC2 nhưng THIẾU trong XML trả về — ${m}`}));
     R.extraXml.forEach(m=>out.push({lv:'warn',s:null,msg:`XML ${lb}: có trong XML nhưng không có trong BC2 — ${m}`})); }
   const order={err:0,warn:1,info:2}; out.sort((a,b)=>order[a.lv]-order[b.lv]);
@@ -2521,8 +2529,9 @@ function renderPending(){
   const lab={xml:'File XML Báo cáo 2 (mã + danh sách)',loctl:'Thi lại đã lọc (Nội dung SH lại)',hoso:'File hồ sơ',bc1:'BC1 đã làm',bc2:'BC2 đã làm',gplx:'File GPLX',sbd:'Danh sách phòng thi (SBD)',thithu:'Danh sách THI THỬ (mục riêng)'};
   const pcc=p=>{ if(!p.recs||p.kind==='gplx'||p.kind==='thithu') return ''; if(!p._cc){ const B=[], P0=[]; for(const r of p.recs){ const id=r.id||normId(r.cmt); const is=cccdIssues(id,r.ns,r.gt); if(r.dupNames&&r.dupNames.length) is.push('cùng số CCCD với dòng khác tên: '+r.dupNames.join(', ')); if(is.length) B.push(`${upper(r.ten)} (${id}): ${is.join('; ')}`); if(r.pad0) P0.push(id); } p._cc={B,P0}; }
     const {B,P0}=p._cc; return (B.length?`<div class="ccw" style="font-size:12px;font-weight:600;margin:3px 0 0;max-width:360px;white-space:normal" title="${esc(B.slice(0,30).join('\n'))}${B.length>30?'\n…':''}">⚠ ${B.length} số CCCD có dấu hiệu sai — rê chuột để xem; sau khi nạp xem ở Kiểm tra dữ liệu</div>`:'')+(P0.length?`<div class="muted" style="font-size:12px">${P0.length} số CCCD 11 số (Excel mất số 0 đầu) → tự thêm 0</div>`:''); };
+  const pnm=p=>{ if(p.kind!=='xml'&&p.kind!=='hoso') return ''; const B=xmlNameBad({recs:p.recs,nmv:1}), hs=p.kind==='hoso'; return B.length?`<div class="ccw" data-nmw="1" style="font-size:12px;font-weight:600;margin:3px 0 0;max-width:360px;white-space:normal" title="${esc(B.slice(0,30).map(nmLine).join('\n'))}${B.length>30?'\n…':''}">⚠ ${B.length} họ tên có dấu hiệu lỗi (chữ Unicode tổ hợp${hs?', ký tự ẩn':', tách họ đệm / tên sai'}…) — rê chuột để xem; ${hs?NM_FIX_HS:NM_FIX}</div>`:''; };
   el.innerHTML=`<div class="imp"><table><thead><tr><th>File</th><th>Tên file</th><th>Nhận dạng</th><th class="c">Số dòng</th><th>Nạp vào</th></tr></thead><tbody>
-  ${pending.map((p,i)=>`<tr><td><b>${esc(p.file)}</b><div class="muted" style="font-size:12px">sheet ${esc(p.sheet)}</div>${p.note?`<div style="font-size:12px;max-width:340px;white-space:normal;color:${p.target==='skip'?'var(--amber)':'var(--muted)'}">${esc(p.note)}</div>`:''}${pcc(p)}</td><td style="white-space:normal;max-width:300px">${p.nameOk?`<span class="tag gplx">${ic('check')} ${esc(p.nameMsg)}</span>`:`<span style="color:${p.wrongKhoa?'var(--seal)':'var(--amber)'};font-size:12.5px;${p.wrongKhoa?'font-weight:600':''}">${esc(p.nameMsg||'')}</span>`}${p.goCourse?`<div><button class="btn sm" data-goc2="${esc(p.goCourse)}" style="margin-top:6px">Chuyển sang khóa ${esc(p.wrongKhoa)}</button></div>`:''}</td><td>${lab[p.kind]}</td><td class="c">${p.recs.length}${p.skipped&&p.skipped.length?`<div style="color:var(--seal);font-size:12px;font-weight:600;white-space:nowrap" title="${esc(p.skipped.map(x=>'Dòng '+x.row+': '+(x.ten||'')+' '+(x.id||'')+' — '+x.reason).join('\n'))}">+${p.skipped.length} dòng lỗi</div>`:''}</td><td>
+  ${pending.map((p,i)=>`<tr><td><b>${esc(p.file)}</b><div class="muted" style="font-size:12px">sheet ${esc(p.sheet)}</div>${p.note?`<div style="font-size:12px;max-width:340px;white-space:normal;color:${p.target==='skip'?'var(--amber)':'var(--muted)'}">${esc(p.note)}</div>`:''}${pcc(p)}${pnm(p)}</td><td style="white-space:normal;max-width:300px">${p.nameOk?`<span class="tag gplx">${ic('check')} ${esc(p.nameMsg)}</span>`:`<span style="color:${p.wrongKhoa?'var(--seal)':'var(--amber)'};font-size:12.5px;${p.wrongKhoa?'font-weight:600':''}">${esc(p.nameMsg||'')}</span>`}${p.goCourse?`<div><button class="btn sm" data-goc2="${esc(p.goCourse)}" style="margin-top:6px">Chuyển sang khóa ${esc(p.wrongKhoa)}</button></div>`:''}</td><td>${lab[p.kind]}</td><td class="c">${p.recs.length}${p.skipped&&p.skipped.length?`<div style="color:var(--seal);font-size:12px;font-weight:600;white-space:nowrap" title="${esc(p.skipped.map(x=>'Dòng '+x.row+': '+(x.ten||'')+' '+(x.id||'')+' — '+x.reason).join('\n'))}">+${p.skipped.length} dòng lỗi</div>`:''}</td><td>
    <select data-pi="${i}" ${p.userLock?'disabled':''}>${p.kind==='xml'?`${!p.part&&p.target!=='skip'?'<option value="" selected>— Chọn: thi mới hay thi lại? —</option>':''}<option value="xml_moi" ${p.target!=='skip'&&p.part==='moi'?'selected':''}>Mã cho THI MỚI (lần đầu)</option><option value="xml_tl" ${p.target!=='skip'&&p.part==='tl'?'selected':''}>Mã cho THI LẠI</option><option value="xml_g" ${p.target!=='skip'&&p.part==='g'?'selected':''}>Mã cho KHÓA GHÉP</option>`:p.kind==='gplx'?`<option value="gplx">GPLX tra cứu</option>`:p.kind==='sbd'?`<option value="sbd">Khóa thi ${esc(p.khoaThi||'')} — ${esc(p.ngayThi||'')}</option>`:p.kind==='thithu'?`<option value="thithu">Mục Thi thử — ${esc(p.label||'')}</option>`:p.kind==='loctl'?`<option value="gcfill" ${p.target!=='skip'?'selected':''}>Điền Nội dung SH lại theo số CCCD</option>`:`<option value="moi" ${p.target==='moi'?'selected':''}>Học mới (BC1)</option><option value="tl" ${p.target==='tl'?'selected':''}>Thi lại — gộp thêm</option>${p.kind==='hoso'||p.kind==='bc2'?`<option value="g" ${p.target==='g'?'selected':''}>Khóa ghép (${esc(p.gTen||gName(C()))})</option>`:''}${p.kind==='hoso'&&C().students.some(x=>x.loai==='tl')?`<option value="tlr" ${p.target==='tlr'?'selected':''}>Thi lại — THAY DS cũ (file đã lọc)</option>`:''}`}<option value="skip" ${p.target==='skip'?'selected':''}>Bỏ qua</option></select></td></tr>`).join('')}
   </tbody></table></div><div class="row" style="margin-top:10px"><button class="btn pri" id="btnDoImp">${ic('check')}Nạp ${pending.filter(p=>p.target!=='skip').length} danh sách</button><button class="btn" id="btnCancelImp">Hủy</button></div>`;
   el.querySelectorAll('[data-goc2]').forEach(b=>b.onclick=()=>{ DB.cur=b.dataset.goc2; save(); pending.forEach(applyNameRule); render(); toast('Đã chuyển sang khóa '+C().ten+' — kiểm tra lại cột “Nạp vào” rồi bấm Nạp'); });
@@ -2649,17 +2658,64 @@ function namingCard(open){
   <p class="muted" style="margin:10px 0 0;font-size:12.5px"><b>File nạp vào:</b> file mẫu chỉ để xem lại cho nhớ — tool không lấy dữ liệu từ đó.<br>
   <b>File xuất ra:</b> khi PC-08 / Bộ Công an đổi mẫu, bấm <b>Tải form gốc</b>, sửa trong Excel (giữ các mã {{…}}, xem sheet “HƯỚNG DẪN MÃ”), rồi <b>Nạp form đã sửa</b>. Tool kiểm tra form, cho xem thử 3 người, rồi dùng cho mọi khóa; vẫn tự lọc, sắp xếp, đặt tên file và đối chiếu từng ô như cũ. Form lưu trong trình duyệt và có trong file <b>Sao lưu</b>.</p></details>`;
 }
+/* ===== KIỂM TRA HỌ TÊN TRONG FILE XML (từ bản 4.19) — lỗi mắt thường không thấy, gửi sang PC-08 rồi mới lộ =====
+   • chữ có dấu ở dạng Unicode TỔ HỢP (dấu rời khỏi chữ: “I” + dấu nặng thay cho “Ị”) → tìm kiếm / đối chiếu theo tên không ra
+   • tách họ đệm / tên sai (thẻ TEN ghi “THỊ BÌNH”) → sắp theo “THỊ…”, lệch thứ tự số báo danh
+   • HO_TEN_DEM + TEN không khớp HO_VA_TEN, thừa dấu cách, ký tự ẩn, chữ “Ð” (U+00D0) gõ thay “Đ” (U+0110)
+   full / hd / t = giá trị NGUYÊN VĂN trong thẻ HO_VA_TEN / HO_TEN_DEM / TEN (chưa cắt khoảng trắng); hd, t = null khi không có thẻ → bỏ phần kiểm tra tách tên.
+   Dấu nháy, gạch nối, chữ Ĭ Ŏ Ŭ Ĕ Ƀ Č… trong tên người dân tộc (H'BLEN, BLĬK) KHÔNG bị coi là lỗi. */
+const NM_HID=/[\t\r\n\u00A0\u00AD\u1680\u2000-\u200F\u2028-\u202F\u205F\u2060\u3000\uFEFF]/;
+function nameIssues(full,hd,t,loose){
+  full=String(full??''); if(loose) full=full.replace(/^ +| +$/g,'');   // loose (ô Excel của file hồ sơ): dấu cách ở đầu / cuối ô không coi là lỗi
+  const F=[full,hd,t].filter(v=>v!=null).map(String), out=[], cl=v=>String(v??'').normalize('NFC').replace(/\s+/g,' ').trim();
+  if(!cl(full)) return ['thiếu họ tên (thẻ HO_VA_TEN trống)'];
+  if(F.some(v=>v!==v.normalize('NFC'))){ const L=[...new Set(F.flatMap(v=>v.match(/\P{M}\p{M}+/gu)||[]).map(x=>x.normalize('NFC')))];
+    out.push(`chữ Unicode tổ hợp, dấu rời khỏi chữ${L.length?' ('+L.join(', ')+')':''} → tìm theo tên không ra`); }
+  else if(F.some(v=>/\p{M}/u.test(v))) out.push('có dấu rời không ghép được vào chữ nào');
+  const hid=[...new Set(F.flatMap(v=>[...v].filter(ch=>NM_HID.test(ch))).map(ch=>'U+'+ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0')))];
+  if(hid.length) out.push(`có ký tự ẩn / dấu cách đặc biệt (${hid.join(', ')})`);
+  if(F.some(v=>/^ | $| {2,}/.test(v))) out.push('thừa dấu cách (ở đầu, ở cuối hoặc 2 dấu cách liền nhau)');
+  if(F.some(v=>/[\u00D0\u00F0\u0189]/.test(v))) out.push('chữ “Ð” (U+00D0) không phải chữ Đ tiếng Việt (U+0110)');
+  if(hd!=null||t!=null){ const N=cl(full), H=cl(hd), T=cl(t), W=N.split(' '), HT=(H?H+' ':'')+T;
+    if(!T) out.push('thẻ TEN (tên) để trống');
+    else if(T.includes(' ')) out.push(`tách họ đệm / tên sai: thẻ TEN ghi “${T}”, đúng là “${W[W.length-1]}” (họ đệm “${W.slice(0,-1).join(' ')}”) → sắp theo tên thành “${T.split(' ')[0]}…”, sai thứ tự số báo danh`);
+    else if(HT.toUpperCase()!==N.toUpperCase()) out.push(`HO_TEN_DEM + TEN (“${HT}”) không khớp HO_VA_TEN (“${N}”)`);
+  }
+  return out;
+}
+/* người có họ tên dấu hiệu lỗi trong 1 file XML (đang chờ nạp hoặc đã nạp). File nạp trước bản 4.19 (không có nmv) chỉ còn HO_VA_TEN đã lưu → kiểm được Unicode tổ hợp / ký tự lạ; nạp lại để kiểm đủ */
+function xmlNameBad(X){ return ((X&&X.recs)||[]).map(r=>({r,is:r.nm||(X.nmv?[]:nameIssues(r.ten))})).filter(x=>x.is.length); }
+const nmTen=r=>String(r.ten||'').normalize('NFC').replace(/\s+/g,' ').trim()||'(không tên)';
+const nmLine=x=>`${nmTen(x.r)} (${x.r.id}): ${x.is.join('; ')}`;
+const NM_FIX='sửa họ tên trong phần mềm đào tạo rồi xuất lại XML trước khi gửi PC-08';
+/* ===== FILE HỒ SƠ (Excel, nguồn của BC1 / thi lại / khóa ghép): kiểm tra cột Họ và tên ngay khi nạp =====
+   Lỗi nằm trong dữ liệu gốc của phần mềm đào tạo → file XML gửi PC-08 sau này cũng mang lỗi, nên báo sớm từ lúc làm BC1.
+   Lỗi gắn theo từng người (s.nm = {is: các dấu hiệu, f: tên file}); nạp lại file hồ sơ đã sửa thì TỰ HẾT (nmApply). */
+const NM_FIX_HS='sửa họ tên trong phần mềm đào tạo, xuất lại file hồ sơ rồi nạp lại (nạp file đã sửa thì lỗi tự hết)';
+function nmApply(s,r,file){ if(r.nm&&r.nm.length) s.nm={is:r.nm,f:file}; else delete s.nm; }
+function nameReport(L,after){
+  let done=false; const fin=()=>{ if(!done){ done=true; after&&setTimeout(after,0); } };
+  const rows=L.flatMap(p=>p.recs.filter(r=>r.nm).map(r=>({p,r})));
+  const d=dialog(`File hồ sơ: ${rows.length} họ tên có dấu hiệu lỗi`,`<div class="note warn" id="hsNmWarn">${ic('alert')}<span><b>${rows.length} họ tên trong file hồ sơ có dấu hiệu lỗi</b> — nhìn bằng mắt không thấy. Lỗi nằm trong dữ liệu gốc của phần mềm đào tạo, nên file XML gửi PC-08 sau này cũng mang lỗi (tìm tên không ra). Cần ${NM_FIX_HS}. Vẫn nạp được file này; lỗi từng người hiện ở mục Kiểm tra dữ liệu.</span></div>
+    <div class="imp" style="margin-top:6px;max-height:46vh;overflow:auto"><table><thead><tr><th class="c">STT</th><th>Họ và tên</th><th class="c">Số CCCD</th><th>File</th><th>Dấu hiệu lỗi</th></tr></thead><tbody>
+    ${rows.map((x,i)=>`<tr><td class="c">${i+1}</td><td style="white-space:nowrap">${esc(nmTen(x.r))}</td><td class="c">${esc(x.r.id)}</td><td style="font-size:12.5px">${esc(x.p.file)}</td><td class="lv-err" style="white-space:normal;min-width:280px">${x.r.nm.map(esc).join('; ')}</td></tr>`).join('')}</tbody></table></div>`,
+    [['Đã rõ','pri',fin]]);
+  d.classList.add('wide'); d.addEventListener('close',fin,{once:true});
+}
 /* ===== FILE XML BÁO CÁO 2 (tải từ phần mềm quản lý đào tạo) — chỉ đọc mã khóa + danh sách người, bỏ qua ảnh ===== */
 async function analyzeXML(file){
   const t=await file.text();
   const kh=(t.match(/<KHOA_HOC>([\s\S]*?)<\/KHOA_HOC>/)||[])[1];
   if(!kh||!/<NGUOI_LX>/.test(t)) throw new Error('không phải file XML Báo cáo của phần mềm đào tạo');
-  const g=(src,tag)=>{ const m=src.match(new RegExp('<'+tag+'>([^<]*)</'+tag+'>')); return m?m[1].trim():''; };
+  const gr=(src,tag)=>{ const m=src.match(new RegExp('<'+tag+'>([^<]*)</'+tag+'>')); return m?m[1]:null; };   // nguyên văn; null = không có thẻ
+  const g=(src,tag)=>(gr(src,tag)||'').trim();
   const maKH=g(kh,'MA_KHOA_HOC')||g(kh,'MA_BCII'), csdt=g(kh,'MA_CSDT'), tenKH=g(kh,'TEN_KHOA_HOC');
   const code=maKH.startsWith(csdt)?maKH.slice(csdt.length):maKH;
   const recs=[]; const re=/<NGUOI_LX>([\s\S]*?)<\/NGUOI_LX>/g; let m;
   while((m=re.exec(t))){ const r=m[1].replace(/<ANH_CHAN_DUNG>[\s\S]*?<\/ANH_CHAN_DUNG>/,'');
-    const ns=g(r,'NGAY_SINH'); recs.push({id:normId(g(r,'SO_CMT')), ten:g(r,'HO_VA_TEN'), ns:/^\d{8}$/.test(ns)?ns.slice(6)+'/'+ns.slice(4,6)+'/'+ns.slice(0,4):ns, gt:{M:'M',F:'F'}[g(r,'GIOI_TINH').toUpperCase()]||''}); }
+    const ns=g(r,'NGAY_SINH'), rec={id:normId(g(r,'SO_CMT')), ten:g(r,'HO_VA_TEN'), ns:/^\d{8}$/.test(ns)?ns.slice(6)+'/'+ns.slice(4,6)+'/'+ns.slice(0,4):ns, gt:{M:'M',F:'F'}[g(r,'GIOI_TINH').toUpperCase()]||''};
+    const nm=nameIssues(gr(r,'HO_VA_TEN'),gr(r,'HO_TEN_DEM'),gr(r,'TEN')); if(nm.length) rec.nm=nm;   // họ tên có dấu hiệu lỗi (Unicode tổ hợp, tách họ đệm / tên…)
+    recs.push(rec); }
   const tong=+g(t.slice(0,3000),'TONG_SO_BAN_GHI')||null;
   const guess=/-TL\b|-TL$/i.test(tenKH)?'tl':/-G$/i.test(tenKH.trim())?'g':'moi';
   const kg=g(kh,'NGAY_KHAI_GIANG'), bg=g(kh,'NGAY_BE_GIANG'), tg=g(kh,'THOI_GIAN_DT');
@@ -2669,9 +2725,9 @@ async function analyzeXML(file){
 function applyXML(p,conf){
   if(p.part!=='moi'&&p.part!=='tl'&&p.part!=='g'){ conf.push(`File XML “${p.file}”: chưa chọn thi mới, thi lại hay khóa ghép — KHÔNG nạp.`); return; }
   const c=C(); c.xml=c.xml||{};
-  c.xml[p.part]={code:p.code, maKH:p.maKH, ten:p.tenKH, file:p.file, t:new Date().toISOString(), recs:p.recs};
+  c.xml[p.part]={code:p.code, maKH:p.maKH, ten:p.tenKH, file:p.file, t:new Date().toISOString(), recs:p.recs, nmv:1};   // nmv: họ tên đã được kiểm tra đủ lúc nạp (từ bản 4.19)
   if(p.part==='g') Object.assign(c.xml.g,{kg:p.kg||'', bg:p.bg||'', tg:p.tg||''});
-  conf.push(`File XML “${p.file}”: mã ${p.code} gán cho ${p.part==='tl'?'THI LẠI':p.part==='g'?'KHÓA GHÉP '+gNameFromXml(p.tenKH):'THI MỚI (lần đầu)'} (${p.recs.length} người) — theo lựa chọn của bạn.`);
+  conf.push(`File XML “${p.file}”: mã ${p.code} gán cho ${p.part==='tl'?'THI LẠI':p.part==='g'?'KHÓA GHÉP '+gNameFromXml(p.tenKH):'THI MỚI (lần đầu)'} (${p.recs.length} người) — theo lựa chọn của bạn.`);   // lỗi họ tên KHÔNG ghi vào đây: tính trực tiếp từ XML đang dùng (xmlCheck) → nạp lại file đã sửa thì tự hết
 }
 /* đối chiếu danh sách BC2 (lần đầu / thi lại) với file XML đã nạp */
 function xmlCheck(c,part){
@@ -2687,6 +2743,8 @@ function xmlCheck(c,part){
   R.near=[]; for(const s of L){ if(s.biLoai||xi.has(s.cccd)) continue; for(const r of ex){ const d=ccNear(s.cccd,r.id); if(d) R.near.push(`${s.ten}: BC2 ${s.cccd} ↔ XML ${r.id} (${r.ten}) — lệch ${d} số`); } }
   /* số CCCD trong XML sai quy tắc (có giới tính để đối chiếu) */
   R.bad=X.recs.map(r=>({r,is:cccdIssues(r.id,r.ns,r.gt)})).filter(x=>x.is.length).map(x=>`${x.r.ten} (${x.r.id}): ${x.is.join('; ')}`);
+  /* họ tên trong XML có dấu hiệu lỗi (Unicode tổ hợp, tách họ đệm / tên sai, ký tự ẩn…) */
+  R.name=xmlNameBad(X).map(nmLine); R.nameOld=!X.nmv;
   return R;
 }
 function xmlCard(c){
@@ -2699,6 +2757,8 @@ function xmlCard(c){
       ${R.extraXml.length?`<div class="lv-warn">Có trong XML nhưng không có trong BC2 và không bị loại (${R.extraXml.length}): ${esc(R.extraXml.slice(0,8).join(', '))}${R.extraXml.length>8?'…':''}</div>`:''}
       ${R.near&&R.near.length?`<div class="lv-err">⚠ CCCD lệch 1–2 số giữa BC2 và XML — nghi gõ nhầm (${R.near.length}): ${esc(R.near.slice(0,8).join('; '))}${R.near.length>8?'…':''}</div>`:''}
       ${R.bad&&R.bad.length?`<div class="lv-err">⚠ Số CCCD trong XML có dấu hiệu sai (${R.bad.length}): ${esc(R.bad.slice(0,8).join('; '))}${R.bad.length>8?'…':''}</div>`:''}
+      ${R.name&&R.name.length?`<div class="lv-err" id="xmlNm_${k}">⚠ Họ tên trong XML có dấu hiệu lỗi (${R.name.length}) — ${NM_FIX}: ${esc(R.name.slice(0,8).join(' · '))}${R.name.length>8?'… (xem đủ ở mục Kiểm tra dữ liệu)':''}</div>`:''}
+      ${R.nameOld?`<div class="muted" style="font-size:12px">File XML này nạp từ bản cũ — nạp lại file để tool kiểm tra đủ họ tên (tách họ đệm / tên).</div>`:''}
       ${R.diff.length?`<div class="lv-warn">Khác tên / ngày sinh (${R.diff.length}): ${esc(R.diff.slice(0,5).join('; '))}${R.diff.length>5?'…':''}</div>`:''}</div>`).join('')}</div>`;
 }
 function pc08Codes(c){
@@ -2718,6 +2778,8 @@ async function exportPC08(){
   if(miss&&!confirm(`Còn ${miss} người thi lại chưa chọn nội dung SH lại. Vẫn xuất?`)) return;
   const bad=['moi','tl'].concat(gg.length?['g']:[]).map(k=>[k,xmlCheck(c,k)]).filter(([k,R])=>R&&R.missXml.length);
   if(bad.length&&!confirm(`Có người trong BC2 nhưng KHÔNG có trong file XML (${bad.map(([k,R])=>(k==='tl'?'thi lại ':k==='g'?'khóa ghép ':'lần đầu ')+R.missXml.length).join(', ')}). PC-08 đối chiếu theo XML — nên kiểm tra trước. Vẫn xuất?`)) return;
+  const nmBad=['moi','tl'].concat(gg.length?['g']:[]).map(k=>[k,xmlCheck(c,k)]).filter(([k,R])=>R&&R.name.length);
+  if(nmBad.length&&!confirm(`File XML Báo cáo 2 có họ tên có dấu hiệu lỗi (${nmBad.map(([k,R])=>(k==='tl'?'thi lại ':k==='g'?'khóa ghép ':'lần đầu ')+R.name.length).join(', ')}) — chữ Unicode tổ hợp, tách họ đệm / tên sai…:\n${nmBad.flatMap(([k,R])=>R.name).slice(0,5).map(m=>'• '+m).join('\n')}${nmBad.reduce((n,[k,R])=>n+R.name.length,0)>5?'\n…':''}\n\nPC-08 nhận dữ liệu theo XML nên lỗi sẽ theo sang kỳ sát hạch (tìm tên không ra, lệch thứ tự số báo danh). Nên ${NM_FIX}. Vẫn xuất?`)) return;
   const row2=(s,i)=>[i+1,s.ten,s.ns,s.cccd,s.dc,s.sk||'x',s.hangHS||s.hangG||'','','','',bc2GC(s)];
   const bc1Order=bc1List().filter(x=>!x.biLoai).map(x=>x.cccd).join(',');
   const F=await formLoad('bc2'); if(F===false) return;
@@ -2752,7 +2814,10 @@ async function handleFiles(fl){
       if(seen[k]){ p.target='skip'; p.userLock=true; p.nameOk=false; p.nameMsg=`Trùng khóa thi ${p.khoaThi} với file “${seen[k]}” trong lần nạp này — mỗi khóa thi chỉ 1 file, file này không nạp.`; } else seen[k]=p.file; }); }
   const pr={hoso:0,bc1:1,bc2:2,gplx:3,sbd:4,loctl:5,xml:6,thithu:7}; res.sort((a,b)=>pr[a.kind]-pr[b.kind]);
   pending=pending.concat(res); TAB='nap'; render();
-  if(res.some(p=>p.kind==='xml'&&p.target!=='skip')) setTimeout(()=>askXmlQueue(()=>renderPending()),50);
+  /* file hồ sơ có họ tên dấu hiệu lỗi → báo ngay (bảng từng người), xong mới hỏi tiếp phần của file XML */
+  const goXml=()=>{ if(res.some(p=>p.kind==='xml'&&p.target!=='skip')) askXmlQueue(()=>renderPending()); };
+  const NB=res.filter(p=>p.kind==='hoso'&&p.recs.some(r=>r.nm));
+  if(NB.length) setTimeout(()=>nameReport(NB,goXml),50); else if(res.some(p=>p.kind==='xml'&&p.target!=='skip')) setTimeout(goXml,50);
 }
 /* ===== File XML Báo cáo 2: 2 file = 1 mã cho THI MỚI + 1 mã cho THI LẠI → luôn hỏi người dùng gán cho phần nào ===== */
 function xmlHint(p){
@@ -2787,18 +2852,22 @@ function xmlPick(p,part,done){
     [['Chọn lại','',()=>{ setTimeout(()=>askXmlPart(p,done),0); }],['Đúng, gán cho '+(part==='tl'?'thi lại':part==='g'?'khóa ghép':'thi mới'),'pri',()=>{ setTimeout(fin,0); }]]);
 }
 function askXmlPart(p,done){
-  const c=C(), h=xmlHint(p);
-  dialog('File XML này là mã của phần nào?',`<div class="note">${ic('info')}<span>Khóa ${esc(c.ten)} có 2 file XML: <b>1 mã cho thi mới</b> và <b>1 mã cho thi lại</b>${h.gName||gList(true,c).length?' — thêm <b>1 mã cho khóa ghép</b> (tên khóa trong XML có đuôi -G)':''}. Chọn đúng để tool đặt tên file PC-08 và đối chiếu danh sách.</span></div>
+  const c=C(), h=xmlHint(p), NB=xmlNameBad({recs:p.recs,nmv:1});
+  const d=dialog('File XML này là mã của phần nào?',`<div class="note">${ic('info')}<span>Khóa ${esc(c.ten)} có 2 file XML: <b>1 mã cho thi mới</b> và <b>1 mã cho thi lại</b>${h.gName||gList(true,c).length?' — thêm <b>1 mã cho khóa ghép</b> (tên khóa trong XML có đuôi -G)':''}. Chọn đúng để tool đặt tên file PC-08 và đối chiếu danh sách.</span></div>
     <table style="margin-top:10px;font-size:13.5px;line-height:1.7"><tr><td class="muted" style="padding-right:12px">File</td><td><b>${esc(p.file)}</b></td></tr>
     <tr><td class="muted">Mã file</td><td><b style="font-size:15px">${esc(p.code)}</b></td></tr><tr><td class="muted">Tên khóa trong XML</td><td>${esc(p.tenKH)}</td></tr>
     <tr><td class="muted">Số người</td><td>${p.recs.length}</td></tr>
     <tr><td class="muted">Đối chiếu khóa ${esc(c.ten)}</td><td>${c.students.length?`<b>${h.m}</b> người trùng danh sách thi mới · <b>${h.t}</b> người trùng danh sách thi lại${h.g?` · <b>${h.g}</b> người trùng khóa ghép`:''}`:'chưa có học viên để đối chiếu'}</td></tr></table>
     ${h.gName?`<div class="note ok" style="margin-top:8px">${ic('info')}<span>Tên khóa trong XML có đuôi <b>-G</b> → đây là <b>KHÓA GHÉP</b> (${esc(gNameFromXml(p.tenKH))}).</span></div>`:''}
-    ${c.xml&&(c.xml.moi||c.xml.tl)?`<div class="muted" style="font-size:12.5px;margin-top:8px">Khóa ${esc(c.ten)} đang dùng: thi mới ${c.xml.moi?'<b>'+esc(c.xml.moi.code)+'</b>':'(chưa có)'} · thi lại ${c.xml.tl?'<b>'+esc(c.xml.tl.code)+'</b>':'(chưa có)'}</div>`:''}`,
+    ${c.xml&&(c.xml.moi||c.xml.tl)?`<div class="muted" style="font-size:12.5px;margin-top:8px">Khóa ${esc(c.ten)} đang dùng: thi mới ${c.xml.moi?'<b>'+esc(c.xml.moi.code)+'</b>':'(chưa có)'} · thi lại ${c.xml.tl?'<b>'+esc(c.xml.tl.code)+'</b>':'(chưa có)'}</div>`:''}
+    ${NB.length?`<div class="note warn" id="xmlNmWarn" style="margin-top:10px">${ic('alert')}<span><b>${NB.length} họ tên trong file XML này có dấu hiệu lỗi</b> — nhìn bằng mắt không thấy, gửi sang PC-08 mới lộ (tìm tên không ra, lệch thứ tự số báo danh). Cần ${NM_FIX}. Vẫn nạp được file này để lấy mã khóa.</span></div>
+      <div class="imp" style="margin-top:6px;max-height:32vh;overflow:auto"><table><thead><tr><th class="c">STT</th><th>Họ và tên</th><th class="c">Số CCCD</th><th>Dấu hiệu lỗi</th></tr></thead><tbody>
+      ${NB.map((x,i)=>`<tr><td class="c">${i+1}</td><td style="white-space:nowrap">${esc(nmTen(x.r))}</td><td class="c">${esc(x.r.id)}</td><td class="lv-err" style="white-space:normal;min-width:300px">${x.is.map(esc).join('; ')}</td></tr>`).join('')}</tbody></table></div>`:''}`,
     [['Bỏ qua file này','',()=>{ p.target='skip'; p.userSet=true; done&&setTimeout(done,0); }],
      ['Mã cho KHÓA GHÉP',h.gName?'pri':'',()=>{ setTimeout(()=>xmlPick(p,'g',done),0); }],
      ['Mã cho THI LẠI','pri',()=>{ setTimeout(()=>xmlPick(p,'tl',done),0); }],
      ['Mã cho THI MỚI','pri',()=>{ setTimeout(()=>xmlPick(p,'moi',done),0); }]]);
+  if(NB.length) d.classList.add('wide');
 }
 function askXmlQueue(after){
   const p=pending.find(x=>x.kind==='xml'&&x.target!=='skip'&&!x.part);
@@ -5325,6 +5394,30 @@ async function selfTest(){
     if(ccNear('052090001234','052090001243')!==2||ccNear('052090001234','052090001234')!==0) throw new Error('so gần đúng sai');
   });
   await t('Kiểm tra CCCD theo ngày sinh',()=>{ if(cccdVsDob('052090001234','01/01/1990')) throw new Error('báo sai với số đúng'); if(!cccdVsDob('052290001234','01/01/1990')) throw new Error('không phát hiện CCCD sai thế kỷ'); return 'phát hiện đúng / sai'; });
+  await t('Kiểm tra họ tên trong file XML và file hồ sơ Excel (Unicode tổ hợp, tách họ đệm / tên, ký tự ẩn)',async()=>{
+    const n=(a,b,c,k)=>{ const r=nameIssues(a,b,c); if(r.length!==k) throw new Error(`“${a}” / “${b}” / “${c}” → ${r.join('; ')||'không lỗi'} (đúng là ${k} lỗi)`); return r; };
+    const TH='THI\u0323', BI='BI\u0300NH', D='ĐINH '+TH+' '+BI;   // “THỊ”, “BÌNH” viết bằng dấu rời (Unicode tổ hợp)
+    if('ĐINH THỊ BÌNH'!=='ĐINH THỊ BÌNH'.normalize('NFC')||D===D.normalize('NFC')||D.normalize('NFC')!=='ĐINH THỊ BÌNH') throw new Error('chuỗi thử không đúng dạng');
+    n('ĐINH THỊ BÌNH','ĐINH THỊ','BÌNH',0); n('HỒ CÔNG','HỒ','CÔNG',0); n('THƠ','','THƠ',0); n("KSOR H'BLĬK",'KSOR',"H'BLĬK",0); n('NGUYỄN THỊ NHƯ THỦY',null,null,0); n('Nguyễn Văn An','NGUYỄN VĂN','AN',0);
+    if(!/Ị, Ì/.test(n(D,'ĐINH '+TH,BI,1)[0])) throw new Error('không nêu đúng chữ có dấu rời');
+    if(!/“THỊ BÌNH”, đúng là “BÌNH” \(họ đệm “ĐINH THỊ”\)/.test(n('ĐINH THỊ BÌNH','ĐINH','THỊ BÌNH',1)[0])) throw new Error('câu báo tách tên sai');
+    n(D,'ĐINH',TH+' '+BI,2); n(D,null,null,1); n('NGUYỄN  VĂN AN',null,null,1); n('NGUYỄN VĂN AN ','NGUYỄN VĂN','AN',1); n('NGUYỄN\u00A0VĂN AN',null,null,1); n('\u00D0Ỗ VĂN AN',null,null,1);
+    n('LÊ VĂN AN','LÊ','AN',1); n('LÊ VĂN AN','LÊ VĂN','',1); n('',null,null,1);
+    const one=(i,ho,t2,full)=>`<NGUOI_LX><HO_TEN_DEM>${ho}</HO_TEN_DEM><TEN>${t2}</TEN><HO_VA_TEN>${full}</HO_VA_TEN><GIOI_TINH>F</GIOI_TINH><NGAY_SINH>19801010</NGAY_SINH><SO_CMT>05218000000${i}</SO_CMT><HO_SO><ANH_CHAN_DUNG>AAAA</ANH_CHAN_DUNG></HO_SO></NGUOI_LX>`;
+    const x=`<?xml version="1.0" encoding="utf-8"?><BAO_CAO2><HEADER><TONG_SO_BAN_GHI>3</TONG_SO_BAN_GHI></HEADER><DATA><KHOA_HOC><MA_CSDT>52003</MA_CSDT><MA_KHOA_HOC>52003K26A9999</MA_KHOA_HOC><TEN_KHOA_HOC>HẠNG A1M-9</TEN_KHOA_HOC></KHOA_HOC><NGUOI_LXS>${one(1,'LÊ THỊ','BÌNH','LÊ THỊ BÌNH')}${one(2,'PHẠM CÔNG','TI\u0323NH','PHẠM CÔNG TI\u0323NH')}${one(3,'ĐINH',TH+' '+BI,D)}</NGUOI_LXS></DATA></BAO_CAO2>`;
+    const p=await analyzeXML(new File([x],'BC2_TEST.xml',{type:'text/xml'})), q=p.recs.map(r=>(r.nm||[]).length).join(',');
+    if(p.code!=='K26A9999'||q!=='0,1,2') throw new Error(`đọc XML thử: mã ${p.code}, số lỗi từng người ${q} (đúng là K26A9999 và 0,1,2)`);
+    if(xmlNameBad({recs:p.recs,nmv:1}).length!==2||xmlNameBad({recs:[{id:'1',ten:D},{id:'2',ten:'LÊ THỊ BÌNH'}]}).length!==1) throw new Error('đếm người có họ tên lỗi sai');
+    /* file hồ sơ (Excel): dấu cách đầu / cuối ô không tính là lỗi; đọc 1 file thử; nạp lại file đã sửa thì lỗi tự hết */
+    const nx=(a,k)=>{ const r=nameIssues(a,null,null,true); if(r.length!==k) throw new Error(`file hồ sơ: “${a}” → ${r.join('; ')||'không lỗi'} (đúng là ${k} lỗi)`); };
+    nx(' NGUYỄN VĂN AN ',0); nx(' '+D+' ',1); nx('NGUYỄN  VĂN AN',1);
+    const ws=XLSX.utils.aoa_to_sheet([['STT','Mã đăng ký','Họ và tên','Ngày sinh','Số CMT','Nơi cư trú'],[1,'52003-20260101-080000','LÊ THỊ BÌNH ','10/10/1980','052180000001','Gia Lai'],[2,'52003-20260101-080100',D,'10/10/1980','052180000002','Gia Lai']]);
+    const wbk=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wbk,ws,'HS');
+    const it=(await analyzeFile(new File([XLSX.write(wbk,{type:'array',bookType:'xlsx'})],'TEST-1.xlsx')))[0], q2=it?it.recs.map(r=>(r.nm||[]).length).join(','):'';
+    if(!it||it.kind!=='hoso'||q2!=='0,1') throw new Error(`đọc file hồ sơ thử: loại ${it&&it.kind}, số lỗi từng người ${q2} (đúng là hoso và 0,1)`);
+    const sv={}; nmApply(sv,it.recs[1],'TEST-1.xlsx'); if(!sv.nm||sv.nm.f!=='TEST-1.xlsx'||sv.nm.is.length!==1) throw new Error('không ghi lỗi họ tên theo file hồ sơ');
+    nmApply(sv,it.recs[0],'TEST-1.xlsx'); if('nm' in sv) throw new Error('nạp lại file hồ sơ đã sửa mà lỗi không tự hết');
+    return 'bắt đúng dấu rời (Ị, Ì), TEN “THỊ BÌNH”, HO_TEN_DEM + TEN lệch, dấu cách thừa, ký tự ẩn, chữ Ð; tên đúng (kể cả H\'BLĬK) không báo nhầm; file hồ sơ Excel: báo đúng người, nạp lại file đã sửa thì hết lỗi'; });
   await t('Xuất BC1 + đọc lại khớp từng ô, bôi vàng người bị loại',async()=>{ const P=stPeople().filter(x=>x.loai==='moi').sort(cmpWith('v3')), wb=new ExcelJS.Workbook();
     bc1Sheet(wb,'TEST',bc1Scal({ten:'TEST-1',soKhoa:'1',vanBan:'1/BC',maKhoa:'X',thoiGian:10,khaiGiang:'2026-01-01',beGiang:'2026-01-10'},P.length),P.map(bc1Row));
     const back=new ExcelJS.Workbook(); await back.xlsx.load(await wb.xlsx.writeBuffer()); const w=back.worksheets[0];
