@@ -715,6 +715,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.20','16/11/2026',['“Xuất Báo cáo 2”: đổi tên file thành “Danh sách Báo cáo 2 <khóa> (<mã XML thi mới>) (<mã thi lại>) (<mã khóa ghép>).xlsx”, vd “Danh sách Báo cáo 2 A1m-48 (K26A1143) (K26A1139) (K26A1150).xlsx” — chỉ ghi mã phần có trong file; thiếu mã XML thì hỏi trước khi xuất. Nội dung file không đổi']],
   ['4.19','15/11/2026',['Kiểm tra HỌ TÊN từng người ngay khi nạp file XML Báo cáo 2 và file hồ sơ Excel (nguồn của BC1, thi lại, khóa ghép): chữ có dấu ở dạng Unicode tổ hợp (dấu rời khỏi chữ — nhìn giống hệt nhưng tìm kiếm / đối chiếu theo tên không ra), thừa dấu cách, ký tự ẩn, chữ “Ð” gõ thay “Đ”; riêng XML thêm: tách họ đệm / tên sai (thẻ TEN ghi “THỊ BÌNH” → sắp theo “THỊ…”, sai thứ tự số báo danh), HO_TEN_DEM + TEN không khớp HO_VA_TEN',
     'File hồ sơ Excel: báo bằng bảng (họ tên, số CCCD, file, dấu hiệu lỗi) ngay khi thả file, ở dòng file chờ nạp, ở mục Kiểm tra dữ liệu (mức Lỗi, theo từng người) và được nhắc khi xuất BC1 / BC2 / file PC-08 — biết từ lúc làm BC1 để sửa trong phần mềm đào tạo',
     'File XML: báo trong hộp “File XML này là mã của phần nào?”, ở dòng file chờ nạp, dưới bảng Báo cáo 2 (đối chiếu XML), ở mục Kiểm tra dữ liệu (mức Lỗi) và hỏi lại trước khi “Xuất file cho PC-08”',
@@ -2560,7 +2561,7 @@ const NAMES=[
  {id:'thithu', kind:'thithu', target:'thithu', show:'<khóa>_Thithu', what:'Danh sách THI THỬ — vào mục riêng “Thi thử”, độc lập, không ảnh hưởng BC1, BC2, Số báo danh. Phải đúng đuôi _Thithu', ex:'GLĐ-2026-K240_Thithu.xls'},
  {id:'sbd',  kind:'sbd',  target:'sbd', show:'GLĐ_<khóa thi>',    what:'File máy chủ phòng thi lý thuyết — CHỈ file tên bắt đầu bằng GLĐ mới được nạp làm danh sách SBD; mỗi khóa thi chỉ 1 file', ex:'GLĐ-2026-K150.xls'}
 ];
-const OUTNAMES=[['o_bc1','Báo cáo 1 (nộp Sở)','BC1_A1m-42.xlsx'],['o_bc2','Báo cáo 2 (2 sheet: lần đầu và -TL)','BC2_A1m-42.xlsx'],
+const OUTNAMES=[['o_bc1','Báo cáo 1 (nộp Sở)','BC1_A1m-42.xlsx'],['o_bc2','Báo cáo 2 (sheet lần đầu, -TL, khóa ghép nếu có) — tên: khóa + mã XML thi mới, thi lại, khóa ghép','Danh sách Báo cáo 2 A1m-48 (K26A1143) (K26A1139) (K26A1150).xlsx'],
   ['o_pc08','Báo cáo 2 tách cho PC-08 — phần lần đầu','Danh sách Báo cáo 2 A1m-42_K26A1115_.xlsx'],['o_pc08tl','Báo cáo 2 tách cho PC-08 — phần thi lại','Danh sách Báo cáo 2 A1m-42-TL_K26A1116_.xlsx'],
   ['o_dssh','DS thí sinh dự sát hạch','DSSATHACH_A1m-42.xlsx'],['o_sbd','Danh sách SBD (mẫu Hội đồng sát hạch)','SBD_GLD-2026-K232.xlsx'],['o_tt','Danh sách SBD THI THỬ (mục Thi thử, cùng mẫu SBD)','SBD_THITHU_GLD-2026-K240.xlsx'],['o_gplx','DS thí sinh có GPLX (số GPLX, ngày cấp, ngày hết hạn)','DSGPLX_GLD-2026-K232.xlsx'],
   ['o_bcdt','BC đăng ký khóa đào tạo (Word, mục Báo cáo 1)','BC_Dao_Tao_Khoa_Hoc_A1m-44.docx'],['o_khdt','Kế hoạch đào tạo (Word, mục Báo cáo 1)','KE_HOACH_DAO_TAO_A1m-47.docx'],['o_bcdn','Báo cáo đề nghị tổ chức sát hạch (Word, mục Báo cáo 2)','001_BC_ĐN_TC_SH_A1m-44.docx'],['o_tcvp','DS tra cứu vi phạm (thi mới + thi lại)','TRA_CUU_VI_PHAM_A1m-44_SH_26-10-2026.xlsx'],['o_sbdpdf','DS SBD dạng PDF để in dán bảng tin (mục Số báo danh)','SBD_GLD-2026-K242.pdf'],['o_tbpng','Thông báo kỳ sát hạch dạng ảnh (Zalo) / PDF in A4','THONGBAO_GLD-2026-K232.png / .pdf'],['o_tb','Thông báo kỳ sát hạch — Excel mẫu cũ','THONGBAO_GLD-2026-K232.xlsx'],['o_kt','Danh sách kiểm tra','KIEMTRA_A1m-42.xlsx'],['o_bk','Sao lưu dữ liệu tool','SAOLUU_2026-10-09.json']];
@@ -4439,7 +4440,11 @@ async function exportBC2(){
     if(moi.some(x=>x.biLoai)||tl.some(x=>x.biLoai)) P.push('Có người bị loại vẫn nằm trong BC2');
     if(gg.length) P.push(...gCommon(gg,moi,tl));
     return P; };
-  const fname=`BC2_${asciiName(c.ten)}${c.maBC2?'_'+asciiName(c.maBC2):''}.xlsx`;
+  // Tên file: “Danh sách Báo cáo 2 <khóa> (<mã XML thi mới>) (<mã thi lại>) (<mã khóa ghép>)” — chỉ ghi mã của phần có trong file, đúng thứ tự mới → thi lại → ghép
+  const K=pc08Codes(c), parts=[[moi,'moi','thi mới'],[tl,'tl','thi lại'],[gg,'g','khóa ghép']].filter(([L])=>L.length);
+  const noCode=parts.filter(([,k])=>!K[k]).map(([,,lb])=>lb);
+  if(noCode.length&&!confirm(`Chưa có mã XML cho phần ${noCode.join(', ')} — tên file sẽ THIẾU mã phần này.\nNạp file XML Báo cáo 2 ở mục Nạp dữ liệu để có đủ mã. Vẫn xuất?`)) return;
+  const fname=`Danh sách Báo cáo 2 ${c.ten}${parts.filter(([,k])=>K[k]).map(([,k])=>` (${K[k]})`).join('')}.xlsx`;
   const F=await formLoad('bc2'); if(F===false) return;
   if(F){ const plans=[]; if(moi.length) plans.push({src:0,name:c.ten,S:bc2Scal(c,moi.length),rows:moi.map(bc2RowB)}); if(tl.length) plans.push({src:1,name:c.ten+'-TL',S:bc2Scal(c,tl.length),rows:tl.map(bc2RowB)});
     if(gg.length) plans.push({src:0,name:gName(c),S:gScal(c,gg.length),rows:gg.map(bc2RowB)});
@@ -5470,7 +5475,7 @@ function courseStatus(c){
   const ids=new Set(c.students.map(s=>s.cccd));
   const ex=(DB.exams||[]).filter(e=>e.rows.some(r=>ids.has(r.id)));
   const M=mocList(c,true), steps=M.reduce((t,m)=>t+m.steps.length,0), done=M.reduce((t,m)=>t+m.done.filter(Boolean).length,0);
-  return {moi,tl,loai:c.students.filter(s=>s.biLoai).length,bc1:c.lastBC1,bc2:c.lastBC2,pc08:lastX(/^Danh sách Báo cáo 2 /),dssh:lastX(/^DSSATHACH_/),
+  return {moi,tl,loai:c.students.filter(s=>s.biLoai).length,bc1:c.lastBC1,bc2:c.lastBC2,pc08:lastX(/^Danh sách Báo cáo 2 .*_\.xlsx$/),dssh:lastX(/^DSSATHACH_/),
     xml:c.xml||{},ex,over:M.filter(m=>m.st==='over').length,act:M.filter(m=>m.st==='act').length,steps,done,nr:(c.audit||[]).filter(e=>e.nr).length,arc:(DB.arc||[]).filter(a=>a.cid===c.id).length};
 }
 function vTQ(v){
