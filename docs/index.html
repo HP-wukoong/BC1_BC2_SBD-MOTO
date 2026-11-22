@@ -715,6 +715,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.21','22/11/2026',['Nạp dữ liệu: sau khi tool tự quét, kiểm tra và so sánh, nếu file vừa nạp KHÔNG sinh lỗi / cảnh báo mới nào thì hiện bảng chữ xanh lá “Đã kiểm tra — không phát hiện lỗi” (kèm danh sách các mục đã kiểm tra: CCCD, họ tên, trùng người, đối chiếu XML, toàn vẹn danh sách thi); có lỗi thì vẫn báo như cũ. Không nạp được file nào thì không hiện bảng này']],
   ['4.20','16/11/2026',['“Xuất Báo cáo 2”: đổi tên file thành “Danh sách Báo cáo 2 <khóa> (<mã XML thi mới>) (<mã thi lại>) (<mã khóa ghép>).xlsx”, vd “Danh sách Báo cáo 2 A1m-48 (K26A1143) (K26A1139) (K26A1150).xlsx” — chỉ ghi mã phần có trong file; thiếu mã XML thì hỏi trước khi xuất. Nội dung file không đổi']],
   ['4.19','15/11/2026',['Kiểm tra HỌ TÊN từng người ngay khi nạp file XML Báo cáo 2 và file hồ sơ Excel (nguồn của BC1, thi lại, khóa ghép): chữ có dấu ở dạng Unicode tổ hợp (dấu rời khỏi chữ — nhìn giống hệt nhưng tìm kiếm / đối chiếu theo tên không ra), thừa dấu cách, ký tự ẩn, chữ “Ð” gõ thay “Đ”; riêng XML thêm: tách họ đệm / tên sai (thẻ TEN ghi “THỊ BÌNH” → sắp theo “THỊ…”, sai thứ tự số báo danh), HO_TEN_DEM + TEN không khớp HO_VA_TEN',
     'File hồ sơ Excel: báo bằng bảng (họ tên, số CCCD, file, dấu hiệu lỗi) ngay khi thả file, ở dòng file chờ nạp, ở mục Kiểm tra dữ liệu (mức Lỗi, theo từng người) và được nhắc khi xuất BC1 / BC2 / file PC-08 — biết từ lúc làm BC1 để sửa trong phần mềm đào tạo',
@@ -1302,7 +1303,12 @@ function preImportLoc(){
     [['Không — giữ nội dung cũ','',()=>{ locs.forEach(p=>p.target='skip'); if(pending.some(p=>p.target!=='skip')) setTimeout(applyImport,0); else { pending=[]; renderPending(); toast('Không thay đổi — giữ nguyên nội dung SH lại cũ.'); } }],
      ['Cập nhật theo file mới','pri',()=>{ setTimeout(applyImport,0); }]]);
 }
+/* ghi chú nạp file chỉ mang tính thông tin (không phải lỗi) — để biết lúc nào được báo “không phát hiện lỗi” */
+const INFO_NOTES=new Set(); const infoNote=t=>(INFO_NOTES.add(t),t);
+const ckKey=x=>(x.s?x.s.cccd:'')+'|'+x.lv+'|'+x.msg;
 function applyImport(){
+  let ckBefore=null; try{ ckBefore=new Set(checks().filter(x=>x.lv!=='info').map(ckKey)); }catch(e){}
+  const impExams=[], impXml=[];
   const impNames=pending.filter(p=>p.target!=='skip').map(p=>p.file).filter((v,i,a)=>a.indexOf(v)===i).join(', ');
   snapshot('Nạp '+impNames);
   const impFiles=[...new Map(pending.filter(p=>p.target!=='skip'&&p._f).map(p=>[p._f.name+'|'+p._f.size,p._f])).values()];
@@ -1311,8 +1317,8 @@ function applyImport(){
   for(const p of pending){
     if(p.target==='skip') continue;
     for(const x of (p.skipped||[])) conf.push(`File “${p.file}” dòng ${x.row}: ${x.ten||'(không tên)'} ${x.id||''} — ${x.reason}. Dòng này KHÔNG được nạp.`);
-    if(p.kind==='xml'){ applyXML(p, conf); continue; }
-    if(p.target==='sbd'){ applySBDServer(p, conf); continue; }
+    if(p.kind==='xml'){ applyXML(p, conf); impXml.push(p.part); continue; }
+    if(p.target==='sbd'){ applySBDServer(p, conf); impExams.push(p.khoaThi); continue; }
     if(p.kind==='loctl'){ applyLocTL(p, conf); continue; }
     if(p.target==='tlr'){
       const ids=new Set(p.recs.map(r=>r.id)); let out=0;
@@ -1352,6 +1358,32 @@ function applyImport(){
   { const cid=c.id; impFiles.forEach(f=>f.arrayBuffer().then(b=>arcAdd('nap',f.name,b,cid)).catch(()=>{})); }
   toast(`Đã nạp: +${add} người mới, cập nhật ${upd}, ${g} GPLX tra cứu${conf.length?`, ${conf.length} ghi chú (xem mục Kiểm tra dữ liệu)`:''}.`,4000);
   render(); showLocReport();
+  importOkReport({names:impNames, add, upd, g, conf, ckBefore, impExams, impXml});
+}
+/* Sau khi nạp: tool đã tự quét, kiểm tra, so sánh — KHÔNG thấy lỗi nào do file vừa nạp → báo bảng XANH LÁ.
+   Có lỗi → giữ cách báo cũ (bảng lỗi / ghi chú ở Kiểm tra dữ liệu), không hiện bảng này. */
+function importOkReport(o){
+  try{
+    if(!o.ckBefore||!String(o.names||'').trim()) return;   // không nạp file nào → không báo
+    const d=$('#dlg'); if(d&&d.open) return;               // đang có bảng khác (vd báo cáo file _LOCTL) → không chồng bảng
+    const c=C(), warn=o.conf.filter(t=>!INFO_NOTES.has(t)), info=o.conf.filter(t=>INFO_NOTES.has(t));
+    const now=checks().filter(x=>x.lv!=='info'), fresh=now.filter(x=>!o.ckBefore.has(ckKey(x))&&!INFO_NOTES.has(x.msg));   // ghi chú thông tin (gán mã XML, đọc ngày bảo lưu…) không phải lỗi
+    const exE=o.impExams.map(k=>(DB.exams||[]).find(e=>e.khoaThi===k)).filter(Boolean).map(e=>({e,R:examCheck(e)}));
+    window._impChk={warn,fresh:fresh.map(x=>(x.s?x.s.ten+': ':'')+x.msg),ex:exE.map(x=>[...x.R.E,...(x.R.W||[])])};   // để kiểm thử
+    if(warn.length||fresh.length||exE.some(x=>x.R.E.length||(x.R.W||[]).length)) return;
+    const old=now.filter(x=>x.lv==='err').length;
+    const did=['Số CCCD: đủ 12 số, mã tỉnh, số thứ 4, năm sinh, giới tính, trùng số khác tên',
+      'Họ tên: ký tự lạ, khoảng trắng, dấu tách sai','Trùng người giữa các file và giữa các danh sách (học mới / thi lại / khóa ghép)'];
+    if(o.impXml.length) did.push('Đối chiếu file XML với danh sách Báo cáo 2 (thiếu / thừa / khác họ tên, ngày sinh)');
+    if(o.impExams.length) did.push('Toàn vẹn danh sách thi: tổng số, SBD, số CMT, nội dung sát hạch, đối chiếu với Báo cáo 2');
+    dialog('Đã kiểm tra — không phát hiện lỗi',`<div class="note ok" style="font-size:15px">${ic('check')}<span><b>Đã quét, kiểm tra và so sánh các file vừa nạp — không phát hiện lỗi.</b></span></div>
+      <div style="margin-top:10px;font-size:13.5px"><b>File:</b> ${esc(o.names)}</div>
+      <div style="font-size:13.5px;margin-top:4px">${o.add||o.upd?`+${o.add} người mới · cập nhật ${o.upd} người`:''}${o.g?`${o.add||o.upd?' · ':''}${o.g} GPLX tra cứu`:''}</div>
+      <ul style="margin:10px 0 0;padding-left:20px;line-height:1.75;color:var(--ok)">${did.map(t=>`<li>${esc(t)} — <b>đạt</b></li>`).join('')}</ul>
+      ${info.length?`<div class="muted" style="font-size:12.5px;margin-top:10px">${info.map(esc).join('<br>')}</div>`:''}
+      ${old?`<div class="note warn" style="margin-top:10px">${ic('alert')}<span>Khóa ${esc(c.ten)} còn <b>${old}</b> lỗi cũ chưa xử lý ở mục <b>Kiểm tra dữ liệu</b> (không phải do file vừa nạp).</span></div>`:''}`,
+      [['Đóng','pri']]);
+  }catch(e){ console.warn('importOkReport',e); }
 }
 /* ===== KHÓA THI (file máy chủ phòng thi lý thuyết) ===== */
 /* Nội dung sát hạch trong file phòng thi:
@@ -1996,7 +2028,7 @@ function applyLocTL(p, conf){
     for(const r of p.recs){ if(!r.hasBL) continue; B.m[r.id]={v:r.nblConflict?'':r.nbl, ten:upper(r.ten||''), nd:r.ndRaw, file:p.file, sheet:p.sheet, row:r.row, conflict:r.nblConflict||''}; if(r.nbl&&!r.nblConflict) nb++;
       if(r.nblConflict) conf.push(`File lọc “${p.file}”: ${upper(r.ten||'')} (${r.id}) có 2 dòng khác ngày bảo lưu (${r.nblConflict}) — để TRỐNG ngày bảo lưu, kiểm tra lại file.`); }
     B.t=new Date().toISOString();
-    conf.push(`File lọc “${p.file}”: đọc cột Ngày bảo lưu — ${nb} người có ngày (dùng cho DS bảo lưu ở mục Số báo danh).`); }
+    conf.push(infoNote(`File lọc “${p.file}”: đọc cột Ngày bảo lưu — ${nb} người có ngày (dùng cho DS bảo lưu ở mục Số báo danh).`)); }
   // tự kiểm lại: mọi người trong file đã khớp phải mang đúng nội dung của file
   R.verifyFail=p.recs.filter(r=>{ const s=c.students.find(x=>x.cccd===r.id); return s&&s.loai==='tl'&&s.gcTL!==r.gcTL; }).length;
   R.nameDiff.forEach(x=>conf.push(`File lọc “${p.file}”: cùng số CCCD nhưng khác tên — ${x}. Đã điền theo số CCCD, kiểm tra lại.`));
@@ -2039,7 +2071,7 @@ function applySBDServer(p, conf){
     for(const c of Object.values(DB.courses)) if(c.sbd&&c.sbd.server&&norm(asciiName(c.sbd.server.khoaThi))===norm(asciiName(ex.khoaThi))){
       c.students.forEach(s=>{ if(s.sbdSrc==='server'){ s.sbd=''; s.sbdN=0; s.sbdSrc=''; } }); c.sbd.server=null; c.sbd.locked=false; }
     DB.exams=DB.exams.filter(e=>!same(e));
-    conf.push(`Khóa thi ${ex.khoaThi}: đã THAY danh sách cũ bằng file “${p.file}”.`);
+    conf.push(infoNote(`Khóa thi ${ex.khoaThi}: đã THAY danh sách cũ bằng file “${p.file}”.`));
   }
   ex.cid=C().id;
   DB.exams.unshift(ex);
@@ -2059,9 +2091,9 @@ function applySBDServer(p, conf){
     x.c.sbd.locked=true; x.c.sbd.server={t:ex.t, file:ex.file, n:x.n, miss:[], noSbd:0, khoaThi:ex.khoaThi};
     if(iso&&!x.c.ngaySH) x.c.ngaySH=iso;
   }
-  conf.push(`Khóa thi ${ex.khoaThi} (${ex.ngayThi}): ${ex.rows.length} thí sinh`+
+  { const t=`Khóa thi ${ex.khoaThi} (${ex.ngayThi}): ${ex.rows.length} thí sinh`+
     (Object.keys(per).length?`, có ${Object.values(per).map(x=>x.n+' người của khóa '+x.c.ten+(x.main?' (đã gán SBD)':'')).join(', ')}`:'')+
-    (nf?`, ${nf} người không có trong dữ liệu tool (cột Hạng GPLX đã có sẽ để trống)`:'')+'.');
+    (nf?`, ${nf} người không có trong dữ liệu tool (cột Hạng GPLX đã có sẽ để trống)`:'')+'.'; conf.push(nf?t:infoNote(t)); }
 }
 function applyGPLX(){
   const c=C();
@@ -2728,7 +2760,7 @@ function applyXML(p,conf){
   const c=C(); c.xml=c.xml||{};
   c.xml[p.part]={code:p.code, maKH:p.maKH, ten:p.tenKH, file:p.file, t:new Date().toISOString(), recs:p.recs, nmv:1};   // nmv: họ tên đã được kiểm tra đủ lúc nạp (từ bản 4.19)
   if(p.part==='g') Object.assign(c.xml.g,{kg:p.kg||'', bg:p.bg||'', tg:p.tg||''});
-  conf.push(`File XML “${p.file}”: mã ${p.code} gán cho ${p.part==='tl'?'THI LẠI':p.part==='g'?'KHÓA GHÉP '+gNameFromXml(p.tenKH):'THI MỚI (lần đầu)'} (${p.recs.length} người) — theo lựa chọn của bạn.`);   // lỗi họ tên KHÔNG ghi vào đây: tính trực tiếp từ XML đang dùng (xmlCheck) → nạp lại file đã sửa thì tự hết
+  conf.push(infoNote(`File XML “${p.file}”: mã ${p.code} gán cho ${p.part==='tl'?'THI LẠI':p.part==='g'?'KHÓA GHÉP '+gNameFromXml(p.tenKH):'THI MỚI (lần đầu)'} (${p.recs.length} người) — theo lựa chọn của bạn.`));   // lỗi họ tên KHÔNG ghi vào đây: tính trực tiếp từ XML đang dùng (xmlCheck) → nạp lại file đã sửa thì tự hết
 }
 /* đối chiếu danh sách BC2 (lần đầu / thi lại) với file XML đã nạp */
 function xmlCheck(c,part){
