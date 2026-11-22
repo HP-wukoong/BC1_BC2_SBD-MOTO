@@ -710,6 +710,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.22','22/11/2026',['Kiểm tra dữ liệu: hạng GPLX cũ và mới tương ứng không còn báo “Hạng GPLX lệch” — C = Cm, E = Dm, D = D2 (vd hồ sơ ghi D2, file GPLX ghi D → khớp). Dm và D không còn bị coi là giống nhau. Chữ hạng in ra báo cáo không đổi']],
   ['4.21','22/11/2026',['Nạp dữ liệu: sau khi tool tự quét, kiểm tra và so sánh, nếu file vừa nạp KHÔNG sinh lỗi / cảnh báo mới nào thì hiện bảng chữ xanh lá “Đã kiểm tra — không phát hiện lỗi” (kèm danh sách các mục đã kiểm tra: CCCD, họ tên, trùng người, đối chiếu XML, toàn vẹn danh sách thi); có lỗi thì vẫn báo như cũ. Không nạp được file nào thì không hiện bảng này']],
   ['4.20','16/11/2026',['“Xuất Báo cáo 2”: đổi tên file thành “Danh sách Báo cáo 2 <khóa> (<mã XML thi mới>) (<mã thi lại>) (<mã khóa ghép>).xlsx”, vd “Danh sách Báo cáo 2 A1m-48 (K26A1143) (K26A1139) (K26A1150).xlsx” — chỉ ghi mã phần có trong file; thiếu mã XML thì hỏi trước khi xuất. Nội dung file không đổi']],
   ['4.19','15/11/2026',['Kiểm tra HỌ TÊN từng người ngay khi nạp file XML Báo cáo 2 và file hồ sơ Excel (nguồn của BC1, thi lại, khóa ghép): chữ có dấu ở dạng Unicode tổ hợp (dấu rời khỏi chữ — nhìn giống hệt nhưng tìm kiếm / đối chiếu theo tên không ra), thừa dấu cách, ký tự ẩn, chữ “Ð” gõ thay “Đ”; riêng XML thêm: tách họ đệm / tên sai (thẻ TEN ghi “THỊ BÌNH” → sắp theo “THỊ…”, sai thứ tự số báo danh), HO_TEN_DEM + TEN không khớp HO_VA_TEN',
@@ -1019,9 +1020,12 @@ function normId(v){
   if(/^\d+$/.test(s)){ if(s.length===11) s='0'+s; else if(s.length===8) s='0'+s; }
   return s;
 }
+/* Hạng GPLX cũ ↔ mới coi là MỘT khi so (chỉ để không báo lệch — chữ in ra báo cáo giữ nguyên như hồ sơ):
+   C ↔ Cm · E ↔ Dm · D ↔ D2 ; B.01 = B1. Hạng khác: bỏ “m” cuối như trước. */
+const HANG_CU_MOI={C:'CM',CM:'CM',E:'DM',DM:'DM',D:'D2',D2:'D2'};
 function normHang(h){
   return String(h||'').toUpperCase().split(/[|\/,;+ ]+/).filter(Boolean)
-    .map(x=>x.replace(/M$/,'').replace(/\.0(\d)$/,'$1')).sort().join('|');   // Cm=C, B.01=B1
+    .map(x=>{ const t=x.replace(/\.0(\d)$/,'$1'); return HANG_CU_MOI[t]||t.replace(/M$/,''); }).sort().join('|');
 }
 function upper(s){ return String(s||'').normalize('NFC').trim().replace(/\s+/g,' ').toUpperCase(); }
 /* Nội dung thi lại: mã lưu trong tool → chữ hiển thị / in ra */
@@ -5456,6 +5460,11 @@ async function selfTest(){
     const E=verifyRows(w,12,P.map((s,i)=>[i+1,s.ten,s.ns,s.cccd,s.dc,s.soGPLX||'',s.hangHS||'','']),['A','B','C','D','E','F','G','H'],'BC1');
     P.forEach((s,i)=>{ const f=w.getCell('B'+(12+i)).fill, y=!!(f&&f.fgColor&&/FFFF00$/i.test(f.fgColor.argb||'')); if(y!==!!s.biLoai) E.push('bôi vàng sai dòng '+(12+i)); });
     if(E.length) throw new Error(E[0]); return `${P.length} người, đúng từng ô`; });
+  await t('Hạng GPLX cũ ↔ mới: C=Cm, E=Dm, D=D2',async()=>{
+    const eq=[['D2','D'],['Dm','E'],['Cm','C'],['C','CM'],['B.01','B1'],['B','B']], ne=[['Dm','D'],['D2','E'],['Cm','D'],['B','C']];
+    for(const [a,b] of eq) if(normHang(a)!==normHang(b)) throw new Error(`“${a}” và “${b}” phải là cùng hạng`);
+    for(const [a,b] of ne) if(normHang(a)===normHang(b)) throw new Error(`“${a}” và “${b}” không được coi là cùng hạng`);
+    return 'D2=D, Dm=E, Cm=C; Dm≠D, D2≠E'; });
   await t('Khóa ghép: SH lần đầu, sheet -G đồng bộ khóa chính, Word ghi dưới khóa chính',async()=>{
     const cg={ten:'TEST-1',soKhoa:'1',thoiGian:10,dv1:'A',dv2:'B',noiKy:'Gia Lai',giamDoc:'X',khaiGiang:'2026-01-01',beGiang:'2026-01-10',ngayKy:'2026-01-11',students:[],
       xml:{g:{code:'K26A9999',ten:'HẠNG A1M-7-G',kg:'2026-01-05',bg:'2026-01-11',tg:7}}};
