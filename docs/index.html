@@ -715,6 +715,7 @@ async function syncStore(){
 }
 /* ===== PHIÊN BẢN — mỗi lần sửa tool thì thêm 1 dòng lên đầu ===== */
 const VERSIONS=[
+  ['4.23','25/11/2026',['Số báo danh → Đối chiếu với Báo cáo 2: CHỈ so với khóa đang thi (học mới, thi lại, khóa ghép của khóa đó), không so với khóa cũ — hết báo sai “khác nội dung sát hạch” với người học mới ở khóa trước nay thi lại ở khóa này. Thí sinh không thuộc khóa đang thi: chỉ ghi số lượng, không đối chiếu']],
   ['4.22','22/11/2026',['Kiểm tra dữ liệu: hạng GPLX cũ và mới tương ứng không còn báo “Hạng GPLX lệch” — C = Cm, E = Dm, D = D2 (vd hồ sơ ghi D2, file GPLX ghi D → khớp). Dm và D không còn bị coi là giống nhau. Chữ hạng in ra báo cáo không đổi']],
   ['4.21','22/11/2026',['Nạp dữ liệu: sau khi tool tự quét, kiểm tra và so sánh, nếu file vừa nạp KHÔNG sinh lỗi / cảnh báo mới nào thì hiện bảng chữ xanh lá “Đã kiểm tra — không phát hiện lỗi” (kèm danh sách các mục đã kiểm tra: CCCD, họ tên, trùng người, đối chiếu XML, toàn vẹn danh sách thi); có lỗi thì vẫn báo như cũ. Không nạp được file nào thì không hiện bảng này']],
   ['4.20','16/11/2026',['“Xuất Báo cáo 2”: đổi tên file thành “Danh sách Báo cáo 2 <khóa> (<mã XML thi mới>) (<mã thi lại>) (<mã khóa ghép>).xlsx”, vd “Danh sách Báo cáo 2 A1m-48 (K26A1143) (K26A1139) (K26A1150).xlsx” — chỉ ghi mã phần có trong file; thiếu mã XML thì hỏi trước khi xuất. Nội dung file không đổi']],
@@ -1922,12 +1923,16 @@ function examsSorted(){ return (DB.exams||[]).slice().sort((a,b)=>examKey(b).loc
 /* ===== ĐỐI CHIẾU CHÉO: danh sách thi (file GLĐ) ↔ Báo cáo 2 của từng khóa đào tạo =====
    Chỉ so, không sửa gì. Khóa “chính” (≥ một nửa người dự thi của khóa có trong file) thì so cả 2 chiều. */
 const GC2ND={L:'L',H:'H','L+H':'LH'};
+/* CHỈ đối chiếu với KHÓA ĐANG THI (khóa sở hữu danh sách thi này, thường là khóa đang mở) — gồm học mới, thi lại, khóa ghép của khóa đó.
+   Không so với khóa cũ: 1 người có thể là học mới ở khóa trước rồi thi lại ở khóa này → so khóa cũ sẽ báo sai nội dung sát hạch. */
 function crossCheck(ex){
   const byC={}, E=[], W=[];
-  for(const r of ex.rows){ const f=findPerson(r.id); if(!f) continue; (byC[f.c.id]=byC[f.c.id]||{c:f.c,hit:[]}).hit.push([f.s,r]); }
+  const own=examOwners().get(ex)||C(), map=new Map(own.students.map(s=>[s.cccd,s]));
+  const hits=ex.rows.filter(r=>map.has(r.id)).map(r=>[map.get(r.id),r]);
+  if(hits.length) byC[own.id]={c:own,hit:hits,force:true};
   const out=[];
   for(const {c,hit} of Object.values(byC)){
-    const active=c.students.filter(s=>!s.biLoai), main=hit.length>=Math.max(1,active.length*0.5);
+    const active=c.students.filter(s=>!s.biLoai), main=true;   // chỉ còn khóa đang thi
     const R={c,main,n:hit.length,active:active.length,missing:[],loai:[],nd:[],ok:0,ppl:[]};
     for(const [s,r] of hit){
       const k=ndClass(r.nd);
@@ -1948,11 +1953,13 @@ function crossCheck(ex){
 }
 function crossHtml(ex){
   const X=crossCheck(ex); if(!X.length) return '';
+  const own=X[0].c, nOut=ex.rows.filter(r=>!own.students.some(s=>s.cccd===r.id)).length;
   const nBad=X.reduce((t,R)=>t+R.loai.length+R.nd.length+R.missing.length,0);
   const lst=(a,cls)=>a.length?`<div class="${cls}" style="font-size:13px;margin:4px 0 0 4px;max-height:180px;overflow:auto">${a.slice(0,80).map(x=>'• '+esc(x)).join('<br>')}${a.length>80?`<br>… và ${a.length-80} người nữa`:''}</div>`:'';
   return `<div class="card"><div class="row"><h2 style="margin:0">Đối chiếu với Báo cáo 2</h2>
     ${nBad?`<span class="tag" style="background:var(--seal-tint);color:var(--seal)">${nBad} chỗ cần xem</span>`:`<span class="tag gplx">${ic('check')} Khớp</span>`}</div>
-    <div class="muted" style="margin:6px 0 2px">So từng thí sinh (theo số CMT) với danh sách Báo cáo 2 trong tool: người bị loại, nội dung sát hạch, và ai có trong BC2 mà thiếu trong danh sách thi. Chỉ để kiểm tra — không sửa danh sách thi.</div>
+    <div class="muted" style="margin:6px 0 2px">So từng thí sinh (theo số CMT) với danh sách Báo cáo 2 <b>của khóa đang thi ${esc(own.ten)}</b> (học mới, thi lại, khóa ghép): người bị loại, nội dung sát hạch, và ai có trong BC2 mà thiếu trong danh sách thi. Không so với khóa cũ. Chỉ để kiểm tra — không sửa danh sách thi.</div>
+    ${nOut?`<div class="muted" style="font-size:12.5px;margin-top:4px">${nOut} thí sinh trong danh sách thi không có trong khóa ${esc(own.ten)} — không đối chiếu.</div>`:''}
     ${X.map(R=>`<div style="margin-top:12px"><b>Khóa ${esc(R.c.ten)}</b> <span class="muted">— ${R.n} người trong danh sách thi${R.main?` / ${R.active} người dự thi trong BC2`:' (thi ghép, không phải khóa chính của đợt này)'}</span>
       ${R.ok===R.n&&!R.missing.length?` <span class="tag gplx">${ic('check')} khớp ${R.ok}/${R.n}</span>`:''}
       ${!R.main?`<div class="tblwrap" style="margin-top:6px"><table style="font-size:13px"><thead><tr><th class="c">SBD</th><th>Họ và tên</th><th class="c">Số CMT</th><th class="c">Ngày sinh</th><th>Nội dung (DS thi)</th><th>Trong tool (khóa ${esc(R.c.ten)})</th><th class="c">Kết quả</th></tr></thead><tbody>
